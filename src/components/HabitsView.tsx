@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, SpecializedHabitType } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
+import { EmptyState, TabBar } from './ui';
 import { ReadingAppModal } from './ReadingAppModal';
 import { WorkoutAppModal } from './WorkoutAppModal';
 
@@ -271,26 +272,21 @@ export const HabitsView: React.FC = () => {
       </div>
 
       {/* Toggle View: Active vs Archived */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowArchived(false)}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-              !showArchived ? 'bg-[#1e2e25] text-accent font-bold border border-accent/30' : 'text-muted hover:text-white'
-            }`}
-          >
-            {isAr ? 'العادات النشطة' : 'Active Habits'} ({habits.filter((h) => !h.isArchived && h.status !== 'archived').length})
-          </button>
-          <button
-            onClick={() => setShowArchived(true)}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-              showArchived ? 'bg-[#1e2e25] text-accent font-bold border border-accent/30' : 'text-muted hover:text-white'
-            }`}
-          >
-            {isAr ? 'المؤرشفة 🗄️' : 'Archived 🗄️'} ({habits.filter((h) => h.isArchived || h.status === 'archived').length})
-          </button>
-        </div>
-      </div>
+      <TabBar
+        items={[
+          {
+            id: 'active',
+            label: `${isAr ? 'العادات النشطة' : 'Active Habits'} (${habits.filter((h) => !h.isArchived && h.status !== 'archived').length})`
+          },
+          {
+            id: 'archived',
+            label: `${isAr ? 'المؤرشفة 🗄️' : 'Archived 🗄️'} (${habits.filter((h) => h.isArchived || h.status === 'archived').length})`
+          }
+        ]}
+        value={showArchived ? 'archived' : 'active'}
+        onChange={(id) => setShowArchived(id === 'archived')}
+        ariaLabel={isAr ? 'عرض العادات' : 'Habit views'}
+      />
 
       {/* Habits Grid */}
       {(() => {
@@ -301,20 +297,30 @@ export const HabitsView: React.FC = () => {
 
         if (displayedHabits.length === 0) {
           return (
-            <div className="empty-state">
-              <div className="empty-icon">♨</div>
-              <strong>{showArchived ? (isAr ? 'لا توجد عادات مؤرشفة' : 'No archived habits') : (isAr ? 'لا توجد عادات مسجلة بعد' : 'No habits yet')}</strong>
-              <p>
-                {isAr
+            <EmptyState
+              icon="repeat"
+              title={
+                showArchived
+                  ? isAr
+                    ? 'لا توجد عادات مؤرشفة'
+                    : 'No archived habits'
+                  : isAr
+                  ? 'لا توجد عادات مسجلة بعد'
+                  : 'No habits yet'
+              }
+              description={
+                isAr
                   ? 'العادات هي البنية الأساسية للإنتاجية المستدامة. ابدأ بعادة واحدة بسيطة الآن.'
-                  : 'Habits are the compound interest of self-improvement. Build your first atomic habit now.'}
-              </p>
-              {!showArchived && (
-                <button className="btn primary" onClick={openNewModal}>
-                  + {isAr ? 'عادة جديدة' : 'New Habit'}
-                </button>
-              )}
-            </div>
+                  : 'Habits are the compound interest of self-improvement. Build your first atomic habit now.'
+              }
+              action={
+                !showArchived ? (
+                  <button className="btn primary" onClick={openNewModal}>
+                    + {isAr ? 'عادة جديدة' : 'New Habit'}
+                  </button>
+                ) : undefined
+              }
+            />
           );
         }
 
