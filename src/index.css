@@ -1218,3 +1218,39 @@ html.light-mode .glass-surface,
     animation: none !important;
   }
 }
+
+/* ============================================================
+   DASHBOARD KPI HIERARCHY (Batch 05.3a)
+   Primary trio (Tasks · Habits · Focus) carries the weight;
+   Reading · Workout sit in a compact secondary rail.
+   ============================================================ */
+.dashboard-kpis-primary > div {
+  padding: var(--sp-4);
+}
+.dashboard-kpis-primary > div strong,
+.dashboard-kpis-primary > div .font-mono.font-bold {
+  font-size: var(--fs-xl);
+  line-height: var(--lh-tight);
+}
+.dashboard-kpis-primary > div > .flex:first-child span:first-child {
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  font-weight: var(--fw-semibold);
+}
+
+.dashboard-kpis-secondary {
+  min-height: 0;
+}
+.dashboard-kpis-secondary > div {
+  padding: var(--sp-1) var(--sp-3);
+  background: transparent;
+  border: 0;
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.dashboard-kpis-secondary > div .font-mono.font-bold {
+  font-size: var(--fs-sm);
+}
+.dashboard-kpis-secondary > div .text-\[10px\] {
+  font-size: var(--fs-micro);
+}

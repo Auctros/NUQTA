@@ -299,7 +299,7 @@ export const DashboardView: React.FC = () => {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="dashboard-kpis-primary grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Tasks Output */}
           <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] space-y-2">
             <div className="flex items-center justify-between text-xs">
@@ -377,6 +377,10 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
 
+        </div>
+
+        {/* Secondary KPIs — reading & workout stay reachable but quieter */}
+        <div className="dashboard-kpis-secondary mt-3 flex flex-wrap items-center gap-2 rounded-[var(--r-sm)] border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-2 py-1.5">
           {/* Real Reading Pages */}
           <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] space-y-2">
             <div className="flex items-center justify-between text-xs">
