@@ -232,11 +232,11 @@ export const GoalsView: React.FC = () => {
       <div className="panel p-3.5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 flex-1">
           {/* Status Tabs */}
-          <div className="flex p-0.5 rounded-lg bg-[#0c120f] border border-[#26372d] text-xs">
+          <div className="flex p-0.5 rounded-lg bg-[var(--surface-sunken)] border border-[var(--border-default)] text-xs">
             <button
               onClick={() => setStatusFilter('all')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === 'all' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                statusFilter === 'all' ? 'bg-[var(--brand-soft)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               {isAr ? 'الكل' : 'All'}
@@ -244,7 +244,7 @@ export const GoalsView: React.FC = () => {
             <button
               onClick={() => setStatusFilter('active')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === 'active' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                statusFilter === 'active' ? 'bg-[var(--brand-soft)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               {isAr ? 'النشطة' : 'Active'}
@@ -252,7 +252,7 @@ export const GoalsView: React.FC = () => {
             <button
               onClick={() => setStatusFilter('completed')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === 'completed' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                statusFilter === 'completed' ? 'bg-[var(--brand-soft)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               {isAr ? 'المكتملة' : 'Completed'}
@@ -260,7 +260,7 @@ export const GoalsView: React.FC = () => {
             <button
               onClick={() => setStatusFilter('paused')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === 'paused' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                statusFilter === 'paused' ? 'bg-[var(--brand-soft)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               {isAr ? 'الموقوفة' : 'Paused'}
@@ -268,7 +268,7 @@ export const GoalsView: React.FC = () => {
             <button
               onClick={() => setStatusFilter('archived')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                statusFilter === 'archived' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                statusFilter === 'archived' ? 'bg-[var(--brand-soft)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               {isAr ? 'المؤرشفة 🗄️' : 'Archived 🗄️'}
@@ -338,13 +338,13 @@ export const GoalsView: React.FC = () => {
               <article
                 key={goal.id}
                 onClick={() => setInspectingGoal(goal)}
-                className="panel p-5 border border-[#23352b] bg-[#111914] rounded-2xl flex flex-col justify-between space-y-4 hover:border-accent/40 transition-all cursor-pointer shadow-lg hover:shadow-xl group"
+                className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl flex flex-col justify-between space-y-4 hover:border-accent/40 transition-all cursor-pointer shadow-lg hover:shadow-xl group"
               >
                 <div className="space-y-3">
                   {/* Top Badges */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-[#18261e] text-accent border border-[#283e31] font-semibold flex items-center gap-1">
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-strong)] font-semibold flex items-center gap-1">
                         <span>{cat.icon}</span>
                         <span>{isAr ? cat.ar : cat.en}</span>
                       </span>
@@ -377,7 +377,7 @@ export const GoalsView: React.FC = () => {
 
                   {/* Title & Description */}
                   <div>
-                    <h3 className="text-base font-bold text-white group-hover:text-accent transition-colors leading-snug">
+                    <h3 className="text-base font-bold text-[var(--text-primary)] group-hover:text-accent transition-colors leading-snug">
                       {goal.title}
                     </h3>
                     {goal.description && (
@@ -401,13 +401,13 @@ export const GoalsView: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="w-full bg-[#18261e] rounded-full h-2 overflow-hidden border border-[#23382c]" title={isAr ? 'نسبة النتائج الرئيسية' : 'Outcome Key Results Progress'}>
+                      <div className="w-full bg-[var(--surface-chip)] rounded-full h-2 overflow-hidden border border-[var(--border-subtle)]" title={isAr ? 'نسبة النتائج الرئيسية' : 'Outcome Key Results Progress'}>
                         <div
                           className="bg-emerald-400 h-full rounded-full transition-all duration-500"
                           style={{ width: `${intel.outcomeProgressPercent}%` }}
                         />
                       </div>
-                      <div className="w-full bg-[#18261e] rounded-full h-2 overflow-hidden border border-[#23382c]" title={isAr ? 'نسبة تنفيذ المهام وانتظام العادات' : 'Execution (Tasks & Habits) Progress'}>
+                      <div className="w-full bg-[var(--surface-chip)] rounded-full h-2 overflow-hidden border border-[var(--border-subtle)]" title={isAr ? 'نسبة تنفيذ المهام وانتظام العادات' : 'Execution (Tasks & Habits) Progress'}>
                         <div
                           className="bg-teal-400 h-full rounded-full transition-all duration-500"
                           style={{ width: `${intel.executionProgressPercent}%` }}
@@ -429,9 +429,9 @@ export const GoalsView: React.FC = () => {
                       {intel.evaluatedKrs.slice(0, 2).map((kr) => (
                         <div
                           key={kr.id}
-                          className="flex items-center justify-between text-xs p-2 rounded-lg bg-[#152019] border border-[#223328]"
+                          className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--surface-inset)] border border-[var(--border-subtle)]"
                         >
-                          <span className="truncate text-white/90 font-medium pe-2">
+                          <span className="truncate text-[var(--text-primary)] font-medium pe-2">
                             {kr.title}
                           </span>
                           <span className="font-mono text-accent text-xs font-bold shrink-0">
@@ -450,22 +450,22 @@ export const GoalsView: React.FC = () => {
                   {/* Linked Activities Counter Pills */}
                   <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] text-muted">
                     {intel.linkedTasksCount > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-[#16241c] text-white/80 border border-[#243a2d]">
+                      <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-[var(--text-primary)] border border-[var(--border-strong)]">
                         ✓ {intel.linkedTasksCount} {isAr ? 'مهام' : 'tasks'}
                       </span>
                     )}
                     {intel.linkedHabitsCount > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-[#16241c] text-white/80 border border-[#243a2d]">
+                      <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-[var(--text-primary)] border border-[var(--border-strong)]">
                         ↻ {intel.linkedHabitsCount} {isAr ? 'عادات' : 'habits'}
                       </span>
                     )}
                     {intel.linkedBooksCount > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-[#16241c] text-amber-300 border border-[#243a2d]">
+                      <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-amber-300 border border-[var(--border-strong)]">
                         📖 {intel.linkedBooksCount} {isAr ? 'كتب' : 'books'}
                       </span>
                     )}
                     {intel.linkedArtProjectsCount > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-[#16241c] text-purple-300 border border-[#243a2d]">
+                      <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-purple-300 border border-[var(--border-strong)]">
                         🎨 {intel.linkedArtProjectsCount} {isAr ? 'مشاريع فنية' : 'art projects'}
                       </span>
                     )}
@@ -474,7 +474,7 @@ export const GoalsView: React.FC = () => {
 
                 {/* Card Foot */}
                 <div
-                  className="pt-3 border-t border-[#1c2a22] flex items-center justify-between text-xs"
+                  className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="text-muted font-mono text-[11px]">
@@ -491,7 +491,7 @@ export const GoalsView: React.FC = () => {
                       <span>{isAr ? 'تفاصيل المؤشرات ↗' : 'Inspect Intel ↗'}</span>
                     </button>
                     <button
-                      className="mini-icon text-muted hover:text-white"
+                      className="mini-icon text-muted hover:text-[var(--text-primary)]"
                       onClick={() => openEditGoalModal(goal)}
                       title={isAr ? 'تعديل' : 'Edit'}
                     >
@@ -627,7 +627,7 @@ export const GoalsView: React.FC = () => {
 
               {/* Initial KR Section when creating */}
               {!editingGoal && (
-                <div className="p-3 bg-[#16231c] rounded-xl border border-[#25392d] space-y-3">
+                <div className="p-3 bg-[var(--surface-inset)] rounded-xl border border-[var(--border-subtle)] space-y-3">
                   <span className="text-xs font-bold text-accent block">
                     {isAr ? 'النتيجة الرئيسية المحورية الأولى (First Key Result):' : 'Initial Core Key Result:'}
                   </span>
@@ -704,7 +704,7 @@ export const GoalsView: React.FC = () => {
                 </div>
               )}
 
-              <div className="form-actions pt-2 border-t border-[#1c2a22]">
+              <div className="form-actions pt-2 border-t border-[var(--border-subtle)]">
                 <button type="button" className="btn subtle" onClick={() => setIsFormModalOpen(false)}>
                   {isAr ? 'إلغاء' : 'Cancel'}
                 </button>
