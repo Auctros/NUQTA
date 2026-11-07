@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { ArtMedium, ArtProject, ProjectStage } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { TabBar } from './ui';
+import { StudioShell, TabBar } from './ui';
 
 const STUDIO_TABS = [
   { id: 'dashboard', ar: 'لوحة المرسم', en: 'Studio Dashboard' },
@@ -161,25 +161,15 @@ export const DrawingView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-      {/* 1. Page Heading */}
-      <div className="page-heading flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="eyebrow flex items-center gap-2">
-            <span className="line"></span>
-            <span className="font-mono text-[var(--d-drawing-accent)]">NUQTA / CREATIVE ART STUDIO</span>
-            <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[var(--text-primary)]">
-            {isAr ? 'مرسم الإبداع والفن' : 'Creative Art Studio'}
-          </h1>
-          <p className="text-xs md:text-sm text-muted">
-            {isAr
-              ? 'مساحة التدفق البصري، توثيق الاسكتشات واللوحات، وتتبع مشاريع المرسم الجارية.'
-              : 'Visual flow container tracking daily sketches, projects, and drawing hours.'}
-          </p>
-        </div>
-
+    <StudioShell
+      eyebrow="NUQTA / CREATIVE ART STUDIO"
+      title={isAr ? 'مرسم الإبداع والفن' : 'Creative Art Studio'}
+      description={
+        isAr
+          ? 'مساحة التدفق البصري، توثيق الاسكتشات واللوحات، وتتبع مشاريع المرسم الجارية.'
+          : 'Visual flow container tracking daily sketches, projects, and drawing hours.'
+      }
+      actions={
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('session')}
@@ -204,9 +194,9 @@ export const DrawingView: React.FC = () => {
             <span>→</span>
           </button>
         </div>
-      </div>
-
-      {/* 2. Top Metric Strip */}
+      }
+      meta={
+        <>
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
         {/* Total Artworks */}
         <div className="p-3.5 rounded-xl border border-purple-500/20 bg-[var(--d-drawing-surface)] space-y-1">
@@ -291,12 +281,12 @@ export const DrawingView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Studio Navigation Tabs */}
-            <TabBar
-        items={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
-        value={activeTab}
-        onChange={(id) => setActiveTab(id as any)}
-      />
+        </>
+      }
+      tabs={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
+      activeTab={activeTab}
+      onTabChange={(id) => setActiveTab(id as any)}
+    >
 
       {/* =========================================================================
           TAB 1: DASHBOARD
@@ -728,6 +718,6 @@ export const DrawingView: React.FC = () => {
           </form>
         </div>
       )}
-    </div>
+    </StudioShell>
   );
 };
