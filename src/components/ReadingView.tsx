@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { BookItem, BookCategory } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { TabBar } from './ui';
+import { Button, Field, Input, Modal, Select, TabBar, Toast } from './ui';
 
 const STUDIO_TABS = [
   { id: 'dashboard', ar: 'لوحة القراءة', en: 'Reading Dashboard' },
@@ -73,6 +73,8 @@ export const ReadingView: React.FC = () => {
   const [bookRating, setBookRating] = useState<number>(5);
   const [bookNotes, setBookNotes] = useState('');
   const [bookCoverColor, setBookCoverColor] = useState('#d97706');
+  const [bookError, setBookError] = useState<string | null>(null);
+  const [bookToast, setBookToast] = useState<string | null>(null);
 
   // Target editing state
   const [isEditingTargets, setIsEditingTargets] = useState(false);
@@ -180,20 +182,62 @@ export const ReadingView: React.FC = () => {
     setBookRating(5);
     setBookNotes('');
     setBookCoverColor('#d97706');
+    setBookError(null);
     setIsEditingBook(true);
+  };
+
+  const handleEditBook = (book: BookItem) => {
+    setEditingBookId(book.id);
+    setBookTitle(book.title || '');
+    setBookAuthor(book.author || '');
+    setBookCategory(book.category || 'productivity');
+    setBookTotalPages(book.totalPages || 1);
+    setBookCurrentPage(book.currentPage || 0);
+    setBookStatus(book.status);
+    setBookRating(book.rating || 5);
+    setBookNotes(book.notes || '');
+    setBookCoverColor(book.coverColor || '#d97706');
+    setBookError(null);
+    setIsEditingBook(true);
+  };
+
+  const handleCancelBook = () => {
+    setIsEditingBook(false);
+    setBookError(null);
   };
 
   const handleSaveBook = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!readingHabit || !bookTitle.trim()) return;
+    if (!readingHabit) return;
+
+    const title = bookTitle.trim();
+    const total = Number(bookTotalPages);
+    const current = Number(bookCurrentPage);
+
+    if (!title) {
+      setBookError(isAr ? 'عنوان الكتاب مطلوب.' : 'Book title is required.');
+      return;
+    }
+    if (!Number.isFinite(total) || total < 1) {
+      setBookError(isAr ? 'عدد الصفحات يجب أن يكون 1 على الأقل.' : 'Total pages must be at least 1.');
+      return;
+    }
+    if (!Number.isFinite(current) || current < 0 || current > total) {
+      setBookError(
+        isAr
+          ? 'الصفحة الحالية يجب أن تكون بين 0 وإجمالي الصفحات.'
+          : 'Current page must be between 0 and the total pages.'
+      );
+      return;
+    }
 
     addOrUpdateBook(readingHabit.id, {
       id: editingBookId || 'book-' + crypto.randomUUID().slice(0, 8),
-      title: bookTitle.trim(),
+      title,
       author: bookAuthor.trim() || (isAr ? 'مؤلف غير محدد' : 'Unknown Author'),
       category: bookCategory,
-      totalPages: Number(bookTotalPages),
-      currentPage: Number(bookCurrentPage),
+      totalPages: total,
+      currentPage: current,
       status: bookStatus,
       rating: Number(bookRating),
       notes: bookNotes.trim() || undefined,
@@ -202,6 +246,16 @@ export const ReadingView: React.FC = () => {
     });
 
     setIsEditingBook(false);
+    setBookError(null);
+    const msg = editingBookId
+      ? isAr
+        ? 'تم تحديث بيانات الكتاب.'
+        : 'Book updated successfully.'
+      : isAr
+      ? 'تمت إضافة الكتاب إلى الخزانة.'
+      : 'Book added to your vault.';
+    setBookToast(msg);
+    window.setTimeout(() => setBookToast(null), 3000);
   };
 
   const handleSaveStandaloneQuote = (e: React.FormEvent) => {
@@ -754,6 +808,14 @@ export const ReadingView: React.FC = () => {
                       {b.id === activeBook?.id ? (isAr ? 'الكتاب النشط ✓' : 'Active ✓') : (isAr ? 'تعيين كنشط' : 'Make Active')}
                     </button>
                     <button
+                      onClick={() => handleEditBook(b)}
+                      className="text-muted hover:text-[var(--d-reading-accent)] text-xs"
+                      aria-label={isAr ? 'تعديل الكتاب' : 'Edit book'}
+                      title={isAr ? 'تعديل الكتاب' : 'Edit book'}
+                    >
+                      ✎
+                    </button>
+                    <button
                       onClick={() => {
                         if (readingHabit && confirm(isAr ? 'حذف الكتاب؟' : 'Delete book?')) {
                           deleteBook(readingHabit.id, b.id);
@@ -769,82 +831,80 @@ export const ReadingView: React.FC = () => {
             })}
           </div>
 
-          {/* Add Book Modal */}
-          {isEditingBook && (
-            <div className="modal-backdrop fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-              <div className="modal w-full max-w-md bg-[var(--d-reading-surface)] border border-[var(--d-reading-border-strong)] rounded-2xl p-6 shadow-2xl space-y-4">
-                <h3 className="text-base font-bold text-[var(--text-primary)]">
-                  {isAr ? 'إضافة كتاب جديد إلى الخزانة' : 'Add New Book'}
-                </h3>
-                <form onSubmit={handleSaveBook} className="space-y-3 text-xs">
-                  <div className="field">
-                    <label className="text-muted block mb-1">{isAr ? 'عنوان الكتاب:' : 'Title:'}</label>
-                    <input
-                      type="text"
-                      value={bookTitle}
-                      onChange={(e) => setBookTitle(e.target.value)}
-                      className="input w-full text-xs font-semibold"
-                      required
-                      autoFocus
-                    />
-                  </div>
-                  <div className="field">
-                    <label className="text-muted block mb-1">{isAr ? 'المؤلف:' : 'Author:'}</label>
-                    <input
-                      type="text"
-                      value={bookAuthor}
-                      onChange={(e) => setBookAuthor(e.target.value)}
-                      className="input w-full text-xs"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="field">
-                      <label className="text-muted block mb-1">{isAr ? 'إجمالي الصفحات:' : 'Total Pages:'}</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={bookTotalPages}
-                        onChange={(e) => setBookTotalPages(Number(e.target.value))}
-                        className="input w-full font-mono text-xs"
-                        required
-                      />
-                    </div>
-                    <div className="field">
-                      <label className="text-muted block mb-1">{isAr ? 'الصفحة الحالية:' : 'Current Page:'}</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={bookCurrentPage}
-                        onChange={(e) => setBookCurrentPage(Number(e.target.value))}
-                        className="input w-full font-mono text-xs"
-                      />
-                    </div>
-                  </div>
-                  <div className="field">
-                    <label className="text-muted block mb-1">{isAr ? 'حالة القراءة:' : 'Status:'}</label>
-                    <select
-                      className="select w-full text-xs"
-                      value={bookStatus}
-                      onChange={(e) => setBookStatus(e.target.value as any)}
-                    >
-                      <option value="reading">{isAr ? 'أقرأ حالياً' : 'Currently Reading'}</option>
-                      <option value="want_to_read">{isAr ? 'قائمة الرغبات' : 'Want to Read'}</option>
-                      <option value="completed">{isAr ? 'مكتمل' : 'Completed'}</option>
-                    </select>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-3 border-t border-[var(--d-reading-border)]">
-                    <button type="button" onClick={() => setIsEditingBook(false)} className="btn subtle small text-xs">
-                      {isAr ? 'إلغاء' : 'Cancel'}
-                    </button>
-                    <button type="submit" className="btn primary small text-xs">
-                      {isAr ? 'حفظ الكتاب' : 'Save Book'}
-                    </button>
-                  </div>
-                </form>
+          {/* Book editor — shared Modal + form controls */}
+          <Modal
+            open={isEditingBook}
+            onClose={handleCancelBook}
+            title={editingBookId ? (isAr ? 'تعديل بيانات الكتاب' : 'Edit Book') : (isAr ? 'إضافة كتاب جديد' : 'Add New Book')}
+            description={isAr ? 'الحقول المعلّمة بـ * مطلوبة.' : 'Fields marked * are required.'}
+            size="sm"
+            footer={
+              <>
+                <Button variant="ghost" size="sm" onClick={handleCancelBook}>
+                  {isAr ? 'إلغاء' : 'Cancel'}
+                </Button>
+                <Button variant="primary" size="sm" onClick={(e) => handleSaveBook(e as any)}>
+                  {editingBookId ? (isAr ? 'حفظ التعديلات' : 'Save Changes') : (isAr ? 'حفظ الكتاب' : 'Save Book')}
+                </Button>
+              </>
+            }
+          >
+            <form onSubmit={handleSaveBook} className="space-y-3">
+              <Field label={isAr ? 'عنوان الكتاب' : 'Book Title'} htmlFor="book-title" required>
+                <Input
+                  id="book-title"
+                  value={bookTitle}
+                  onChange={(e) => setBookTitle(e.target.value)}
+                  invalid={!bookTitle.trim() && !!bookError}
+                  autoFocus
+                  placeholder={isAr ? 'مثال: العادات الذرية' : 'e.g. Atomic Habits'}
+                />
+              </Field>
+              <Field
+                label={isAr ? 'المؤلف' : 'Author'}
+                htmlFor="book-author"
+                hint={isAr ? 'اختياري — يصبح «غير محدد» عند تركه فارغًا.' : 'Optional — becomes Unknown Author when empty.'}
+              >
+                <Input id="book-author" value={bookAuthor} onChange={(e) => setBookAuthor(e.target.value)} />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={isAr ? 'إجمالي الصفحات' : 'Total Pages'} htmlFor="book-total" required>
+                  <Input
+                    id="book-total"
+                    type="number"
+                    min={1}
+                    value={bookTotalPages}
+                    onChange={(e) => setBookTotalPages(Number(e.target.value))}
+                    className="tabular-nums"
+                  />
+                </Field>
+                <Field label={isAr ? 'الصفحة الحالية' : 'Current Page'} htmlFor="book-current">
+                  <Input
+                    id="book-current"
+                    type="number"
+                    min={0}
+                    value={bookCurrentPage}
+                    onChange={(e) => setBookCurrentPage(Number(e.target.value))}
+                    className="tabular-nums"
+                  />
+                </Field>
               </div>
-            </div>
-          )}
+              <Field label={isAr ? 'حالة القراءة' : 'Status'} htmlFor="book-status">
+                <Select id="book-status" value={bookStatus} onChange={(e) => setBookStatus(e.target.value as any)}>
+                  <option value="reading">{isAr ? 'أقرأ حالياً' : 'Currently Reading'}</option>
+                  <option value="want_to_read">{isAr ? 'قائمة الرغبات' : 'Want to Read'}</option>
+                  <option value="completed">{isAr ? 'مكتمل' : 'Completed'}</option>
+                </Select>
+              </Field>
+              {bookError && (
+                <p role="alert" className="text-[var(--fs-xs)] font-medium text-[var(--state-danger)]">
+                  {bookError}
+                </p>
+              )}
+            </form>
+          </Modal>
+
+          <Toast open={!!bookToast} message={bookToast || ''} tone="success" onClose={() => setBookToast(null)} />
         </div>
       )}
 
