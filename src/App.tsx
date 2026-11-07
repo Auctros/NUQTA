@@ -26,6 +26,7 @@ import { DrawingView } from './components/DrawingView';
 import { ArchiveHistoryView } from './components/ArchiveHistoryView';
 import { useNuqtaReminders } from './lib/useNuqtaReminders';
 import { CommandPalette, CommandItem } from './components/CommandPalette';
+import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { NuqtaNotificationEngine } from './lib/notifications';
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
     initializeStore();
@@ -67,6 +69,11 @@ export default function App() {
   // Global hotkeys (Q for new task, Escape to close sidebar)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'f' || e.key === 'F') && e.shiftKey && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setIsSearchOpen((open) => !open);
+        return;
+      }
       if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         setIsPaletteOpen((open) => !open);
@@ -207,6 +214,12 @@ export default function App() {
         onClose={() => setIsPaletteOpen(false)}
         items={paletteItems}
         isAr={isAr}
+      />
+      <GlobalSearchModal
+        open={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        isAr={isAr}
+        onOpenResult={(result) => setActiveNavTab(result.domain)}
       />
 
       {/* Mobile Scrim Backdrop */}
@@ -437,6 +450,16 @@ export default function App() {
               <span className="status-dot"></span>
               <span>{isAr ? 'محلي وآمن' : 'Local & private'}</span>
             </div>
+
+            {/* Global Search */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="icon-btn"
+              title={isAr ? 'البحث الشامل (Ctrl+Shift+F)' : 'Global Search (Ctrl+Shift+F)'}
+              aria-label={isAr ? 'البحث الشامل' : 'Global search'}
+            >
+              <NuqtaIcon name="search" className="w-4 h-4" />
+            </button>
 
             {/* Language Toggle */}
             <button
