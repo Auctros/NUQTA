@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { BookItem, BookCategory } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
+import { TabBar } from './ui';
+
+const STUDIO_TABS = [
+  { id: 'dashboard', ar: 'لوحة القراءة', en: 'Reading Dashboard' },
+  { id: 'session', ar: 'تسجيل جلسة', en: 'Log Session' },
+  { id: 'library', ar: 'خزانة ومكتبة الكتب', en: 'Book Vault' },
+  { id: 'quotes', ar: 'بنك الاقتباسات', en: 'Quotes Bank' },
+  { id: 'targets', ar: 'الأهداف والإيقاع', en: 'Targets & Pace' }
+];
 
 export const ReadingView: React.FC = () => {
   const {
@@ -390,67 +399,11 @@ export const ReadingView: React.FC = () => {
       </div>
 
       {/* 3. Studio Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-[var(--d-reading-raised)] rounded-xl border border-[var(--d-reading-border)] overflow-x-auto text-xs">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'dashboard'
-              ? 'bg-amber-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📊</span>
-          <span>{isAr ? 'لوحة القراءة' : 'Reading Dashboard'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('session')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'session'
-              ? 'bg-amber-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>✍️</span>
-          <span>{isAr ? 'تسجيل جلسة' : 'Log Session'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('library')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'library'
-              ? 'bg-amber-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📚</span>
-          <span>{isAr ? 'خزانة ومكتبة الكتب' : 'Book Vault'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('quotes')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'quotes'
-              ? 'bg-amber-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>💬</span>
-          <span>{isAr ? 'بنك الاقتباسات' : 'Quotes Bank'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('targets')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'targets'
-              ? 'bg-amber-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>🎯</span>
-          <span>{isAr ? 'الأهداف والإيقاع' : 'Targets & Pace'}</span>
-        </button>
-      </div>
+            <TabBar
+        items={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
+        value={activeTab}
+        onChange={(id) => setActiveTab(id as any)}
+      />
 
       {/* =========================================================================
           TAB 1: DASHBOARD

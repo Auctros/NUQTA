@@ -12,7 +12,15 @@ import {
   QuranSurahStatus
 } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { Badge, StatTile } from './ui';
+import { Badge, StatTile, TabBar } from './ui';
+
+const STUDIO_TABS = [
+  { id: 'dashboard', ar: 'لوحة المتابعة', en: 'Dashboard' },
+  { id: 'session', ar: 'جلسة حفظ / مراجعة', en: 'Live Session' },
+  { id: 'map', ar: 'خريطة المصحف (114 سورة)', en: 'Surah Map (114)' },
+  { id: 'schedule', ar: 'جدول المراجعة والورد', en: 'Revision Schedule' },
+  { id: 'history', ar: 'سجل الجلسات', en: 'History & Archive' }
+];
 
 export const QuranView: React.FC = () => {
   const {
@@ -368,67 +376,11 @@ export const QuranView: React.FC = () => {
       </div>
 
       {/* 3. Studio Navigation Tabs (Buttons) */}
-      <div className="flex items-center gap-1.5 p-1 bg-[var(--d-quran-surface)] rounded-xl border border-[var(--d-quran-border-strong)] overflow-x-auto text-xs">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'dashboard'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📊</span>
-          <span>{isAr ? 'لوحة المتابعة' : 'Dashboard'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('session')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'session'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>✍️</span>
-          <span>{isAr ? 'جلسة حفظ / مراجعة' : 'Live Session'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('map')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'map'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>🗺️</span>
-          <span>{isAr ? 'خريطة المصحف (114 سورة)' : 'Surah Map (114)'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('schedule')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'schedule'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📅</span>
-          <span>{isAr ? 'جدول المراجعة والورد' : 'Revision Schedule'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'history'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📜</span>
-          <span>{isAr ? 'سجل الجلسات' : 'History & Archive'}</span>
-        </button>
-      </div>
+            <TabBar
+        items={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
+        value={activeTab}
+        onChange={(id) => setActiveTab(id as any)}
+      />
 
       {/* =========================================================================
           TAB 1: DASHBOARD

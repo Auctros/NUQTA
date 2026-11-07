@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { WorkoutRoutine, ExerciseEntry, ExerciseSet } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
+import { TabBar } from './ui';
+
+const STUDIO_TABS = [
+  { id: 'dashboard', ar: 'لوحة اللياقة', en: 'Fitness Dashboard' },
+  { id: 'session', ar: 'تسجيل حصة تمرين', en: 'Log Workout' },
+  { id: 'routines', ar: 'برامج التمارين', en: 'Routines Vault' },
+  { id: 'history', ar: 'سجل الحصص', en: 'Workout History' },
+  { id: 'targets', ar: 'أهداف اللياقة', en: 'Fitness Targets' }
+];
 
 export const WorkoutView: React.FC = () => {
   const {
@@ -297,67 +306,11 @@ export const WorkoutView: React.FC = () => {
       </div>
 
       {/* 3. Studio Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-[var(--d-workout-surface)] rounded-xl border border-[var(--d-workout-border)] overflow-x-auto text-xs">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'dashboard'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📊</span>
-          <span>{isAr ? 'لوحة اللياقة' : 'Fitness Dashboard'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('session')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'session'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>⚡</span>
-          <span>{isAr ? 'تسجيل حصة تمرين' : 'Log Workout'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('routines')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'routines'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📋</span>
-          <span>{isAr ? 'برامج التمارين' : 'Routines Vault'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'history'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📜</span>
-          <span>{isAr ? 'سجل الحصص' : 'Workout History'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('targets')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'targets'
-              ? 'bg-emerald-500 text-black font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>🎯</span>
-          <span>{isAr ? 'أهداف اللياقة' : 'Fitness Targets'}</span>
-        </button>
-      </div>
+            <TabBar
+        items={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
+        value={activeTab}
+        onChange={(id) => setActiveTab(id as any)}
+      />
 
       {/* =========================================================================
           TAB 1: DASHBOARD

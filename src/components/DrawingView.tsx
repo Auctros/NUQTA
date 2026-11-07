@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { ArtMedium, ArtProject, ProjectStage } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
+import { TabBar } from './ui';
+
+const STUDIO_TABS = [
+  { id: 'dashboard', ar: 'لوحة المرسم', en: 'Studio Dashboard' },
+  { id: 'session', ar: 'تسجيل عمل جديد', en: 'Log Artwork' },
+  { id: 'projects', ar: 'مشاريع المرسم', en: 'Projects Vault' },
+  { id: 'gallery', ar: 'معرض الأعمال', en: 'Gallery' },
+  { id: 'targets', ar: 'أهداف التدفق', en: 'Creative Targets' }
+];
 
 export const DrawingView: React.FC = () => {
   const {
@@ -283,67 +292,11 @@ export const DrawingView: React.FC = () => {
       </div>
 
       {/* 3. Studio Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-[var(--d-drawing-surface)] rounded-xl border border-[var(--d-drawing-border)] overflow-x-auto text-xs">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'dashboard'
-              ? 'bg-purple-500 text-[var(--text-on-state)] font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📊</span>
-          <span>{isAr ? 'لوحة المرسم' : 'Studio Dashboard'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('session')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'session'
-              ? 'bg-purple-500 text-[var(--text-on-state)] font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>🎨</span>
-          <span>{isAr ? 'تسجيل عمل جديد' : 'Log Artwork'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('projects')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'projects'
-              ? 'bg-purple-500 text-[var(--text-on-state)] font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>📁</span>
-          <span>{isAr ? 'مشاريع المرسم' : 'Projects Vault'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('gallery')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'gallery'
-              ? 'bg-purple-500 text-[var(--text-on-state)] font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>🖼️</span>
-          <span>{isAr ? 'معرض الأعمال' : 'Gallery'}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('targets')}
-          className={`px-3.5 py-1.5 rounded-lg transition-all font-medium flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'targets'
-              ? 'bg-purple-500 text-[var(--text-on-state)] font-bold shadow-sm'
-              : 'text-muted hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <span>🎯</span>
-          <span>{isAr ? 'أهداف التدفق' : 'Creative Targets'}</span>
-        </button>
-      </div>
+            <TabBar
+        items={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
+        value={activeTab}
+        onChange={(id) => setActiveTab(id as any)}
+      />
 
       {/* =========================================================================
           TAB 1: DASHBOARD
