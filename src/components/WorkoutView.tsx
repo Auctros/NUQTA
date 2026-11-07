@@ -224,7 +224,7 @@ export const WorkoutView: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
         {/* Total Reps */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'إجمالي التكرارات' : 'Total Reps'}</span>
             <span className="text-[var(--d-workout-accent)] text-xs">⚡</span>
           </span>
@@ -234,14 +234,14 @@ export const WorkoutView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'تكرار' : 'reps'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'الهدف الشهري:' : 'Monthly Target:'} {workoutData.monthlyTargetReps || 500} {isAr ? 'تكرار' : 'reps'}
           </span>
         </div>
 
         {/* Workouts Logged */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'الحصص المنجزة' : 'Workouts Logged'}</span>
             <span className="text-[var(--state-info)] text-xs">✓</span>
           </span>
@@ -251,14 +251,14 @@ export const WorkoutView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'حصة' : 'sessions'}</span>
           </div>
-          <span className="text-[10px] text-muted block font-mono">
+          <span className="text-[var(--fs-micro)] text-muted block font-mono">
             ~{Math.round((workoutData.totalMinutes || 0) / 60)} {isAr ? 'ساعات تدريب' : 'hours total'}
           </span>
         </div>
 
         {/* Weekly Target Sessions */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'الهدف الأسبوعي' : 'Weekly Sessions'}</span>
             <span className="text-[var(--state-warning)] text-xs">🎯</span>
           </span>
@@ -268,14 +268,14 @@ export const WorkoutView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'حصص/أسبوع' : 'sessions/wk'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'انتظام مستمر' : 'Active Cadence'}
           </span>
         </div>
 
         {/* Streak */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'سلسلة النشاط' : 'Current Streak'}</span>
             <span className="text-accent text-xs">♨</span>
           </span>
@@ -285,21 +285,21 @@ export const WorkoutView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'أيام' : 'days'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'أطول سلسلة:' : 'Best:'} {workoutHabit.longestStreak || 0} {isAr ? 'يوم' : 'd'}
           </span>
         </div>
 
         {/* Favorite Routine */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1 col-span-2 sm:col-span-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'البرنامج المفضل' : 'Favorite Focus'}</span>
             <span className="text-[var(--d-workout-accent)] text-xs">🏆</span>
           </span>
           <strong className="text-xs font-bold text-[var(--text-primary)] block truncate">
             {workoutData.favoriteRoutine || (isAr ? 'وزن الجسم والبلانك' : 'Home Calisthenics')}
           </strong>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'تمارين حرة بدون أوزان' : 'Pure bodyweight'}
           </span>
         </div>
@@ -326,7 +326,7 @@ export const WorkoutView: React.FC = () => {
                     ⚡
                   </span>
                   <div>
-                    <span className="text-[10px] font-mono tracking-wider text-[var(--d-workout-accent)] uppercase block">
+                    <span className="text-[var(--fs-micro)] font-mono tracking-wider text-[var(--d-workout-accent)] uppercase block">
                       {isAr ? 'حصة التدريب المقترحة' : 'RECOMMENDED SESSION'}
                     </span>
                     <h2 className="text-base font-bold text-[var(--text-primary)]">
@@ -349,15 +349,15 @@ export const WorkoutView: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--d-workout-border-strong)] text-center text-xs">
                 <div className="p-2 rounded-lg bg-[var(--d-workout-raised)]">
-                  <span className="text-[10px] text-muted block">{isAr ? 'ضغط (Push)' : 'Push-ups'}</span>
+                  <span className="text-[var(--fs-micro)] text-muted block">{isAr ? 'ضغط (Push)' : 'Push-ups'}</span>
                   <strong className="text-[var(--d-workout-accent)] font-mono">3 × 15</strong>
                 </div>
                 <div className="p-2 rounded-lg bg-[var(--d-workout-raised)]">
-                  <span className="text-[10px] text-muted block">{isAr ? 'سكوات (Legs)' : 'Air Squats'}</span>
+                  <span className="text-[var(--fs-micro)] text-muted block">{isAr ? 'سكوات (Legs)' : 'Air Squats'}</span>
                   <strong className="text-[var(--d-workout-accent)] font-mono">3 × 20</strong>
                 </div>
                 <div className="p-2 rounded-lg bg-[var(--d-workout-raised)]">
-                  <span className="text-[10px] text-muted block">{isAr ? 'بلانك (Core)' : 'Plank'}</span>
+                  <span className="text-[var(--fs-micro)] text-muted block">{isAr ? 'بلانك (Core)' : 'Plank'}</span>
                   <strong className="text-[var(--d-workout-accent)] font-mono">3 × 45s</strong>
                 </div>
               </div>
@@ -389,13 +389,13 @@ export const WorkoutView: React.FC = () => {
                     >
                       <div>
                         <strong className="text-[var(--text-primary)] block truncate">{s.title}</strong>
-                        <span className="text-[11px] text-muted flex items-center gap-2 mt-0.5 font-mono">
+                        <span className="text-[var(--fs-xs)] text-muted flex items-center gap-2 mt-0.5 font-mono">
                           <span>{s.date}</span>
                           <span>· {s.durationMinutes}m</span>
                           <span>· {(s.totalReps || 0)} {isAr ? 'تكرار' : 'reps'}</span>
                           <span>· RPE {s.intensityRating}/5</span>
                         </span>
-                        {s.notes && <p className="text-[11px] text-muted/80 mt-1 italic">"{s.notes}"</p>}
+                        {s.notes && <p className="text-[var(--fs-xs)] text-muted/80 mt-1 italic">"{s.notes}"</p>}
                       </div>
                       <span className="text-[var(--d-workout-accent)] font-mono font-bold text-xs">
                         +{s.totalReps || 0} {isAr ? 'تكرار' : 'reps'}
@@ -438,7 +438,7 @@ export const WorkoutView: React.FC = () => {
                   >
                     <div>
                       <strong className="text-[var(--text-primary)] block group-hover:text-[var(--d-workout-accent)]">{r.name}</strong>
-                      <span className="text-[10px] text-muted">{r.mins}m · {r.level}</span>
+                      <span className="text-[var(--fs-micro)] text-muted">{r.mins}m · {r.level}</span>
                     </div>
                     <span className="text-[var(--d-workout-accent)] text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                       {isAr ? 'بدء ↗' : 'Start ↗'}
@@ -454,7 +454,7 @@ export const WorkoutView: React.FC = () => {
                 <span>✦</span>
                 <span>{isAr ? 'ربط حي مع صحة اليوم' : 'Live Health Sync'}</span>
               </span>
-              <p className="text-muted leading-relaxed text-[11px]">
+              <p className="text-muted leading-relaxed text-[var(--fs-xs)]">
                 {isAr
                   ? 'تسجيل أي حصة تدريبية هنا يرفع طاقة اليوم تلقائياً، ويوثق نشاطك الرياضي في لوحة الصحة العامة وذكاء الأهداف.'
                   : 'Logging a session automatically updates your daily energy gauge and syncs to goals.'}
@@ -626,7 +626,7 @@ export const WorkoutView: React.FC = () => {
               <div key={i} className="p-4 rounded-xl border border-[var(--d-workout-border)] bg-[var(--d-workout-surface)] space-y-3 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-[var(--d-workout-accent-strong)] border border-emerald-500/30">
+                    <span className="text-[var(--fs-micro)] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-[var(--d-workout-accent-strong)] border border-emerald-500/30">
                       {rt.mins}m
                     </span>
                     <span className="text-xs text-muted">{rt.focus}</span>
@@ -685,14 +685,14 @@ export const WorkoutView: React.FC = () => {
                 >
                   <div>
                     <strong className="text-[var(--text-primary)] block truncate">{s.title}</strong>
-                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted font-mono">
+                    <div className="flex items-center gap-2 mt-0.5 text-[var(--fs-xs)] text-muted font-mono">
                       <span>{s.date}</span>
                       <span>· {s.durationMinutes}m</span>
                       <span>· {s.totalReps || 0} {isAr ? 'تكرار' : 'reps'}</span>
                       <span>· RPE {s.intensityRating}/5</span>
                       <span>· {s.workoutType}</span>
                     </div>
-                    {s.notes && <p className="text-[11px] text-muted/80 mt-1 italic">"{s.notes}"</p>}
+                    {s.notes && <p className="text-[var(--fs-xs)] text-muted/80 mt-1 italic">"{s.notes}"</p>}
                   </div>
                   <span className="text-[var(--d-workout-accent)] font-mono font-bold text-xs shrink-0">
                     +{s.totalReps || 0} {isAr ? 'تكرار' : 'reps'}

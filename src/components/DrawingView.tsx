@@ -210,7 +210,7 @@ export const DrawingView: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
         {/* Total Artworks */}
         <div className="p-3.5 rounded-xl border border-purple-500/20 bg-[var(--d-drawing-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'الأعمال والاسكتشات' : 'Artworks & Sketches'}</span>
             <span className="text-[var(--d-drawing-accent)] text-xs">🎨</span>
           </span>
@@ -220,14 +220,14 @@ export const DrawingView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'عمل' : 'pieces'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'معرض الأعمال المكتملة' : 'Completed gallery'}
           </span>
         </div>
 
         {/* Active Projects */}
         <div className="p-3.5 rounded-xl border border-purple-500/20 bg-[var(--d-drawing-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'المشاريع الجارية' : 'Active Projects'}</span>
             <span className="text-blue-400 text-xs">📁</span>
           </span>
@@ -237,14 +237,14 @@ export const DrawingView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'مشاريع' : 'projects'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'خطوات إنتاج مستمرة' : 'In pipeline'}
           </span>
         </div>
 
         {/* Total Flow Hours */}
         <div className="p-3.5 rounded-xl border border-purple-500/20 bg-[var(--d-drawing-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'ساعات التدفق' : 'Flow Hours'}</span>
             <span className="text-[var(--state-warning)] text-xs">⌛</span>
           </span>
@@ -254,14 +254,14 @@ export const DrawingView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{(drawingData.totalDrawingMinutes || 0) % 60}m</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'الهدف الأسبوعي:' : 'Target:'} {drawingData.weeklyTargetHours || 3}h {isAr ? 'أسبوعياً' : '/wk'}
           </span>
         </div>
 
         {/* Streak */}
         <div className="p-3.5 rounded-xl border border-purple-500/20 bg-[var(--d-drawing-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'الانتظام في الرسم' : 'Current Streak'}</span>
             <span className="text-accent text-xs">♨</span>
           </span>
@@ -271,21 +271,21 @@ export const DrawingView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'أيام' : 'days'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'أطول سلسلة:' : 'Best:'} {drawingHabit.longestStreak || 0} {isAr ? 'يوم' : 'd'}
           </span>
         </div>
 
         {/* Favorite Medium */}
         <div className="p-3.5 rounded-xl border border-purple-500/20 bg-[var(--d-drawing-surface)] space-y-1 col-span-2 sm:col-span-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'الوسيط المفضل' : 'Favorite Medium'}</span>
             <span className="text-[var(--d-drawing-accent)] text-xs">✏️</span>
           </span>
           <strong className="text-xs font-bold text-[var(--text-primary)] block capitalize truncate">
             {drawingData.favoriteMedium || 'Pencil / Sketch'}
           </strong>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'الرسم والتدريب اليدوي' : 'Traditional / Digital'}
           </span>
         </div>
@@ -312,7 +312,7 @@ export const DrawingView: React.FC = () => {
                     🎨
                   </span>
                   <div>
-                    <span className="text-[10px] font-mono tracking-wider text-[var(--d-drawing-accent)] uppercase block">
+                    <span className="text-[var(--fs-micro)] font-mono tracking-wider text-[var(--d-drawing-accent)] uppercase block">
                       {isAr ? 'جلسة التدفق الإبداعي' : 'CREATIVE FLOW SESSION'}
                     </span>
                     <h2 className="text-base font-bold text-[var(--text-primary)]">
@@ -360,13 +360,13 @@ export const DrawingView: React.FC = () => {
                     >
                       <div>
                         <strong className="text-[var(--text-primary)] block truncate">{p.title}</strong>
-                        <span className="text-[11px] text-muted flex items-center gap-2 mt-0.5 font-mono">
+                        <span className="text-[var(--fs-xs)] text-muted flex items-center gap-2 mt-0.5 font-mono">
                           <span>{p.completedDate}</span>
                           <span>· {p.durationMinutes}m</span>
                           <span>· {p.medium}</span>
                           {p.projectTitle ? <span>· {p.projectTitle}</span> : null}
                         </span>
-                        {p.notes && <p className="text-[11px] text-muted/80 mt-1 italic">"{p.notes}"</p>}
+                        {p.notes && <p className="text-[var(--fs-xs)] text-muted/80 mt-1 italic">"{p.notes}"</p>}
                       </div>
                       <span className="text-[var(--d-drawing-accent)] font-mono text-xs font-bold">
                         {p.durationMinutes}m {isAr ? 'تدفق' : 'flow'}
@@ -400,11 +400,11 @@ export const DrawingView: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <strong className="text-[var(--text-primary)] truncate block">{proj.title}</strong>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/15 text-[var(--d-drawing-accent-strong)]">
+                      <span className="text-[var(--fs-micro)] font-mono px-1.5 py-0.5 rounded bg-purple-500/15 text-[var(--d-drawing-accent-strong)]">
                         {proj.medium}
                       </span>
                     </div>
-                    <span className="text-[10px] text-muted block">
+                    <span className="text-[var(--fs-micro)] text-muted block">
                       {proj.sessionsCount || 0} {isAr ? 'جلسات' : 'sessions'} · {proj.totalMinutesSpent || 0}m {isAr ? 'تدفق' : 'spent'}
                     </span>
                   </div>
@@ -561,16 +561,16 @@ export const DrawingView: React.FC = () => {
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-[var(--d-drawing-accent-strong)]">
+                    <span className="text-[var(--fs-micro)] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-[var(--d-drawing-accent-strong)]">
                       {proj.medium}
                     </span>
-                    <span className="text-[10px] text-muted">{proj.startedDate}</span>
+                    <span className="text-[var(--fs-micro)] text-muted">{proj.startedDate}</span>
                   </div>
                   <h3 className="font-bold text-[var(--text-primary)] text-sm">{proj.title}</h3>
                   {proj.description && <p className="text-xs text-muted mt-1">{proj.description}</p>}
                 </div>
 
-                <div className="pt-2 border-t border-[var(--d-drawing-border-soft)] flex items-center justify-between text-[11px] text-muted">
+                <div className="pt-2 border-t border-[var(--d-drawing-border-soft)] flex items-center justify-between text-[var(--fs-xs)] text-muted">
                   <span>{proj.sessionsCount || 0} {isAr ? 'جلسات' : 'sessions'} · {proj.totalMinutesSpent || 0}m</span>
                   <button
                     onClick={() => {
@@ -654,17 +654,17 @@ export const DrawingView: React.FC = () => {
                 >
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-[var(--d-drawing-accent-strong)]">
+                      <span className="text-[var(--fs-micro)] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-[var(--d-drawing-accent-strong)]">
                         {p.medium}
                       </span>
-                      <span className="text-[10px] text-muted">{p.completedDate}</span>
+                      <span className="text-[var(--fs-micro)] text-muted">{p.completedDate}</span>
                     </div>
                     <strong className="text-[var(--text-primary)] block text-sm">{p.title}</strong>
-                    {p.projectTitle && <span className="text-[11px] text-muted block mt-0.5">{p.projectTitle}</span>}
-                    {p.notes && <p className="text-[11px] text-muted/80 mt-1 italic">"{p.notes}"</p>}
+                    {p.projectTitle && <span className="text-[var(--fs-xs)] text-muted block mt-0.5">{p.projectTitle}</span>}
+                    {p.notes && <p className="text-[var(--fs-xs)] text-muted/80 mt-1 italic">"{p.notes}"</p>}
                   </div>
 
-                  <div className="pt-2 border-t border-[var(--d-drawing-border-soft)] flex items-center justify-between text-[11px]">
+                  <div className="pt-2 border-t border-[var(--d-drawing-border-soft)] flex items-center justify-between text-[var(--fs-xs)]">
                     <span className="font-mono text-[var(--d-drawing-accent)]">{p.durationMinutes}m {isAr ? 'تدفق' : 'flow'}</span>
                     <button
                       onClick={() => {

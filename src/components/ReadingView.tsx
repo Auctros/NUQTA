@@ -368,7 +368,7 @@ export const ReadingView: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
         {/* Total Pages Read */}
         <div className="p-3.5 rounded-xl border border-amber-500/20 bg-[var(--d-reading-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'الصفحات المنجزة' : 'Pages Read'}</span>
             <span className="text-[var(--d-reading-accent)] text-xs">📖</span>
           </span>
@@ -378,14 +378,14 @@ export const ReadingView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'ص' : 'pages'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             ~{Math.round(readingData.totalReadingMinutes / 60)} {isAr ? 'ساعات قراءة' : 'reading hours'}
           </span>
         </div>
 
         {/* Books Finished */}
         <div className="p-3.5 rounded-xl border border-amber-500/20 bg-[var(--d-reading-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'الكتب المكتملة' : 'Finished Books'}</span>
             <span className="text-[var(--d-reading-accent)] text-xs">📚</span>
           </span>
@@ -395,14 +395,14 @@ export const ReadingView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted font-mono">/ {readingData.annualTargetBooks}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {readingBooks.length} {isAr ? 'قيد القراءة حالياً' : 'in progress'}
           </span>
         </div>
 
         {/* Today's Reading */}
         <div className="p-3.5 rounded-xl border border-amber-500/20 bg-[var(--d-reading-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'قراءة اليوم' : 'Read Today'}</span>
             <span className="text-[var(--state-success)] text-xs">✓</span>
           </span>
@@ -412,14 +412,14 @@ export const ReadingView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted font-mono">/ {readingData.dailyTargetPages || 20} {isAr ? 'ص' : 'p'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'الهدف الأسبوعي:' : 'Week:'} {pagesReadThisWeek}/{readingData.weeklyTargetPages || 140} {isAr ? 'ص' : 'p'}
           </span>
         </div>
 
         {/* Reading Speed */}
         <div className="p-3.5 rounded-xl border border-amber-500/20 bg-[var(--d-reading-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'سرعة الاستيعاب' : 'Average Pace'}</span>
             <span className="text-accent text-xs">⚡</span>
           </span>
@@ -429,14 +429,14 @@ export const ReadingView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'ص/س' : 'pages/hr'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {estMinutesToFinish > 0 ? `~${estMinutesToFinish}m ${isAr ? 'لختم الكتاب' : 'to finish'}` : (isAr ? 'مكتمل' : 'Completed')}
           </span>
         </div>
 
         {/* Quotes Bank Count */}
         <div className="p-3.5 rounded-xl border border-amber-500/20 bg-[var(--d-reading-surface)] space-y-1 col-span-2 sm:col-span-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'بنك الاقتباسات' : 'Quote Sanctuary'}</span>
             <span className="text-[var(--state-purple)] text-xs">💬</span>
           </span>
@@ -446,7 +446,7 @@ export const ReadingView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'اقتباس' : 'quotes'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {readingHabit.currentStreak || 0} {isAr ? 'يوم سلسلة متصلة' : 'days streak'}
           </span>
         </div>
@@ -477,7 +477,7 @@ export const ReadingView: React.FC = () => {
                       📖
                     </div>
                     <div>
-                      <span className="text-[10px] font-mono tracking-wider text-[var(--d-reading-accent)] uppercase block">
+                      <span className="text-[var(--fs-micro)] font-mono tracking-wider text-[var(--d-reading-accent)] uppercase block">
                         {isAr ? 'الكتاب الجاري قراءته حالياً' : 'ACTIVE BOOK'}
                       </span>
                       <h2 className="text-base md:text-lg font-bold text-[var(--text-primary)] truncate max-w-md">
@@ -515,7 +515,7 @@ export const ReadingView: React.FC = () => {
                       style={{ width: `${activeProgress}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-muted">
+                  <div className="flex items-center justify-between text-[var(--fs-xs)] text-muted">
                     <span>{pagesLeft} {isAr ? 'صفحة متبقية' : 'pages left'}</span>
                     <span>~{estMinutesToFinish} {isAr ? 'دقيقة لختم الكتاب' : 'mins to finish'}</span>
                   </div>
@@ -553,13 +553,13 @@ export const ReadingView: React.FC = () => {
                     >
                       <div>
                         <strong className="text-[var(--text-primary)] block truncate">{s.bookTitle}</strong>
-                        <span className="text-[11px] text-muted flex items-center gap-2 mt-0.5 font-mono">
+                        <span className="text-[var(--fs-xs)] text-muted flex items-center gap-2 mt-0.5 font-mono">
                           <span>{s.date}</span>
                           <span>· {s.pagesRead} {isAr ? 'ص' : 'pages'}</span>
                           <span>· {s.durationMinutes}m</span>
                           <span>· {s.speedPagesPerHour} {isAr ? 'ص/س' : 'p/h'}</span>
                         </span>
-                        {s.notes && <p className="text-[11px] text-muted/80 mt-1 italic">"{s.notes}"</p>}
+                        {s.notes && <p className="text-[var(--fs-xs)] text-muted/80 mt-1 italic">"{s.notes}"</p>}
                       </div>
                       <span className="text-[var(--d-reading-accent)] font-mono font-bold text-xs">
                         +{s.pagesRead} {isAr ? 'ص' : 'p'}
@@ -600,7 +600,7 @@ export const ReadingView: React.FC = () => {
                   >
                     <div className="min-w-0 flex-1">
                       <strong className="block truncate text-[var(--text-primary)]">{b.title}</strong>
-                      <span className="text-[10px] text-muted">{b.author}</span>
+                      <span className="text-[var(--fs-micro)] text-muted">{b.author}</span>
                     </div>
                     <span className="font-mono text-[var(--d-reading-accent)] text-xs shrink-0">
                       {Math.round((b.currentPage / Math.max(1, b.totalPages)) * 100)}%
@@ -617,10 +617,10 @@ export const ReadingView: React.FC = () => {
                   <span>💬</span>
                   <span>{isAr ? 'شذرة من خزانة الاقتباسات' : 'Sanctuary Quote'}</span>
                 </span>
-                <p className="text-[var(--text-primary)] italic leading-relaxed text-[11px]">
+                <p className="text-[var(--text-primary)] italic leading-relaxed text-[var(--fs-xs)]">
                   "{readingData.quotes[0].quote}"
                 </p>
-                <div className="flex justify-between text-[10px] text-[var(--state-purple)] pt-1 border-t border-purple-500/20 font-mono">
+                <div className="flex justify-between text-[var(--fs-micro)] text-[var(--state-purple)] pt-1 border-t border-purple-500/20 font-mono">
                   <span>{readingData.quotes[0].author || (isAr ? 'مؤلف' : 'Author')}</span>
                   {readingData.quotes[0].page && <span>{isAr ? 'صفحة' : 'Page'} {readingData.quotes[0].page}</span>}
                 </div>
@@ -740,7 +740,7 @@ export const ReadingView: React.FC = () => {
         <div className="space-y-4">
           <div className="p-4 rounded-xl border border-[var(--d-reading-border)] bg-[var(--d-reading-surface)] flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-muted text-[11px]">{isAr ? 'الحالة:' : 'Filter:'}</span>
+              <span className="text-muted text-[var(--fs-xs)]">{isAr ? 'الحالة:' : 'Filter:'}</span>
               {(['all', 'reading', 'completed', 'want_to_read'] as const).map((filter) => (
                 <button
                   key={filter}
@@ -786,8 +786,8 @@ export const ReadingView: React.FC = () => {
                       </div>
                       <div className="min-w-0">
                         <strong className="text-xs text-[var(--text-primary)] block truncate">{b.title}</strong>
-                        <span className="text-[11px] text-muted block truncate">{b.author}</span>
-                        <span className="text-[10px] text-[var(--d-reading-accent)] font-mono mt-0.5 block">
+                        <span className="text-[var(--fs-xs)] text-muted block truncate">{b.author}</span>
+                        <span className="text-[var(--fs-micro)] text-[var(--d-reading-accent)] font-mono mt-0.5 block">
                           {b.currentPage} / {b.totalPages} {isAr ? 'ص' : 'p'} ({progress}%)
                         </span>
                       </div>
@@ -798,7 +798,7 @@ export const ReadingView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-[var(--d-reading-border-soft)] flex items-center justify-between text-[11px]">
+                  <div className="pt-2 border-t border-[var(--d-reading-border-soft)] flex items-center justify-between text-[var(--fs-xs)]">
                     <button
                       onClick={() => {
                         if (readingHabit) setActiveBook(readingHabit.id, b.id);
@@ -933,8 +933,8 @@ export const ReadingView: React.FC = () => {
                   key={q.id}
                   className="p-4 rounded-xl border border-purple-500/20 bg-[var(--d-reading-raised)] space-y-2 text-xs flex flex-col justify-between"
                 >
-                  <p className="text-[var(--text-primary)]/95 italic leading-relaxed text-[11px]">"{q.quote}"</p>
-                  <div className="flex items-center justify-between text-[10px] text-[var(--state-purple)] pt-2 border-t border-purple-500/15">
+                  <p className="text-[var(--text-primary)]/95 italic leading-relaxed text-[var(--fs-xs)]">"{q.quote}"</p>
+                  <div className="flex items-center justify-between text-[var(--fs-micro)] text-[var(--state-purple)] pt-2 border-t border-purple-500/15">
                     <span>
                       {q.author} {q.bookTitle ? `· ${q.bookTitle}` : ''} {q.page ? `(ص ${q.page})` : ''}
                     </span>

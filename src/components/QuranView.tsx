@@ -286,7 +286,7 @@ export const QuranView: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
         {/* Total Distinct Ayahs */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-quran-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'الآيات المحفوظة فعلياً' : 'Ayahs Memorized'}</span>
             <span className="text-[var(--d-quran-accent)] text-xs">📜</span>
           </span>
@@ -302,14 +302,14 @@ export const QuranView: React.FC = () => {
               style={{ width: `${percentOfQuran}%` }}
             />
           </div>
-          <span className="text-[10px] text-[var(--d-quran-accent-strong)] font-mono block">
+          <span className="text-[var(--fs-micro)] text-[var(--d-quran-accent-strong)] font-mono block">
             {percentOfQuran}% {isAr ? 'من القرآن الكريم' : 'of Quran'}
           </span>
         </div>
 
         {/* Completed Surahs */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-quran-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'السور المكتملة' : 'Completed Surahs'}</span>
             <span className="text-[var(--d-quran-accent)] text-xs">🕌</span>
           </span>
@@ -319,14 +319,14 @@ export const QuranView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted font-mono">/ {TOTAL_QURAN_SURAHS}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {surahsState.filter((s) => s.status === 'in_progress').length} {isAr ? 'سور قيد الحفظ' : 'in progress'}
           </span>
         </div>
 
         {/* Today's Accomplishments */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-quran-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'إنجاز ورد اليوم' : 'Today\'s Output'}</span>
             <span className="text-[var(--state-warning)] text-xs">☀️</span>
           </span>
@@ -336,14 +336,14 @@ export const QuranView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'آية حفظ' : 'ayahs'}</span>
           </div>
-          <span className="text-[10px] text-muted block font-mono">
+          <span className="text-[var(--fs-micro)] text-muted block font-mono">
             {todayMinutes} {isAr ? 'دقيقة تدبر وحفظ' : 'mins logged'}
           </span>
         </div>
 
         {/* Streak */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-quran-surface)] space-y-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
+          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
             <span>{isAr ? 'الانتظام في الورد' : 'Current Streak'}</span>
             <span className="text-accent text-xs">♨</span>
           </span>
@@ -353,7 +353,7 @@ export const QuranView: React.FC = () => {
             </strong>
             <span className="text-xs text-muted">{isAr ? 'أيام متتالية' : 'days'}</span>
           </div>
-          <span className="text-[10px] text-muted block">
+          <span className="text-[var(--fs-micro)] text-muted block">
             {isAr ? 'أطول سلسلة:' : 'Best:'} {quranHabit.longestStreak || 0} {isAr ? 'يوم' : 'd'}
           </span>
         </div>
@@ -397,7 +397,7 @@ export const QuranView: React.FC = () => {
                     📖
                   </span>
                   <div>
-                    <span className="text-[10px] font-mono tracking-wider text-[var(--d-quran-accent)] uppercase block">
+                    <span className="text-[var(--fs-micro)] font-mono tracking-wider text-[var(--d-quran-accent)] uppercase block">
                       {isAr ? 'السورة الجارية في الحفظ' : 'ACTIVE MEMORIZATION SURAH'}
                     </span>
                     <h2 className="text-lg font-bold text-[var(--text-primary)]">
@@ -439,7 +439,7 @@ export const QuranView: React.FC = () => {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-muted pt-1">
+                    <div className="flex items-center justify-between text-[var(--fs-xs)] text-muted pt-1">
                       <span>
                         {isAr ? 'مكان النزول:' : 'Revelation:'}{' '}
                         {selectedSurahMeta.place === 'makkah' ? (isAr ? 'مكية' : 'Meccan') : (isAr ? 'مدنية' : 'Medinan')}
@@ -498,7 +498,7 @@ export const QuranView: React.FC = () => {
                           <strong className="text-[var(--text-primary)] block truncate">
                             سورة {s.surahName} (الآيات {s.ayahStart} إلى {s.ayahEnd})
                           </strong>
-                          <span className="text-[11px] text-muted flex items-center gap-2 mt-0.5">
+                          <span className="text-[var(--fs-xs)] text-muted flex items-center gap-2 mt-0.5">
                             <span>{s.date}</span>
                             <span>· {s.ayahCount} {isAr ? 'آيات' : 'ayahs'}</span>
                             <span>· {s.durationMinutes}m</span>
@@ -507,7 +507,7 @@ export const QuranView: React.FC = () => {
                       </div>
 
                       <span
-                        className={`text-[10px] px-2 py-0.5 rounded font-medium border shrink-0 ${
+                        className={`text-[var(--fs-micro)] px-2 py-0.5 rounded font-medium border shrink-0 ${
                           s.quality === 'excellent'
                             ? 'bg-emerald-500/15 text-[var(--d-quran-accent-strong)] border-emerald-500/30'
                             : s.quality === 'very_good'
@@ -541,7 +541,7 @@ export const QuranView: React.FC = () => {
                   <span>🔁</span>
                   <span>{isAr ? 'السور المستحقة للمراجعة' : 'Due for Revision'}</span>
                 </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-teal-500/15 text-[var(--state-info-strong)] border border-teal-500/30">
+                <span className="text-[var(--fs-micro)] font-mono px-2 py-0.5 rounded bg-teal-500/15 text-[var(--state-info-strong)] border border-teal-500/30">
                   {isAr ? 'تثبيت الحفظ' : 'Active Cadence'}
                 </span>
               </div>
@@ -577,7 +577,7 @@ export const QuranView: React.FC = () => {
                             <strong className="text-[var(--text-primary)] block group-hover:text-[var(--d-quran-accent)]">
                               {meta.number}. سورة {meta.nameAr}
                             </strong>
-                            <span className="text-[10px] text-muted">
+                            <span className="text-[var(--fs-micro)] text-muted">
                               {s.memorizedAyahsCount} {isAr ? 'آية محفوظة' : 'ayahs'} · {s.status === 'completed' ? (isAr ? 'مكتملة' : 'Done') : (isAr ? 'قيد الحفظ' : 'In Progress')}
                             </span>
                           </div>
@@ -599,7 +599,7 @@ export const QuranView: React.FC = () => {
                 <span>✦</span>
                 <span>{isAr ? 'قاعدة الحفظ الراسخ' : 'Golden Rule of Retention'}</span>
               </span>
-              <p className="text-muted leading-relaxed text-[11px]">
+              <p className="text-muted leading-relaxed text-[var(--fs-xs)]">
                 {isAr
                   ? '«ما تكرر تقرر» — المراجعة اليومية المنتظمة للقديم والحديث أهم من الاستكثار من الحفظ الجديد دون تثبيت. خصص ثلثي وقتك للمراجعة والتسميع.'
                   : 'Spaced repetition preserves cognitive anchors. Anchor 70% of study time into active retrieval and revision.'}
@@ -761,7 +761,7 @@ export const QuranView: React.FC = () => {
                         key={mins}
                         type="button"
                         onClick={() => setDurationMinutes(mins)}
-                        className="px-2 py-1 rounded bg-[var(--d-quran-chip)] border border-[var(--d-quran-border-strong)] text-[10px] text-muted hover:text-[var(--text-primary)]"
+                        className="px-2 py-1 rounded bg-[var(--d-quran-chip)] border border-[var(--d-quran-border-strong)] text-[var(--fs-micro)] text-muted hover:text-[var(--text-primary)]"
                       >
                         {mins}m
                       </button>
@@ -855,7 +855,7 @@ export const QuranView: React.FC = () => {
 
             {/* Status Filter */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-muted text-[11px]">{isAr ? 'الحالة:' : 'Status:'}</span>
+              <span className="text-muted text-[var(--fs-xs)]">{isAr ? 'الحالة:' : 'Status:'}</span>
               {(['all', 'completed', 'in_progress', 'needs_revision', 'not_started'] as const).map((st) => (
                 <button
                   key={st}
@@ -881,7 +881,7 @@ export const QuranView: React.FC = () => {
 
             {/* Juz Filter */}
             <div className="flex items-center gap-1.5">
-              <span className="text-muted text-[11px]">{isAr ? 'الجزء:' : 'Juz:'}</span>
+              <span className="text-muted text-[var(--fs-xs)]">{isAr ? 'الجزء:' : 'Juz:'}</span>
               <select
                 className="select text-xs"
                 value={mapJuzFilter}
@@ -930,7 +930,7 @@ export const QuranView: React.FC = () => {
                           <strong className="text-xs text-[var(--text-primary)] block">
                             سورة {meta.nameAr}
                           </strong>
-                          <span className="text-[10px] text-muted block">
+                          <span className="text-[var(--fs-micro)] text-muted block">
                             {meta.nameEn} · {meta.totalAyahs} {isAr ? 'آية' : 'ayahs'}
                           </span>
                         </div>
@@ -957,7 +957,7 @@ export const QuranView: React.FC = () => {
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <div className="flex justify-between text-[10px] text-muted font-mono">
+                      <div className="flex justify-between text-[var(--fs-micro)] text-muted font-mono">
                         <span>{memorizedCount}/{meta.totalAyahs} {isAr ? 'آية' : 'ayahs'}</span>
                         <span>{pct}%</span>
                       </div>
@@ -965,8 +965,8 @@ export const QuranView: React.FC = () => {
                   </div>
 
                   {/* Card Action */}
-                  <div className="pt-2 border-t border-[var(--d-quran-border-soft)] flex items-center justify-between text-[11px]">
-                    <span className="text-muted text-[10px]">
+                  <div className="pt-2 border-t border-[var(--d-quran-border-soft)] flex items-center justify-between text-[var(--fs-xs)]">
+                    <span className="text-muted text-[var(--fs-micro)]">
                       {isAr ? 'جزء' : 'Juz'} {meta.juzStart}
                     </span>
                     <button
@@ -1041,7 +1041,7 @@ export const QuranView: React.FC = () => {
               </select>
             </div>
 
-            <div className="p-4 rounded-xl bg-[var(--d-quran-raised)] border border-[var(--d-quran-border)] space-y-2 text-[11px]">
+            <div className="p-4 rounded-xl bg-[var(--d-quran-raised)] border border-[var(--d-quran-border)] space-y-2 text-[var(--fs-xs)]">
               <strong className="text-[var(--text-primary)] block font-semibold">
                 {isAr ? 'المنهجية المقترحة في الورد:' : 'Recommended Framework:'}
               </strong>
@@ -1105,14 +1105,14 @@ export const QuranView: React.FC = () => {
                       <strong className="text-[var(--text-primary)] block truncate">
                         سورة {s.surahName} (الآيات {s.ayahStart} - {s.ayahEnd})
                       </strong>
-                      <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted font-mono">
+                      <div className="flex items-center gap-2 mt-0.5 text-[var(--fs-xs)] text-muted font-mono">
                         <span>{s.date}</span>
                         <span>· {s.ayahCount} {isAr ? 'آية' : 'ayahs'}</span>
                         <span>· {s.durationMinutes}m</span>
                         {s.mistakesCount ? <span>· {s.mistakesCount} {isAr ? 'أخطاء' : 'mistakes'}</span> : null}
                       </div>
                       {s.notes && (
-                        <p className="text-[11px] text-muted/80 mt-1 italic truncate">
+                        <p className="text-[var(--fs-xs)] text-muted/80 mt-1 italic truncate">
                           "{s.notes}"
                         </p>
                       )}
@@ -1121,7 +1121,7 @@ export const QuranView: React.FC = () => {
 
                   <div className="flex items-center gap-2 shrink-0">
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
+                      className={`text-[var(--fs-micro)] px-2 py-0.5 rounded font-medium border ${
                         s.quality === 'excellent'
                           ? 'bg-emerald-500/15 text-[var(--d-quran-accent-strong)] border-emerald-500/30'
                           : s.quality === 'very_good'
