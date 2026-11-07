@@ -25,6 +25,7 @@ import { WorkoutView } from './components/WorkoutView';
 import { DrawingView } from './components/DrawingView';
 import { ArchiveHistoryView } from './components/ArchiveHistoryView';
 import { useNuqtaReminders } from './lib/useNuqtaReminders';
+import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { NuqtaNotificationEngine } from './lib/notifications';
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
   useEffect(() => {
     initializeStore();
@@ -65,6 +67,11 @@ export default function App() {
   // Global hotkeys (Q for new task, Escape to close sidebar)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setIsPaletteOpen((open) => !open);
+        return;
+      }
       if (e.key === 'Escape') {
         setSidebarOpen(false);
         return;
@@ -129,6 +136,41 @@ export default function App() {
     { id: 'insights', label: isAr ? 'الرؤى' : 'Insights', icon: 'chart' }
   ];
 
+  const paletteItems: CommandItem[] = [
+    ...[...workspaceNav, ...studiosNav, ...lifeNav].map((item) => ({
+      id: `nav-${item.id}`,
+      label: item.label,
+      hint: isAr ? 'صفحة' : 'Page',
+      group: isAr ? 'التنقل' : 'Navigate',
+      keywords: [String(item.id)],
+      run: () => setActiveNavTab(item.id)
+    })),
+    {
+      id: 'act-settings',
+      label: isAr ? 'الإعدادات والبيانات' : 'Settings & Data',
+      hint: isAr ? 'إجراء' : 'Action',
+      group: isAr ? 'إجراءات' : 'Actions',
+      keywords: ['settings', 'preferences', 'data', 'backup'],
+      run: () => setActiveNavTab('settings')
+    },
+    {
+      id: 'act-simulator',
+      label: isAr ? 'محاكي التراكم (ماذا لو)' : 'What-If Simulator',
+      hint: isAr ? 'إجراء' : 'Action',
+      group: isAr ? 'إجراءات' : 'Actions',
+      keywords: ['simulator', 'what if'],
+      run: () => setActiveNavTab('simulator')
+    },
+    {
+      id: 'act-focus',
+      label: isAr ? 'بدء جلسة تركيز' : 'Start a Focus Session',
+      hint: isAr ? 'إجراء' : 'Action',
+      group: isAr ? 'إجراءات' : 'Actions',
+      keywords: ['focus', 'timer', 'pomodoro'],
+      run: () => setActiveNavTab('focus')
+    }
+  ];
+
   const getPageTitle = () => {
     switch (activeNavTab) {
       case 'today': return isAr ? 'نظرة عامة' : 'Overview';
@@ -160,6 +202,12 @@ export default function App() {
       {/* Global Modals */}
       <RescueModal />
       <SundayRitualModal />
+      <CommandPalette
+        open={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        items={paletteItems}
+        isAr={isAr}
+      />
 
       {/* Mobile Scrim Backdrop */}
       <div
