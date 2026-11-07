@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { PriorityLevel, Task, TaskStatus } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
+import { EmptyState, PageHeader, Surface, TabBar } from './ui';
 import { suggestSmartReschedule } from '../lib/energyAlgorithm';
 
 export const TasksView: React.FC = () => {
@@ -180,35 +181,32 @@ export const TasksView: React.FC = () => {
   return (
     <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Page Heading */}
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">
-            <span className="line"></span>
-            <span>NUQTA / EXECUTION</span>
-          </div>
-          <h1>{isAr ? 'المهام والتنفيذ' : 'Tasks & Execution'}</h1>
-          <p>
-            {isAr
-              ? 'أولويات واضحة، مهام صغيرة قابلة للتنفيذ دون تشتت أو فوضى.'
-              : 'Clear priorities, small executable actions without overwhelm or clutter.'}
-          </p>
-        </div>
-        <div className="heading-actions">
-          {overdueTasks.length > 0 && (
-            <button className="btn subtle small" onClick={handleApplyReschedule} title={isAr ? 'إعادة جدولة المهام المتأخرة ذكياً' : 'Smart reschedule overdue tasks'}>
-              <NuqtaIcon name="repeat" className="w-3.5 h-3.5 text-accent" />
-              <span>{isAr ? `إعادة جدولة (${overdueTasks.length})` : `Reschedule (${overdueTasks.length})`}</span>
+      <PageHeader
+        eyebrow="NUQTA / EXECUTION"
+        title={isAr ? 'المهام والتنفيذ' : 'Tasks & Execution'}
+        description={
+          isAr
+            ? 'أولويات واضحة، مهام صغيرة قابلة للتنفيذ دون تشتت أو فوضى.'
+            : 'Clear priorities, small executable actions without overwhelm or clutter.'
+        }
+        actions={
+          <>
+            {overdueTasks.length > 0 && (
+              <button className="btn subtle small" onClick={handleApplyReschedule} title={isAr ? 'إعادة جدولة المهام المتأخرة ذكياً' : 'Smart reschedule overdue tasks'}>
+                <NuqtaIcon name="repeat" className="w-3.5 h-3.5 text-accent" />
+                <span>{isAr ? `إعادة جدولة (${overdueTasks.length})` : `Reschedule (${overdueTasks.length})`}</span>
+              </button>
+            )}
+            <button className="btn primary" onClick={openNewTaskModal}>
+              <span className="btn-icon">+</span>
+              <span>{isAr ? 'مهمة جديدة' : 'New Task'}</span>
             </button>
-          )}
-          <button className="btn primary" onClick={openNewTaskModal}>
-            <span className="btn-icon">+</span>
-            <span>{isAr ? 'مهمة جديدة' : 'New Task'}</span>
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Toolbar */}
-      <div className="toolbar">
+      <Surface variant="panel" padding="sm" className="toolbar">
         <div className="filter-input">
           <input
             className="input"
@@ -260,27 +258,18 @@ export const TasksView: React.FC = () => {
           <option value="priority">{isAr ? 'حسب الأولوية' : 'Sort by Priority'}</option>
         </select>
 
-        <div className="view-switcher" role="group" aria-label="Task views">
-          <button
-            onClick={() => setViewMode('list')}
-            className={viewMode === 'list' ? 'active' : ''}
-          >
-            {isAr ? 'قائمة' : 'List'}
-          </button>
-          <button
-            onClick={() => setViewMode('board')}
-            className={viewMode === 'board' ? 'active' : ''}
-          >
-            {isAr ? 'لوحة' : 'Board'}
-          </button>
-          <button
-            onClick={() => setViewMode('matrix')}
-            className={viewMode === 'matrix' ? 'active' : ''}
-          >
-            {isAr ? 'مصفوفة' : 'Matrix'}
-          </button>
-        </div>
-      </div>
+        <TabBar
+          items={[
+            { id: 'list', label: isAr ? 'قائمة' : 'List' },
+            { id: 'board', label: isAr ? 'لوحة' : 'Board' },
+            { id: 'matrix', label: isAr ? 'مصفوفة' : 'Matrix' }
+          ]}
+          value={viewMode}
+          onChange={(id) => setViewMode(id as 'list' | 'board' | 'matrix')}
+          variant="underline"
+          ariaLabel={isAr ? 'أوضاع عرض المهام' : 'Task views'}
+        />
+      </Surface>
 
       {/* Main Content Area */}
       <section className="panel panel-pad">
@@ -310,18 +299,20 @@ export const TasksView: React.FC = () => {
         {viewMode === 'list' && (
           <div className="task-list">
             {sorted.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">✓</div>
-                <strong>{isAr ? 'لا توجد مهام هنا' : 'No tasks here'}</strong>
-                <p>
-                  {isAr
+              <EmptyState
+                icon="check-square"
+                title={isAr ? 'لا توجد مهام هنا' : 'No tasks here'}
+                description={
+                  isAr
                     ? 'كل شيء نظيف ومنجز! أضف مهمة جديدة للبدء.'
-                    : 'Everything is clear! Add a new task to get started.'}
-                </p>
-                <button className="btn primary" onClick={openNewTaskModal}>
-                  + {isAr ? 'مهمة جديدة' : 'Add Task'}
-                </button>
-              </div>
+                    : 'Everything is clear! Add a new task to get started.'
+                }
+                action={
+                  <button className="btn primary" onClick={openNewTaskModal}>
+                    + {isAr ? 'مهمة جديدة' : 'Add Task'}
+                  </button>
+                }
+              />
             ) : (
               sorted.map((task) => {
                 const pInfo = priorityMeta(task.priority);
