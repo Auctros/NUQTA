@@ -1,0 +1,958 @@
+@import "tailwindcss";
+@import "./nuqta-theme.css";
+
+/* ============================================================
+   NUQTA — SEMANTIC COLOR TOKENS (single source of truth)
+   ============================================================
+   Primitives (--bg, --panel, --text, --accent …) stay defined in
+   nuqta-theme.css. This layer aliases them into role-based names
+   and adds the "inset / chip / track" surfaces that used to be
+   hardcoded #hex inside JSX.
+
+   RULES
+   1. Never write a raw #hex in a component again — use these tokens.
+   2. Dark values below are the exact shades in use today, so the
+      dark identity is unchanged.
+   3. Light values are declared once, in the .light-mode block below,
+      and override the primitives (not the aliases).
+   ============================================================ */
+:root {
+  /* --- surfaces not covered by the primitive set --- */
+  --panel-inset: #141e17;   /* inner tiles (was #141e17 / #131d16 …) */
+  --panel-chip: #1c2a20;    /* chips, mini badges                 */
+  --panel-track: #1e2e24;   /* progress bar tracks                */
+  --panel-deep: #0d1418;    /* recessed control groups (timer presets) */
+  --panel-active: #24342d;  /* selected pill / toggle surface      */
+  --track-strong: #293730;  /* large ring & arc tracks (timer)     */
+  --panel-faint: rgba(255, 255, 255, 0.03); /* hover / dropdown fill */
+
+  /* --- borders & rings --- */
+  --border-strong: #274231; /* emphasized / accent borders        */
+  --ring-color: #23382c;    /* progress ring / focus outline      */
+  --hairline: #24312b;      /* neutral divider hairline           */
+
+  /* --- surfaces (semantic) --- */
+  --surface-page: var(--bg);
+  --surface-raised: var(--panel);
+  --surface-sunken: var(--panel-2);
+  --surface-inset: var(--panel-inset);
+  --surface-chip: var(--panel-chip);
+  --surface-track: var(--panel-track);
+  --surface-deep: var(--panel-deep);
+  --surface-active: var(--panel-active);
+  --surface-faint: var(--panel-faint);
+
+  /* --- text (semantic) --- */
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
+  --text-tertiary: var(--muted-2);
+  --text-on-accent: var(--accent-ink);
+  --text-on-state: #ffffff;
+
+  /* --- borders (semantic) --- */
+  --border-default: var(--border);
+  --border-subtle: var(--border-soft);
+
+  /* --- brand --- */
+  --brand: var(--accent);
+  --brand-strong: var(--accent-strong);
+  --brand-soft: rgba(182, 243, 211, 0.12);
+  --brand-soft-border: rgba(182, 243, 211, 0.3);
+
+  /* --- states --- */
+  --state-success: #34d399;
+  --state-success-strong: #6ee7b7;
+  --state-warning: #fbbf24;
+  --state-warning-strong: #fcd34d;
+  --state-danger: #fb7185;
+  --state-danger-strong: #fda4af;
+  --state-info: #2dd4bf;
+  --state-info-strong: #5eead4;
+  --state-purple: #c084fc;
+  --state-danger-soft: #1f1315;
+  --state-warning-wash-from: rgba(69, 26, 3, 0.4);
+  --state-warning-wash-to: rgba(69, 26, 3, 0.2);
+
+  /* ========================================================
+     DOMAIN TOKENS — one palette per studio, one shared shape.
+     Each studio keeps its own hue family (Quran = emerald,
+     Reading = amber, Workout = emerald/teal, Drawing = violet)
+     while sharing the same token names, so components stay
+     identical across the four studios.
+     ======================================================== */
+
+  /* Quran Studio — emerald sanctuary */
+  --d-quran-surface: #111914;
+  --d-quran-raised: #141f17;
+  --d-quran-chip: #18261e;
+  --d-quran-deep: #0f1d14;
+  --d-quran-border: #23352b;
+  --d-quran-border-soft: #1c2c22;
+  --d-quran-border-strong: #223528;
+  --d-quran-border-accent: #2a4436;
+  --d-quran-accent: #34d399;
+  --d-quran-accent-strong: #6ee7b7;
+  --d-quran-accent-bright: #a7f3d0;
+
+  /* Reading Vault — warm amber archive */
+  --d-reading-surface: #12100b;
+  --d-reading-raised: #14120c;
+  --d-reading-chip: #241c10;
+  --d-reading-deep: #141009;
+  --d-reading-border: #262014;
+  --d-reading-border-soft: #1f190e;
+  --d-reading-border-strong: #2b2212;
+  --d-reading-border-accent: #3b2d18;
+  --d-reading-accent: #fbbf24;
+  --d-reading-accent-strong: #fcd34d;
+  --d-reading-accent-bright: #fde68a;
+
+  /* Home Workout — disciplined emerald/teal */
+  --d-workout-surface: #0f1712;
+  --d-workout-raised: #142217;
+  --d-workout-chip: #121c16;
+  --d-workout-deep: #080d0a;
+  --d-workout-border: #1f3024;
+  --d-workout-border-soft: #1b2a20;
+  --d-workout-border-strong: #1d2d21;
+  --d-workout-border-accent: #2b3a32;
+  --d-workout-accent: #34d399;
+  --d-workout-accent-strong: #6ee7b7;
+  --d-workout-accent-bright: #a7f3d0;
+
+  /* Art Studio — violet creative room */
+  --d-drawing-surface: #140e1b;
+  --d-drawing-raised: #160d1b;
+  --d-drawing-chip: #201027;
+  --d-drawing-deep: #140e18;
+  --d-drawing-border: #271830;
+  --d-drawing-border-soft: #211429;
+  --d-drawing-border-strong: #2d1c32;
+  --d-drawing-border-accent: #3b2049;
+  --d-drawing-accent: #c084fc;
+  --d-drawing-accent-strong: #d8b4fe;
+  --d-drawing-accent-bright: #e9d5ff;
+}
+
+/* ============================================================
+   NUQTA Typography Scaling (Readability Boost)
+   ============================================================ */
+body {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Headings */
+.page-heading h1 {
+  font-size: clamp(26px, 2.6vw, 34px);
+  font-weight: 750;
+  letter-spacing: -0.5px;
+}
+.page-heading p {
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+.eyebrow {
+  font-size: 11.5px;
+  letter-spacing: 1.2px;
+}
+.panel-heading h2, .panel-heading h3, .section-head h2 {
+  font-size: 15.5px;
+  font-weight: 720;
+}
+.panel-heading p, .section-head p {
+  font-size: 12px;
+}
+
+/* Tasks & Rows */
+.task-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.task-subtitle {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.task-row {
+  padding: 13px 15px;
+  gap: 12px;
+}
+.check-circle {
+  width: 19px;
+  height: 19px;
+  border-radius: 6px;
+}
+.check-circle.checked:after {
+  font-size: 13px;
+}
+
+/* Navigation & Sidebar */
+.nav-item {
+  font-size: 13.5px;
+  min-height: 42px;
+  padding: 9px 13px;
+}
+.nav-label {
+  font-size: 11px;
+  letter-spacing: 1.1px;
+}
+.nav-trailing {
+  font-size: 11px;
+  padding: 2px 7px;
+}
+.capture-shortcut {
+  font-size: 13px;
+}
+.sidebar-footer-card p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.profile-details strong {
+  font-size: 13px;
+}
+.profile-details small {
+  font-size: 11px;
+}
+
+/* Metrics & Stats */
+.metric-value {
+  font-size: 27px;
+  letter-spacing: -0.5px;
+}
+.metric-label {
+  font-size: 12px;
+}
+.metric-foot {
+  font-size: 11px;
+}
+.energy-number {
+  font-size: 22px;
+}
+.energy-info strong {
+  font-size: 14.5px;
+}
+.energy-info p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* Buttons & Inputs */
+.btn {
+  font-size: 13px;
+  padding: 9px 15px;
+  min-height: 38px;
+}
+.btn.small {
+  font-size: 12px;
+  min-height: 31px;
+  padding: 6px 11px;
+}
+.input, .textarea, .select {
+  font-size: 13.5px;
+  padding: 10px 13px;
+}
+.field label, .field-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Tags & Helpers */
+.tag {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.small-muted, .muted {
+  font-size: 12px;
+}
+.fine-print {
+  font-size: 11.5px;
+  line-height: 1.75;
+}
+
+/* Timeline */
+.timeline-time {
+  font-size: 11px;
+}
+.timeline-copy strong {
+  font-size: 13px;
+}
+.timeline-copy small {
+  font-size: 11.5px;
+}
+
+/* Habits, Goals, Calendar */
+.habit-card h3, .goal-card h3 {
+  font-size: 15px;
+}
+.habit-card p, .goal-card .goal-why {
+  font-size: 12px;
+  line-height: 1.65;
+}
+.habit-week span {
+  font-size: 10.5px;
+  height: 26px;
+}
+.streak {
+  font-size: 12px;
+}
+.day-num {
+  font-size: 12px;
+}
+.calendar-day-label {
+  font-size: 11px;
+}
+.cal-event-chip {
+  font-size: 9.5px;
+}
+
+/* ============================================================
+   LIGHT MODE DEFINITIVE OVERRIDES & CONTRAST
+   ============================================================ */
+html.light-mode,
+body.light-mode {
+  color-scheme: light;
+  --bg: #f4f6f4;
+  --panel: #ffffff;
+  --panel-2: #edf2ee;
+  --panel-3: #e4ebe6;
+  --border: #d4ded7;
+  --border-soft: #e2e9e4;
+  --text: #14231a;
+  --muted: #57695e;
+  --muted-2: #788a80;
+  --accent: #1e6344;
+  --accent-strong: #278157;
+  --accent-ink: #effff5;
+  background-color: #f4f6f4 !important;
+  color: #14231a !important;
+}
+
+/* Light-mode values for the semantic layer added at the top of this
+   file. Only primitives are overridden here; the :root aliases resolve
+   against them because both rules target the same <html> element. */
+html.light-mode,
+body.light-mode {
+  --panel-inset: #f4f8f5;
+  --panel-chip: #eaf1eb;
+  --panel-track: #e3ebe5;
+  --panel-deep: #f3f7f4;
+  --panel-active: #deeee3;
+  --track-strong: #d9e6dd;
+  --panel-faint: rgba(20, 60, 40, 0.045);
+
+  --border-strong: #c2d5c9;
+  --ring-color: #d3e3d8;
+  --hairline: #e2e9e4;
+
+  --brand-soft: rgba(30, 99, 68, 0.1);
+  --brand-soft-border: rgba(30, 99, 68, 0.26);
+
+  --state-success: #137a4d;
+  --state-success-strong: #0f6b43;
+  --state-warning: #8a5a10;
+  --state-warning-strong: #7d4f09;
+  --state-danger: #b4232f;
+  --state-danger-strong: #9f1f2a;
+  --state-info: #0f766e;
+  --state-info-strong: #0d5f59;
+  --state-purple: #6d28d9;
+  --state-danger-soft: #fdf1f0;
+  --state-warning-wash-from: rgba(245, 158, 11, 0.14);
+  --state-warning-wash-to: rgba(245, 158, 11, 0.05);
+
+  /* Domain tokens — light editions (same names, readable hues) */
+  --d-quran-surface: #ffffff;
+  --d-quran-raised: #f3f9f5;
+  --d-quran-chip: #e9f3ed;
+  --d-quran-deep: #eef6f1;
+  --d-quran-border: #d7e5dc;
+  --d-quran-border-soft: #e3eee7;
+  --d-quran-border-strong: #c3d8ca;
+  --d-quran-border-accent: #a9c9b6;
+  --d-quran-accent: #147a52;
+  --d-quran-accent-strong: #0f6845;
+  --d-quran-accent-bright: #0b5638;
+
+  --d-reading-surface: #ffffff;
+  --d-reading-raised: #fdf8ef;
+  --d-reading-chip: #f7eeda;
+  --d-reading-deep: #faf4e7;
+  --d-reading-border: #e9e0cc;
+  --d-reading-border-soft: #f1e9d9;
+  --d-reading-border-strong: #d9cbae;
+  --d-reading-border-accent: #c4b087;
+  --d-reading-accent: #8a5a12;
+  --d-reading-accent-strong: #744a0c;
+  --d-reading-accent-bright: #5f3c07;
+
+  --d-workout-surface: #ffffff;
+  --d-workout-raised: #f2f8f5;
+  --d-workout-chip: #e7f2ec;
+  --d-workout-deep: #edf6f1;
+  --d-workout-border: #d5e4db;
+  --d-workout-border-soft: #e2eee7;
+  --d-workout-border-strong: #bed4c7;
+  --d-workout-border-accent: #a5c2b2;
+  --d-workout-accent: #0f7357;
+  --d-workout-accent-strong: #0b5e47;
+  --d-workout-accent-bright: #084a38;
+
+  --d-drawing-surface: #ffffff;
+  --d-drawing-raised: #f7f3fc;
+  --d-drawing-chip: #eee6f9;
+  --d-drawing-deep: #f3eefb;
+  --d-drawing-border: #e2d9f0;
+  --d-drawing-border-soft: #ece6f7;
+  --d-drawing-border-strong: #cdc0e4;
+  --d-drawing-border-accent: #b8a6d8;
+  --d-drawing-accent: #6b3fbf;
+  --d-drawing-accent-strong: #5a32a3;
+  --d-drawing-accent-bright: #4a2787;
+}
+
+.light-mode {
+  color: #14231a !important;
+}
+
+.light-mode .app-shell,
+.light-mode .main-area {
+  background-color: #f4f6f4 !important;
+  color: #14231a !important;
+}
+
+.light-mode .sidebar {
+  background: #eaefe9 !important;
+  border-color: #d6e0d8 !important;
+  color: #14231a !important;
+}
+
+.light-mode .topbar {
+  background: rgba(244, 246, 244, 0.94) !important;
+  border-color: #d6e0d8 !important;
+}
+
+.light-mode .topbar .breadcrumbs {
+  color: #57695e !important;
+}
+
+.light-mode .topbar .breadcrumbs strong {
+  color: #14231a !important;
+}
+
+.light-mode .offline-pill {
+  background: #e4efe7 !important;
+  border-color: #c7ded0 !important;
+  color: #1e6344 !important;
+}
+
+.light-mode .brand-mark {
+  background: #1e6344 !important;
+}
+
+.light-mode .brand-mark:before {
+  background: #ffffff !important;
+}
+
+.light-mode .brand-name {
+  color: #14231a !important;
+}
+
+.light-mode .brand-tag {
+  color: #57695e !important;
+}
+
+.light-mode .capture-shortcut {
+  background: #eef5f0 !important;
+  border-color: #c8ded1 !important;
+  color: #14231a !important;
+}
+
+.light-mode .capture-shortcut:hover {
+  background: #e4efe7 !important;
+  border-color: #a3cdb3 !important;
+}
+
+.light-mode .capture-plus {
+  background: #1e6344 !important;
+  color: #ffffff !important;
+}
+
+.light-mode .capture-shortcut kbd {
+  background: #ffffff !important;
+  border-color: #cadad0 !important;
+  color: #57695e !important;
+}
+
+.light-mode .nav-label {
+  color: #6d8074 !important;
+}
+
+.light-mode .nav-item {
+  color: #495e51 !important;
+}
+
+.light-mode .nav-item:hover {
+  background: #dde7e0 !important;
+  color: #14231a !important;
+}
+
+.light-mode .nav-item.active {
+  background: #d4e5d9 !important;
+  color: #1e6344 !important;
+  font-weight: 700 !important;
+}
+
+.light-mode .nav-trailing {
+  background: #d4ded7 !important;
+  color: #495e51 !important;
+}
+
+.light-mode .sidebar-footer-card {
+  background: #edf5ef !important;
+  border-color: #cddfd3 !important;
+}
+
+.light-mode .sidebar-footer-card p {
+  color: #495e51 !important;
+}
+
+.light-mode .avatar {
+  background: #d9e9df !important;
+  border-color: #b9d8c3 !important;
+  color: #1e6344 !important;
+}
+
+.light-mode .profile-details strong {
+  color: #14231a !important;
+}
+
+.light-mode .profile-details small {
+  color: #63776b !important;
+}
+
+.light-mode .sidebar-bottom {
+  border-color: #d6e0d8 !important;
+}
+
+/* Light Mode Panels */
+.light-mode .panel,
+.light-mode .focus-card,
+.light-mode .metric-card,
+.light-mode .modal,
+.light-mode .task-row,
+.light-mode .habit-card,
+.light-mode .goal-card,
+.light-mode .savings-card,
+.light-mode .health-tile,
+.light-mode .journal-editor,
+.light-mode .insight-card,
+.light-mode .settings-section,
+.light-mode .day-agenda,
+.light-mode .calendar-panel,
+.light-mode .capture-bar {
+  background: #ffffff !important;
+  border-color: #d6e0d8 !important;
+  color: #14231a !important;
+  box-shadow: 0 1px 3px rgba(18, 38, 25, 0.04) !important;
+}
+
+.light-mode .page-heading h1,
+.light-mode .panel-heading h2,
+.light-mode .panel-heading h3,
+.light-mode .section-head h2,
+.light-mode h1,
+.light-mode h2,
+.light-mode h3,
+.light-mode strong,
+.light-mode .task-title,
+.light-mode .metric-value,
+.light-mode .energy-number {
+  color: #14231a !important;
+}
+
+.light-mode p,
+.light-mode small,
+.light-mode .small-muted,
+.light-mode .muted,
+.light-mode .task-subtitle,
+.light-mode .metric-label,
+.light-mode .metric-foot,
+.light-mode .agenda-date,
+.light-mode .fine-print {
+  color: #57695e !important;
+}
+
+.light-mode .subtle-line,
+.light-mode .focus-divider {
+  background: #e2e9e4 !important;
+}
+
+/* Light Mode Buttons */
+.light-mode .btn {
+  background: #ffffff !important;
+  color: #1e3326 !important;
+  border-color: #d0ded4 !important;
+}
+
+.light-mode .btn:hover {
+  background: #f0f5f1 !important;
+  border-color: #b8cfc0 !important;
+}
+
+.light-mode .btn.primary {
+  background: #1e6344 !important;
+  border-color: #1e6344 !important;
+  color: #ffffff !important;
+  font-weight: 750 !important;
+}
+
+.light-mode .btn.primary:hover {
+  background: #174e35 !important;
+  border-color: #174e35 !important;
+  color: #ffffff !important;
+}
+
+.light-mode .btn.subtle {
+  background: transparent !important;
+  border-color: #d0ded4 !important;
+  color: #3b5043 !important;
+}
+
+.light-mode .btn.subtle:hover {
+  background: #eaf1ec !important;
+  color: #14231a !important;
+}
+
+.light-mode .icon-btn {
+  color: #57695e !important;
+}
+
+.light-mode .icon-btn:hover {
+  background: #e5ece6 !important;
+  border-color: #d0ded4 !important;
+  color: #14231a !important;
+}
+
+.light-mode .mini-icon {
+  color: #6a7c71 !important;
+}
+
+.light-mode .mini-icon:hover {
+  background: #e5ece6 !important;
+  color: #14231a !important;
+}
+
+/* Hero Panel Light Mode */
+.light-mode .hero-panel {
+  background: radial-gradient(ellipse at 87% 5%, rgba(30,99,68,0.14), transparent 45%), linear-gradient(135deg, #e3efe5 0%, #f0f6f1 70%, #f6faf7 100%) !important;
+  border-color: #c7ded0 !important;
+}
+
+.light-mode .hero-panel h1 {
+  color: #12281c !important;
+}
+
+.light-mode .hero-panel p,
+.light-mode .hero-top,
+.light-mode .hero-date,
+.light-mode .hero-weather {
+  color: #3f604d !important;
+}
+
+.light-mode .hero-weather {
+  border-inline-start-color: #bfd8c8 !important;
+}
+
+.light-mode .hero-decoration .ring {
+  border-color: rgba(30, 99, 68, 0.2) !important;
+}
+
+.light-mode .hero-decoration .orb {
+  background: #1e6344 !important;
+  box-shadow: 0 0 14px rgba(30, 99, 68, 0.45) !important;
+}
+
+/* Inputs, Textareas, Selects */
+.light-mode .input,
+.light-mode .textarea,
+.light-mode .select {
+  background: #fbfdfb !important;
+  border-color: #cdd8d1 !important;
+  color: #14231a !important;
+}
+
+.light-mode .input::placeholder,
+.light-mode .textarea::placeholder {
+  color: #899c90 !important;
+}
+
+.light-mode .input:focus,
+.light-mode .textarea:focus,
+.light-mode .select:focus {
+  border-color: #278157 !important;
+  box-shadow: 0 0 0 3px rgba(30, 99, 68, 0.12) !important;
+}
+
+/* Check Circle */
+.light-mode .check-circle {
+  border-color: #8fa095 !important;
+  background: #ffffff !important;
+}
+
+.light-mode .check-circle.checked {
+  background: #1e6344 !important;
+  border-color: #1e6344 !important;
+  color: #ffffff !important;
+}
+
+/* Tags */
+.light-mode .tag {
+  background: #f0f5f1 !important;
+  border-color: #d1ded6 !important;
+  color: #495e51 !important;
+}
+
+.light-mode .tag.green {
+  background: #e4efe7 !important;
+  border-color: #bad9c5 !important;
+  color: #1e6344 !important;
+}
+
+.light-mode .tag.orange {
+  background: #f9f1e6 !important;
+  border-color: #e8d3b8 !important;
+  color: #8f531d !important;
+}
+
+.light-mode .tag.red {
+  background: #fae9e8 !important;
+  border-color: #ebc6c4 !important;
+  color: #9c2727 !important;
+}
+
+.light-mode .tag.blue {
+  background: #e9f1f8 !important;
+  border-color: #c7dbe9 !important;
+  color: #1f5385 !important;
+}
+
+/* Progress lines */
+.light-mode .progress-line {
+  background: #e1e9e3 !important;
+}
+
+.light-mode .progress-line span {
+  background: #278157 !important;
+}
+
+/* Metric card icons */
+.light-mode .metric-icon {
+  background: #e5f1e8 !important;
+  color: #1e6344 !important;
+}
+
+.light-mode .metric-icon.blue {
+  background: #e5edf5 !important;
+  color: #1f5385 !important;
+}
+
+.light-mode .metric-icon.orange {
+  background: #f8efe4 !important;
+  color: #8f531d !important;
+}
+
+/* Energy Ring */
+.light-mode .energy-ring:after {
+  background: #ffffff !important;
+}
+
+.light-mode .energy-number {
+  color: #14231a !important;
+}
+
+.light-mode .energy-chip {
+  background: #f1f6f2 !important;
+  border-color: #d0ded4 !important;
+  color: #495e51 !important;
+}
+
+.light-mode .energy-chip.selected {
+  background: #dbeee0 !important;
+  border-color: #1e6344 !important;
+  color: #1e6344 !important;
+  font-weight: 700 !important;
+}
+
+/* Week Strip */
+.light-mode .week-day {
+  color: #57695e !important;
+}
+
+.light-mode .week-day.selected {
+  background: #dbeee0 !important;
+  border-color: #9fceb0 !important;
+  color: #1e6344 !important;
+}
+
+/* Kanban & Matrix */
+.light-mode .kanban-column {
+  background: #f2f7f3 !important;
+  border-color: #d6e0d8 !important;
+}
+
+.light-mode .kanban-card {
+  background: #ffffff !important;
+  border-color: #d6e0d8 !important;
+}
+
+.light-mode .matrix-quadrant.q1 {
+  background: #fff8f7 !important;
+  border-color: #f1cfce !important;
+}
+
+.light-mode .matrix-quadrant.q2 {
+  background: #f4faf5 !important;
+  border-color: #cae4d2 !important;
+}
+
+.light-mode .matrix-quadrant.q3 {
+  background: #fff9f2 !important;
+  border-color: #ecdbca !important;
+}
+
+.light-mode .matrix-quadrant.q4 {
+  background: #f7faf8 !important;
+  border-color: #d6e0d8 !important;
+}
+
+/* Calendar */
+.light-mode .calendar-cell {
+  background: #ffffff !important;
+  border-color: #e2e9e4 !important;
+  color: #14231a !important;
+}
+
+.light-mode .calendar-cell.other-month {
+  opacity: 0.45 !important;
+  background: #f8faf8 !important;
+}
+
+.light-mode .calendar-cell.today {
+  background: #e7f4eb !important;
+  border-color: #8fc7a1 !important;
+}
+
+.light-mode .calendar-cell.selected {
+  box-shadow: inset 0 0 0 2px #1e6344 !important;
+  background: #dbefe0 !important;
+}
+
+.light-mode .cal-event-chip {
+  background: #e2efe6 !important;
+  color: #1e6344 !important;
+}
+
+/* View switcher */
+.light-mode .view-switcher {
+  background: #e6eee8 !important;
+  border-color: #d1ded5 !important;
+}
+
+.light-mode .view-switcher button {
+  color: #57695e !important;
+}
+
+.light-mode .view-switcher button.active {
+  background: #ffffff !important;
+  color: #1e6344 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+}
+
+/* Habits */
+.light-mode .habit-week span {
+  background: #eef3ef !important;
+  color: #57695e !important;
+}
+
+.light-mode .habit-week span.done {
+  background: #1e6344 !important;
+  color: #ffffff !important;
+}
+
+.light-mode .chain span {
+  background: #dfe7e1 !important;
+}
+
+.light-mode .chain span.filled {
+  background: #278157 !important;
+}
+
+/* Privacy note & rescue */
+.light-mode .privacy-note,
+.light-mode .rescue-summary {
+  background: #edf6f0 !important;
+  border-color: #c7ded0 !important;
+  color: #14231a !important;
+}
+
+.light-mode .rescue-summary p,
+.light-mode .privacy-note p {
+  color: #495e51 !important;
+}
+
+.light-mode .rescue-choice {
+  background: #ffffff !important;
+  border-color: #d6e0d8 !important;
+  color: #14231a !important;
+}
+
+.light-mode .rescue-choice.selected {
+  background: #e4efe7 !important;
+  border-color: #8fc7a1 !important;
+}
+
+.light-mode .rescue-choice .choice-icon {
+  background: #e4efe7 !important;
+  color: #1e6344 !important;
+}
+
+.light-mode .app-footer {
+  border-color: #d6e0d8 !important;
+  color: #57695e !important;
+}
+
+/* ============================================================
+   COLLAPSIBLE SIDEBAR DYNAMICS (Slide-in & Slide-out)
+   ============================================================ */
+.sidebar {
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s ease !important;
+}
+
+/* On Desktop: When collapsed, hide completely off-screen and remove main-area offset */
+@media (min-width: 901px) {
+  .app-shell.sidebar-collapsed .sidebar {
+    transform: translateX(-105%) !important;
+  }
+  [dir="rtl"] .app-shell.sidebar-collapsed .sidebar {
+    transform: translateX(105%) !important;
+  }
+  .app-shell.sidebar-collapsed .main-area {
+    margin-inline-start: 0 !important;
+    transition: margin-inline-start 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .app-shell:not(.sidebar-collapsed) .main-area {
+    transition: margin-inline-start 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Mobile & Tablet Scrim & Drawer */
+@media (max-width: 900px) {
+  [dir="rtl"] .sidebar {
+    transform: translateX(105%);
+  }
+  [dir="rtl"] .sidebar.open {
+    transform: translateX(0);
+  }
+}

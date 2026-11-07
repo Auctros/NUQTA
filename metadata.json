@@ -1,0 +1,6 @@
+{
+  "name": "NUQTA - Life Management & Productivity",
+  "description": "Holistic local-first life operating system managing tasks, atomic habits, OKR goals, deep work, health, and finances. One life. Live it wisely.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NUQTA | One life. Live it wisely.</title>
+    <meta name="description" content="Holistic local-first life operating system managing tasks, atomic habits, OKR goals, deep work, health, and finances." />
+    <meta property="og:title" content="NUQTA | One life. Live it wisely." />
+    <meta property="og:description" content="Holistic local-first life operating system managing tasks, atomic habits, OKR goals, deep work, health, and finances." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+      // Compatibility shim for browser extensions (e.g. request interceptors) attempting to overwrite window.fetch
+      (function() {
+        try {
+          const originalFetch = window.fetch;
+          let currentFetch = originalFetch;
+          Object.defineProperty(window, 'fetch', {
+            configurable: true,
+            enumerable: true,
+            get() {
+              return currentFetch;
+            },
+            set(fn) {
+              currentFetch = fn;
+            }
+          });
+        } catch (e) {
+          // Ignore if environment forbids redefinition
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

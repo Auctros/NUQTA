@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- Dynamic theme color — app.js updates this on theme change -->
+  <meta name="theme-color" content="#0b0f13" />
+
+  <!-- Standard meta -->
+  <meta name="description" content="NUQTA — نقطة واحدة واضحة، وحياة تُعاش بحكمة." />
+  <meta name="application-name" content="NUQTA" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no" />
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- iOS — add to home screen support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NUQTA" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
+  <!-- Android — modern equivalent -->
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <title>NUQTA — عِشها بحكمة</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23b6f3d3'/%3E%3Ccircle cx='32' cy='32' r='8' fill='%230b0f13'/%3E%3C/svg%3E" />
+
+  <!-- Skip link — hidden until keyboard focus -->
+  <style>
+    .skip-link {
+      position: fixed;
+      top: -100px;
+      inset-inline-start: 8px;
+      background: #b6f3d3;
+      color: #0b0f13;
+      padding: 8px 16px;
+      border-radius: 0 0 8px 8px;
+      font-weight: 700;
+      font-size: 13px;
+      text-decoration: none;
+      z-index: 99999;
+      transition: top .15s ease;
+      font-family: var(--font, system-ui, -apple-system, "Segoe UI", sans-serif);
+    }
+    .skip-link:focus {
+      top: 0;
+      outline: 2px solid #0b0f13;
+      outline-offset: 2px;
+    }
+    .noscript-warning {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: #0b0f13;
+      color: #edf2f4;
+      padding: 24px;
+      text-align: center;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      z-index: 99999;
+    }
+    .noscript-warning h1 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .noscript-warning p {
+      margin: 0;
+      color: #8a98a3;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+  </style>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a href="#page-content" class="skip-link">تخطَّ إلى المحتوى</a>
+
+  <div class="app-shell" id="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="القائمة الجانبية">
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true"><span></span></div>
+        <div class="brand-copy">
+          <span class="brand-name">NUQTA<span class="brand-period">.</span></span>
+          <span class="brand-tag" data-i18n="tagline">عِشها بحكمة</span>
+        </div>
+        <button type="button" class="icon-btn sidebar-close mobile-only" id="sidebar-close" aria-label="إغلاق القائمة" data-icon="close"></button>
+      </div>
+
+      <button type="button" class="capture-shortcut" id="sidebar-capture">
+        <span class="capture-plus">+</span>
+        <span data-i18n="quickCapture">التقاط سريع</span>
+        <kbd>Q</kbd>
+      </button>
+
+      <div class="nav-label" data-i18n="workspace">مساحتك</div>
+      <nav class="primary-nav" id="primary-nav" aria-label="مساحة العمل">
+        <button type="button" class="nav-item active" data-page="home"><span class="nav-icon" data-icon="grid"></span><span data-i18n="nav.home">نظرة عامة</span><span class="nav-trailing" id="today-count">0</span></button>
+        <button type="button" class="nav-item" data-page="tasks"><span class="nav-icon" data-icon="check-square"></span><span data-i18n="nav.tasks">المهام</span></button>
+        <button type="button" class="nav-item" data-page="habits"><span class="nav-icon" data-icon="repeat"></span><span data-i18n="nav.habits">العادات</span></button>
+        <button type="button" class="nav-item" data-page="goals"><span class="nav-icon" data-icon="target"></span><span data-i18n="nav.goals">الأهداف</span></button>
+        <button type="button" class="nav-item" data-page="focus"><span class="nav-icon" data-icon="timer"></span><span data-i18n="nav.focus">التركيز</span></button>
+        <button type="button" class="nav-item" data-page="calendar"><span class="nav-icon" data-icon="calendar"></span><span data-i18n="nav.calendar">التقويم</span></button>
+      </nav>
+
+      <div class="nav-label nav-label-spaced" data-i18n="life">الحياة</div>
+      <nav class="primary-nav" aria-label="الحياة">
+        <button type="button" class="nav-item" data-page="finance"><span class="nav-icon" data-icon="wallet"></span><span data-i18n="nav.finance">المال</span></button>
+        <button type="button" class="nav-item" data-page="health"><span class="nav-icon" data-icon="activity"></span><span data-i18n="nav.health">الصحة</span></button>
+        <button type="button" class="nav-item" data-page="journal"><span class="nav-icon" data-icon="book-open"></span><span data-i18n="nav.journal">اليوميات</span></button>
+        <button type="button" class="nav-item" data-page="insights"><span class="nav-icon" data-icon="chart"></span><span data-i18n="nav.insights">الرؤى</span></button>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="sidebar-footer-card">
+        <div class="footer-spark">✳</div>
+        <p data-i18n="smallStep">ليس مطلوبًا أن تفعل كل شيء. اختر الخطوة التالية فقط.</p>
+        <button type="button" class="text-link" id="rescue-link" data-i18n="rescueMode">وضع الإنقاذ <span>↗</span></button>
+      </div>
+
+      <div class="sidebar-bottom">
+        <button type="button" class="nav-item" data-page="settings"><span class="nav-icon" data-icon="settings"></span><span data-i18n="nav.settings">الإعدادات والبيانات</span></button>
+        <button type="button" class="profile-row" id="profile-button">
+          <span class="avatar" id="avatar-initial">ع</span>
+          <span class="profile-details">
+            <strong id="sidebar-user">علي</strong>
+            <small data-i18n="localProfile">ملف محلي · خاص</small>
+          </span>
+          <span class="more-dots">···</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="sidebar-scrim" id="sidebar-scrim" aria-hidden="true"></div>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="topbar-start">
+          <button type="button" class="icon-btn mobile-only menu-open" id="menu-open" aria-label="فتح القائمة" data-icon="menu"></button>
+          <div class="breadcrumbs">
+            <span data-i18n="breadcrumb">مساحتك</span>
+            <span class="breadcrumb-slash">/</span>
+            <strong id="page-crumb" data-i18n="nav.home">نظرة عامة</strong>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <div class="offline-pill"><span class="status-dot"></span><span data-i18n="localOnly">محلي وآمن</span></div>
+          <button type="button" class="icon-btn" id="lang-toggle" aria-label="Switch language" title="العربية / English"><span class="lang-glyph">EN</span></button>
+          <button type="button" class="icon-btn" id="theme-toggle" aria-label="تغيير المظهر" title="تغيير المظهر" data-icon="sun"></button>
+          <button type="button" class="icon-btn notification-button" id="notification-toggle" aria-label="التذكيرات" title="التذكيرات" data-icon="bell"><span class="notification-dot" id="notification-dot"></span></button>
+        </div>
+      </header>
+
+      <div class="page-content" id="page-content" tabindex="-1"></div>
+
+      <footer class="app-footer">
+        <span>NUQTA<span class="brand-period">.</span> <span data-i18n="footerLine">وقت أقل في الإدارة. حياة أكثر في عيشها.</span></span>
+        <span class="footer-privacy"><span class="tiny-lock" data-icon="lock"></span><span data-i18n="footerPrivacy">بياناتك لا تغادر هذا الجهاز</span></span>
+      </footer>
+    </main>
+  </div>
+
+  <noscript>
+    <div class="noscript-warning">
+      <div>
+        <h1>NUQTA</h1>
+        <p>هذا التطبيق يحتاج JavaScript للعمل. الرجاء تفعيله في المتصفح.</p>
+        <p style="margin-top:8px">NUQTA requires JavaScript to run. Please enable it in your browser.</p>
+      </div>
+    </div>
+  </noscript>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <div class="modal-root" id="modal-root"></div>
+
+  <input type="file" id="import-file" accept="application/json,.json" hidden />
+
+  <script src="app.js" defer></script>
+</body>
+</html>
