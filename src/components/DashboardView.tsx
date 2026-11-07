@@ -1307,19 +1307,6 @@ export const DashboardView: React.FC = () => {
                 <NuqtaIcon name="arrow" className="w-3.5 h-3.5 text-muted" />
               </button>
 
-              <button
-                className="task-row w-full text-start p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] hover:border-accent/40 transition-all flex items-center justify-between text-xs"
-                onClick={() => setRescueModeOpen(true)}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="metric-icon text-[var(--state-warning)] text-sm">✳</span>
-                  <div>
-                    <span className="font-semibold text-[var(--text-primary)] block">{isAr ? 'إعادة ضبط اليوم (Rescue)' : 'Rescue Mode Reset'}</span>
-                    <span className="text-[11px] text-muted">{isAr ? 'تخفيف الحمل الذهني' : 'Shelve non-essentials'}</span>
-                  </div>
-                </div>
-                <NuqtaIcon name="arrow" className="w-3.5 h-3.5 text-muted" />
-              </button>
             </div>
           </section>
         </aside>
