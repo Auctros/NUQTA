@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Goal, GoalPriority, KeyResult, KeyResultDataSource } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
+import { EmptyState, PageHeader } from './ui';
 import { GoalDetailModal } from './GoalDetailModal';
 import { evaluateGoalProgress } from '../lib/goalProgressEngine';
 
@@ -176,38 +177,33 @@ export const GoalsView: React.FC = () => {
   return (
     <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Page Heading */}
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">
-            <span className="line"></span>
-            <span>NUQTA / GOAL INTELLIGENCE</span>
-          </div>
-          <h1>{isAr ? 'إدارة الأهداف وذكاء التقدم' : 'Goal Management & Intelligence'}</h1>
-          <p>
-            {isAr
-              ? 'ربط الأهداف الكبرى بالمهام والعادات وجلسات القراءة والتمارين والرسم، بحسابات واقعية مشتقة من السجلات الفعلية.'
-              : 'Direct macro vision linked dynamically to tasks, habits, and specialized sub-systems with real derivation.'}
-          </p>
-        </div>
-        <div className="heading-actions">
+      <PageHeader
+        eyebrow="NUQTA / GOAL INTELLIGENCE"
+        title={isAr ? 'إدارة الأهداف وذكاء التقدم' : 'Goal Management & Intelligence'}
+        description={
+          isAr
+            ? 'ربط الأهداف الكبرى بالمهام والعادات وجلسات القراءة والتمارين والرسم، بحسابات واقعية مشتقة من السجلات الفعلية.'
+            : 'Direct macro vision linked dynamically to tasks, habits, and specialized sub-systems with real derivation.'
+        }
+        actions={
           <button className="btn primary" onClick={openNewGoalModal}>
             <span className="btn-icon">+</span>
             <span>{isAr ? 'هدف استراتيجي جديد' : 'New Strategic Goal'}</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* KPI Intelligence Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="panel p-4 border border-[#26372d] bg-[#111914] rounded-xl">
+        <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
           <span className="text-muted text-xs block">{isAr ? 'الأهداف النشطة' : 'Active Objectives'}</span>
-          <strong className="text-2xl font-mono text-white font-bold mt-1 block">
+          <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
             {activeGoalsCount} <span className="text-xs text-muted font-normal">/ {goals.length}</span>
           </strong>
           <span className="text-[11px] text-muted">{isAr ? 'أهداف قيد التنفيذ' : 'in progress'}</span>
         </div>
 
-        <div className="panel p-4 border border-[#26372d] bg-[#111914] rounded-xl">
+        <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
           <span className="text-muted text-xs block">{isAr ? 'متوسط سرعة الإنجاز' : 'Avg Velocity'}</span>
           <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
             {avgActiveProgress}%
@@ -215,7 +211,7 @@ export const GoalsView: React.FC = () => {
           <span className="text-[11px] text-muted">{isAr ? 'متوسط النتائج النشطة' : 'across active goals'}</span>
         </div>
 
-        <div className="panel p-4 border border-[#26372d] bg-[#111914] rounded-xl">
+        <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
           <span className="text-muted text-xs block">{isAr ? 'المراحل المنجزة' : 'Milestones Hit'}</span>
           <strong className="text-2xl font-mono text-emerald-400 font-bold mt-1 block">
             {totalCompletedMilestones}
@@ -223,7 +219,7 @@ export const GoalsView: React.FC = () => {
           <span className="text-[11px] text-muted">{isAr ? 'محطة زمنية مكتملة' : 'milestones completed'}</span>
         </div>
 
-        <div className="panel p-4 border border-[#26372d] bg-[#111914] rounded-xl">
+        <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
           <span className="text-muted text-xs block">{isAr ? 'يحتاج تنشيطاً' : 'Needs Momentum'}</span>
           <strong className={`text-2xl font-mono font-bold mt-1 block ${dormantCount > 0 ? 'text-amber-400' : 'text-muted'}`}>
             {dormantCount}
@@ -233,7 +229,7 @@ export const GoalsView: React.FC = () => {
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="panel p-3.5 border border-[#26372d] bg-[#111914] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="panel p-3.5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 flex-1">
           {/* Status Tabs */}
           <div className="flex p-0.5 rounded-lg bg-[#0c120f] border border-[#26372d] text-xs">
@@ -318,18 +314,20 @@ export const GoalsView: React.FC = () => {
 
       {/* Goal Cards Grid */}
       {filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">🎯</div>
-          <strong>{isAr ? 'لا توجد أهداف مطابقة للفلاتر' : 'No goals found'}</strong>
-          <p>
-            {isAr
+        <EmptyState
+          icon="target"
+          title={isAr ? 'لا توجد أهداف مطابقة للفلاتر' : 'No goals found'}
+          description={
+            isAr
               ? 'قم بإنشاء هدف استراتيجي جديد واربطه بمهامك وعاداتك.'
-              : 'Create a new strategic objective to anchor execution and drive momentum.'}
-          </p>
-          <button className="btn primary" onClick={openNewGoalModal}>
-            + {isAr ? 'إنشاء هدف جديد' : 'New Goal'}
-          </button>
-        </div>
+              : 'Create a new strategic objective to anchor execution and drive momentum.'
+          }
+          action={
+            <button className="btn primary" onClick={openNewGoalModal}>
+              + {isAr ? 'إنشاء هدف جديد' : 'New Goal'}
+            </button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map(({ goal, intel }) => {
