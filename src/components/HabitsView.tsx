@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, SpecializedHabitType } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { EmptyState, TabBar } from './ui';
+import { EmptyState, PageHeader, TabBar } from './ui';
 import { ReadingAppModal } from './ReadingAppModal';
 import { WorkoutAppModal } from './WorkoutAppModal';
 
@@ -125,20 +125,16 @@ export const HabitsView: React.FC = () => {
   return (
     <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Page Heading */}
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">
-            <span className="line"></span>
-            <span>NUQTA / RHYTHM</span>
-          </div>
-          <h1>{isAr ? 'العادات والإيقاع' : 'Habits & Rhythm'}</h1>
-          <p>
-            {isAr
-              ? 'تكرار يومي صغير ومدروس يصنع تحولاً جذرياً في مسار حياتك.'
-              : 'Small, intentional daily actions that create profound shifts over time.'}
-          </p>
-        </div>
-        <div className="heading-actions">
+      <PageHeader
+        eyebrow="NUQTA / RHYTHM"
+        title={isAr ? 'العادات والإيقاع' : 'Habits & Rhythm'}
+        description={
+          isAr
+            ? 'تكرار يومي صغير ومدروس يصنع تحولاً جذرياً في مسار حياتك.'
+            : 'Small, intentional daily actions that create profound shifts over time.'
+        }
+        actions={
+          <>
           {(() => {
             const openOrCreateStudio = (type: 'quran' | 'reading' | 'workout' | 'drawing') => {
               const existing = habits.find((h) => h.specializedType === type);
@@ -239,8 +235,9 @@ export const HabitsView: React.FC = () => {
               </div>
             );
           })()}
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Summary Metrics */}
       <div className="money-summary" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
