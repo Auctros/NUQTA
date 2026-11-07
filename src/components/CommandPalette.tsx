@@ -96,6 +96,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, i
       open={open}
       onClose={onClose}
       size="md"
+      variant="glass"
       title={isAr ? 'لوحة الأوامر' : 'Command Palette'}
       description={isAr ? 'تنقّل بين صفحات NUQTA أو نفّذ إجراءً سريعًا' : 'Jump to a NUQTA page or run a quick action'}
     >

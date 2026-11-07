@@ -51,6 +51,8 @@ export interface ModalProps {
   footer?: React.ReactNode;
   size?: ModalSize;
   closeLabel?: string;
+  /** "glass" opts this dialog into the soft-glass surface; default stays unchanged. */
+  variant?: 'default' | 'glass';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -61,7 +63,8 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
   size = 'md',
-  closeLabel = 'Close'
+  closeLabel = 'Close',
+  variant = 'default'
 }) => {
   const panelRef = useOverlayBehaviour(open, onClose);
   if (!open) return null;
@@ -82,8 +85,10 @@ export const Modal: React.FC<ModalProps> = ({
         tabIndex={-1}
         className={[
           'w-full flex flex-col overflow-hidden outline-none',
-          'max-h-[92vh] rounded-[var(--r-lg)] border border-[var(--border-default)]',
-          'bg-[var(--surface-raised)] shadow-[var(--elev-3)]',
+          'max-h-[92vh] rounded-[var(--r-lg)] border',
+          variant === 'glass'
+            ? 'glass-surface border-[var(--glass-border)]'
+            : 'border-[var(--border-default)] bg-[var(--surface-raised)] shadow-[var(--elev-3)]',
           MODAL_WIDTH[size]
         ].join(' ')}
       >

@@ -189,6 +189,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ open, onCl
       open={open}
       onClose={onClose}
       size="md"
+      variant="glass"
       title={isAr ? 'البحث الشامل' : 'Global Search'}
       description={
         isAr ? 'ابحث داخل مهامك وعاداتك وأهدافك واستوديوهاتك' : 'Search across tasks, habits, goals and your studios'
