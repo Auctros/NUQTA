@@ -12,7 +12,7 @@ import {
   QuranSurahStatus
 } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { Badge, StatTile, TabBar } from './ui';
+import { Badge, StatTile, StudioShell, TabBar } from './ui';
 
 const STUDIO_TABS = [
   { id: 'dashboard', ar: 'لوحة المتابعة', en: 'Dashboard' },
@@ -224,38 +224,15 @@ export const QuranView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-      {/* Toast Alert */}
-      {logSuccessToast && (
-        <div className="p-3 rounded-xl border border-emerald-500/40 bg-[var(--d-quran-chip)] text-[var(--d-quran-accent-bright)] text-xs flex items-center justify-between shadow-lg animate-fade-in">
-          <div className="flex items-center gap-2">
-            <span className="text-[var(--d-quran-accent)] text-base">✓</span>
-            <span>{logSuccessToast}</span>
-          </div>
-          <button onClick={() => setLogSuccessToast(null)} className="text-[var(--d-quran-accent)] hover:text-[var(--text-primary)]">
-            ×
-          </button>
-        </div>
-      )}
-
-      {/* 1. Page Heading with Quick Stats */}
-      <div className="page-heading flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="eyebrow flex items-center gap-2">
-            <span className="line"></span>
-            <span className="font-mono text-[var(--d-quran-accent)]">NUQTA / QURAN SANCTUARY</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[var(--text-primary)]">
-            {isAr ? 'استوديو حفظ ومراجعة القرآن الكريم' : 'Quran Memorization Studio'}
-          </h1>
-          <p className="text-xs md:text-sm text-muted">
-            {isAr
-              ? 'مساحة هادئة لمتابعة الورد، الحفظ الجديد، والتسميع المتين مع منع تكرار احتساب الآيات.'
-              : 'Disciplined sanctuary for new memorization, spaced revision, and mastery retention.'}
-          </p>
-        </div>
-
+    <StudioShell
+      eyebrow="NUQTA / QURAN SANCTUARY"
+      title={isAr ? 'استوديو حفظ ومراجعة القرآن الكريم' : 'Quran Memorization Studio'}
+      description={
+        isAr
+          ? 'مساحة هادئة لمتابعة الورد، الحفظ الجديد، والتسميع المتين مع منع تكرار احتساب الآيات.'
+          : 'Disciplined sanctuary for new memorization, spaced revision, and mastery retention.'
+      }
+      actions={
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('session')}
@@ -280,10 +257,9 @@ export const QuranView: React.FC = () => {
             <span>→</span>
           </button>
         </div>
-      </div>
-
-      {/* 2. Top Metric Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+      }
+      meta={
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
         {/* Total Distinct Ayahs */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-quran-surface)] space-y-1">
           <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
@@ -306,7 +282,7 @@ export const QuranView: React.FC = () => {
             {percentOfQuran}% {isAr ? 'من القرآن الكريم' : 'of Quran'}
           </span>
         </div>
-
+        
         {/* Completed Surahs */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-quran-surface)] space-y-1">
           <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
@@ -323,7 +299,7 @@ export const QuranView: React.FC = () => {
             {surahsState.filter((s) => s.status === 'in_progress').length} {isAr ? 'سور قيد الحفظ' : 'in progress'}
           </span>
         </div>
-
+        
         {/* Today's Accomplishments */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-quran-surface)] space-y-1">
           <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
@@ -340,7 +316,7 @@ export const QuranView: React.FC = () => {
             {todayMinutes} {isAr ? 'دقيقة تدبر وحفظ' : 'mins logged'}
           </span>
         </div>
-
+        
         {/* Streak */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-quran-surface)] space-y-1">
           <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
@@ -357,7 +333,7 @@ export const QuranView: React.FC = () => {
             {isAr ? 'أطول سلسلة:' : 'Best:'} {quranHabit.longestStreak || 0} {isAr ? 'يوم' : 'd'}
           </span>
         </div>
-
+        
         {/* Revision Cadence */}
         <div className="col-span-2 sm:col-span-1">
           <StatTile
@@ -373,16 +349,14 @@ export const QuranView: React.FC = () => {
             accent="info"
           />
         </div>
-      </div>
+              </div>
+      }
+      tabs={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
+      activeTab={activeTab}
+      onTabChange={(id) => setActiveTab(id as any)}
+    >
 
-      {/* 3. Studio Navigation Tabs (Buttons) */}
-            <TabBar
-        items={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
-        value={activeTab}
-        onChange={(id) => setActiveTab(id as any)}
-      />
-
-      {/* =========================================================================
+{/* =========================================================================
           TAB 1: DASHBOARD
          ========================================================================= */}
       {activeTab === 'dashboard' && (
@@ -1151,6 +1125,6 @@ export const QuranView: React.FC = () => {
           )}
         </div>
       )}
-    </div>
+    </StudioShell>
   );
 };

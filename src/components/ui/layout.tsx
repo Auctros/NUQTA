@@ -10,8 +10,8 @@ import { Badge, BadgeTone, ProgressBar, Surface } from './primitives';
 /* ---------- PageHeader ---------- */
 export interface PageHeaderProps {
   eyebrow?: string;
-  title: string;
-  description?: string;
+  title: React.ReactNode;
+  description?: React.ReactNode;
   actions?: React.ReactNode;
   meta?: React.ReactNode;
 }
@@ -224,9 +224,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 /* ---------- StudioShell ---------- */
 export interface StudioShellProps {
   eyebrow: string;
-  title: string;
-  description?: string;
+  title: React.ReactNode;
+  description?: React.ReactNode;
   actions?: React.ReactNode;
+  meta?: React.ReactNode;
   tabs?: TabItem[];
   activeTab?: string;
   onTabChange?: (id: string) => void;
@@ -239,6 +240,7 @@ export const StudioShell: React.FC<StudioShellProps> = ({
   title,
   description,
   actions,
+  meta,
   tabs,
   activeTab,
   onTabChange,
@@ -247,6 +249,7 @@ export const StudioShell: React.FC<StudioShellProps> = ({
 }) => (
   <div className="space-y-[var(--sp-5)]">
     <PageHeader eyebrow={eyebrow} title={title} description={description} actions={actions} />
+    {meta}
     {tabs && activeTab !== undefined && onTabChange && (
       <TabBar items={tabs} value={activeTab} onChange={onTabChange} variant={tabVariant} />
     )}
