@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local safety snapshots and audit screenshots — kept on disk, never committed.
+# Root-only patterns: nested assets with the same names stay tracked.
+/.backup-*/
+/nuqta-*.png

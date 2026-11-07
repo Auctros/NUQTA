@@ -94,6 +94,18 @@
   --d-quran-accent-strong: #6ee7b7;
   --d-quran-accent-bright: #a7f3d0;
 
+  /* Surah-status tints. Derived from the state colour + the domain surface,
+     so the same declaration serves dark and light without a duplicated
+     light block. Idle reuses the plain surface/border pair. */
+  --d-quran-status-done-bg: color-mix(in srgb, var(--state-success) 14%, var(--d-quran-surface));
+  --d-quran-status-done-border: color-mix(in srgb, var(--state-success) 45%, var(--d-quran-surface));
+  --d-quran-status-progress-bg: color-mix(in srgb, var(--state-info) 14%, var(--d-quran-surface));
+  --d-quran-status-progress-border: color-mix(in srgb, var(--state-info) 45%, var(--d-quran-surface));
+  --d-quran-status-review-bg: color-mix(in srgb, var(--state-warning) 14%, var(--d-quran-surface));
+  --d-quran-status-review-border: color-mix(in srgb, var(--state-warning) 45%, var(--d-quran-surface));
+  --d-quran-status-idle-bg: var(--d-quran-surface);
+  --d-quran-status-idle-border: var(--d-quran-border);
+
   /* Reading Vault — warm amber archive */
   --d-reading-surface: #12100b;
   --d-reading-raised: #14120c;

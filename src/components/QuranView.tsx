@@ -695,7 +695,7 @@ export const QuranView: React.FC = () => {
                   className={`p-3 rounded-xl border text-center transition-all ${
                     sessionType === 'new_memorization'
                       ? 'border-emerald-400 bg-emerald-500/20 text-[var(--text-primary)] font-bold'
-                      : 'border-[var(--d-quran-border-strong)] bg-[var(--d-quran-chip)] text-muted hover:text-[var(--text-primary)]'
+                      : 'border-[var(--d-quran-border)] bg-[var(--d-quran-chip)] text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <span className="text-base block mb-0.5">🟢</span>
@@ -708,7 +708,7 @@ export const QuranView: React.FC = () => {
                   className={`p-3 rounded-xl border text-center transition-all ${
                     sessionType === 'revision'
                       ? 'border-blue-400 bg-blue-500/20 text-[var(--text-primary)] font-bold'
-                      : 'border-[var(--d-quran-border-strong)] bg-[var(--d-quran-chip)] text-muted hover:text-[var(--text-primary)]'
+                      : 'border-[var(--d-quran-border)] bg-[var(--d-quran-chip)] text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <span className="text-base block mb-0.5">🔵</span>
@@ -721,7 +721,7 @@ export const QuranView: React.FC = () => {
                   className={`p-3 rounded-xl border text-center transition-all ${
                     sessionType === 'recitation_test'
                       ? 'border-purple-400 bg-purple-500/20 text-[var(--text-primary)] font-bold'
-                      : 'border-[var(--d-quran-border-strong)] bg-[var(--d-quran-chip)] text-muted hover:text-[var(--text-primary)]'
+                      : 'border-[var(--d-quran-border)] bg-[var(--d-quran-chip)] text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <span className="text-base block mb-0.5">🟣</span>
@@ -960,12 +960,12 @@ export const QuranView: React.FC = () => {
                   key={meta.number}
                   className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
                     isCompleted
-                      ? 'border-emerald-500/40 bg-[var(--d-quran-chip)]'
+                      ? 'border-[var(--d-quran-status-done-border)] bg-[var(--d-quran-status-done-bg)]'
                       : isInProgress
-                      ? 'border-teal-500/30 bg-[var(--d-quran-chip)]'
+                      ? 'border-[var(--d-quran-status-progress-border)] bg-[var(--d-quran-status-progress-bg)]'
                       : needsRevision
-                      ? 'border-amber-500/30 bg-[var(--d-quran-chip)]'
-                      : 'border-[var(--d-quran-border-strong)] bg-[var(--d-quran-chip)] opacity-80 hover:opacity-100'
+                      ? 'border-[var(--d-quran-status-review-border)] bg-[var(--d-quran-status-review-bg)]'
+                      : 'border-[var(--d-quran-status-idle-border)] bg-[var(--d-quran-status-idle-bg)] opacity-80 hover:opacity-100'
                   }`}
                 >
                   <div>
@@ -992,7 +992,7 @@ export const QuranView: React.FC = () => {
                             ? 'bg-teal-500/20 text-[var(--state-info-strong)] border-teal-500/30'
                             : needsRevision
                             ? 'bg-amber-500/20 text-[var(--state-warning-strong)] border-amber-500/30'
-                            : 'bg-zinc-800 text-[var(--text-tertiary)] border-zinc-700'
+                            : 'bg-[var(--d-quran-chip)] text-[var(--text-secondary)] border-[var(--d-quran-border)]'
                         }`}
                       >
                         {isCompleted

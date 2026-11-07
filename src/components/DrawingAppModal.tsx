@@ -82,7 +82,7 @@ export const DrawingAppModal: React.FC<DrawingAppModalProps> = ({ habit, onClose
   ];
 
   const mediumMeta: Record<ArtMedium, { ar: string; en: string; icon: string; badge: string; color: string }> = {
-    sketch: { ar: 'رصاص وفحم', en: 'Pencil / Charcoal', icon: '✏️', badge: 'bg-zinc-800 text-[var(--text-secondary)] border-zinc-700', color: '#a1a1aa' },
+    sketch: { ar: 'رصاص وفحم', en: 'Pencil / Charcoal', icon: '✏️', badge: 'bg-[var(--d-drawing-chip)] text-[var(--text-secondary)] border-[var(--d-drawing-border)]', color: '#a1a1aa' },
     ink: { ar: 'حبر وتحبير (Ink)', en: 'Ink & Linework', icon: '✒️', badge: 'bg-[var(--d-drawing-chip)] text-[var(--d-drawing-accent-strong)] border-[var(--d-drawing-border-strong)]', color: '#c084fc' },
     watercolor: { ar: 'ألوان مائية', en: 'Watercolor', icon: '🎨', badge: 'bg-[var(--d-drawing-chip)] text-[var(--state-info-strong)] border-[var(--d-drawing-border-strong)]', color: '#38bdf8' },
     digital: { ar: 'رسم رقمي', en: 'Digital Art', icon: '💻', badge: 'bg-[var(--d-drawing-chip)] text-[var(--d-drawing-accent-strong)] border-[var(--d-drawing-border-strong)]', color: '#22d3ee' },
