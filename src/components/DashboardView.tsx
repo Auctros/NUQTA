@@ -251,40 +251,6 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Contextual Overload Banner (Rescue Mode Prompt) */}
-      {isOverwhelmed && (
-        <div className="p-4 rounded-xl border border-amber-500/30 bg-gradient-to-r from-[var(--state-warning-wash-from)] via-[var(--surface-inset)] to-[var(--state-warning-wash-to)] flex flex-wrap items-center justify-between gap-3 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-[var(--state-warning)] flex items-center justify-center font-bold text-lg border border-amber-500/30 shrink-0">
-              ✳
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <strong className="text-sm font-bold text-[var(--state-warning-strong)]">
-                  {isAr ? 'هل تشعر بالتشتت أو تزاحم اليوم؟' : 'Feeling overwhelmed with daily open loops?'}
-                </strong>
-                <span className="text-[10px] bg-amber-500/20 text-[var(--state-warning-strong)] px-2 py-0.5 rounded-full font-mono">
-                  {overdueTasks.length} {isAr ? 'متأخرة' : 'overdue'} · {pendingTodayTasks.length} {isAr ? 'معلقة' : 'pending'}
-                </span>
-              </div>
-              <p className="text-xs text-[var(--state-warning-strong)]/80 mt-0.5">
-                {isAr
-                  ? 'يمكنك تفعيل وضع الإنقاذ (Rescue Mode) لترحيل ما لا يلزم فوراً والتركيز على مهمة مرساة واحدة دون إجهاد ذهني.'
-                  : 'Activate Rescue Mode to defer secondary tasks and lock into a single high-impact anchor.'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setRescueModeOpen(true)}
-              className="btn small bg-amber-500 text-black font-semibold hover:bg-amber-400 border-none shadow-md text-xs"
-            >
-              <span>{isAr ? 'تفعيل وضع الإنقاذ الآن ✳' : 'Launch Rescue Mode ✳'}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 3. Daily Progress Strip (Factual & Honest Accomplishments) */}
       <div className="panel p-4 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-raised)] shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-[var(--border-subtle)]">
@@ -597,6 +563,40 @@ export const DashboardView: React.FC = () => {
               })}
             </div>
           </section>
+
+          {/* Contextual Overload Banner — after the anchors, before the agenda */}
+          {isOverwhelmed && (
+            <div className="p-4 rounded-xl border border-amber-500/30 bg-gradient-to-r from-[var(--state-warning-wash-from)] via-[var(--surface-inset)] to-[var(--state-warning-wash-to)] flex flex-wrap items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-[var(--state-warning)] flex items-center justify-center font-bold text-lg border border-amber-500/30 shrink-0">
+                  ✳
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-sm font-bold text-[var(--state-warning-strong)]">
+                      {isAr ? 'هل تشعر بالتشتت أو تزاحم اليوم؟' : 'Feeling overwhelmed with daily open loops?'}
+                    </strong>
+                    <span className="text-[10px] bg-amber-500/20 text-[var(--state-warning-strong)] px-2 py-0.5 rounded-full font-mono">
+                      {overdueTasks.length} {isAr ? 'متأخرة' : 'overdue'} · {pendingTodayTasks.length} {isAr ? 'معلقة' : 'pending'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--state-warning-strong)]/80 mt-0.5">
+                    {isAr
+                      ? 'يمكنك تفعيل وضع الإنقاذ (Rescue Mode) لترحيل ما لا يلزم فوراً والتركيز على مهمة مرساة واحدة دون إجهاد ذهني.'
+                      : 'Activate Rescue Mode to defer secondary tasks and lock into a single high-impact anchor.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setRescueModeOpen(true)}
+                  className="btn small bg-amber-500 text-black font-semibold hover:bg-amber-400 border-none shadow-md text-xs"
+                >
+                  <span>{isAr ? 'تفعيل وضع الإنقاذ الآن ✳' : 'Launch Rescue Mode ✳'}</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Today's Adaptive Agenda (Overdue, Upcoming Flow, Completed) */}
           <section className="panel p-5 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-raised)] shadow-sm">
