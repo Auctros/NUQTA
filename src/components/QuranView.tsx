@@ -12,6 +12,7 @@ import {
   QuranSurahStatus
 } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
+import { Badge, StatTile } from './ui';
 
 export const QuranView: React.FC = () => {
   const {
@@ -350,20 +351,19 @@ export const QuranView: React.FC = () => {
         </div>
 
         {/* Revision Cadence */}
-        <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-quran-surface)] space-y-1 col-span-2 sm:col-span-1">
-          <span className="text-[11px] text-muted block flex items-center justify-between">
-            <span>{isAr ? 'دورة المراجعة' : 'Revision Cadence'}</span>
-            <span className="text-[var(--state-info)] text-xs">↻</span>
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <strong className="text-xl font-bold font-mono text-[var(--state-info)]">
-              {quranData?.revisionSchedule?.revisionCycleDays || 7}
-            </strong>
-            <span className="text-xs text-muted">{isAr ? 'أيام' : 'days'}</span>
-          </div>
-          <span className="text-[10px] text-muted block">
-            {isAr ? 'الهدف اليومي:' : 'Daily Target:'} {quranData?.dailyTargetAyahs || 10} {isAr ? 'آيات' : 'ayahs'}
-          </span>
+        <div className="col-span-2 sm:col-span-1">
+          <StatTile
+            label={isAr ? 'دورة المراجعة' : 'Revision Cadence'}
+            value={
+              <>
+                {quranData?.revisionSchedule?.revisionCycleDays || 7}
+                <span className="text-[var(--fs-sm)] font-normal ms-1">{isAr ? 'أيام' : 'days'}</span>
+              </>
+            }
+            hint={`${isAr ? 'الهدف اليومي:' : 'Daily Target:'} ${quranData?.dailyTargetAyahs || 10} ${isAr ? 'آيات' : 'ayahs'}`}
+            icon="repeat"
+            accent="info"
+          />
         </div>
       </div>
 
@@ -984,16 +984,8 @@ export const QuranView: React.FC = () => {
                         </div>
                       </div>
 
-                      <span
-                        className={`text-[9px] px-1.5 py-0.5 rounded font-medium border ${
-                          isCompleted
-                            ? 'bg-emerald-500/20 text-[var(--d-quran-accent-strong)] border-emerald-500/30'
-                            : isInProgress
-                            ? 'bg-teal-500/20 text-[var(--state-info-strong)] border-teal-500/30'
-                            : needsRevision
-                            ? 'bg-amber-500/20 text-[var(--state-warning-strong)] border-amber-500/30'
-                            : 'bg-[var(--d-quran-chip)] text-[var(--text-secondary)] border-[var(--d-quran-border)]'
-                        }`}
+                      <Badge
+                        tone={isCompleted ? 'success' : isInProgress ? 'info' : needsRevision ? 'warning' : 'neutral'}
                       >
                         {isCompleted
                           ? (isAr ? 'محفوظة' : 'Completed')
@@ -1002,7 +994,7 @@ export const QuranView: React.FC = () => {
                           : needsRevision
                           ? (isAr ? 'مراجعة' : 'Review')
                           : (isAr ? 'لم تبدأ' : 'Not Started')}
-                      </span>
+                      </Badge>
                     </div>
 
                     {/* Progress Bar */}

@@ -74,6 +74,74 @@
   --state-warning-wash-to: rgba(69, 26, 3, 0.2);
 
   /* ========================================================
+     DESIGN SYSTEM TOKENS (Batch 02)
+     --------------------------------------------------------
+     Structural tokens only. Colors are NOT duplicated here —
+     they already live in the primitive/semantic/domain layers
+     above and must stay the single source of truth.
+     ======================================================== */
+
+  /* Typography scale — 7 levels */
+  --fs-micro: 11px;
+  --fs-xs: 12px;
+  --fs-sm: 13.5px;
+  --fs-base: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 24px;
+  --fs-2xl: 30px;
+
+  --lh-tight: 1.15;
+  --lh-snug: 1.35;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.7;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-heavy: 800;
+
+  /* Spacing scale (4px base) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+
+  /* Radius */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-full: 999px;
+
+  /* Elevation — soft depth, two layers (ambient + key) */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --elev-2: 0 2px 4px rgba(0, 0, 0, 0.16), 0 8px 24px -12px rgba(0, 0, 0, 0.4);
+  --elev-3: 0 4px 10px rgba(0, 0, 0, 0.2), 0 24px 64px -24px rgba(0, 0, 0, 0.55);
+
+  /* Motion */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.3, 1);
+
+  /* Z-index layers */
+  --z-base: 0;
+  --z-sticky: 20;
+  --z-sidebar: 30;
+  --z-dropdown: 40;
+  --z-modal: 60;
+  --z-toast: 80;
+
+  /* Breakpoints are documented, not variable-driven (CSS vars do not
+     work in media queries): sm 640 · md 768 · lg 1024 · xl 1280. */
+
+  /* ========================================================
      DOMAIN TOKENS — one palette per studio, one shared shape.
      Each studio keeps its own hue family (Quran = emerald,
      Reading = amber, Workout = emerald/teal, Drawing = violet)
