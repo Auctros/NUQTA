@@ -40,6 +40,7 @@ export default function App() {
     setLanguage,
     setTheme,
     setRescueModeOpen,
+    requestFocus,
     tasks,
     habits
   } = useNuqtaStore();
@@ -219,7 +220,10 @@ export default function App() {
         open={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         isAr={isAr}
-        onOpenResult={(result) => setActiveNavTab(result.domain)}
+        onOpenResult={(result) => {
+          requestFocus(result.domain, result.recordId);
+          setActiveNavTab(result.domain as any);
+        }}
       />
 
       {/* Mobile Scrim Backdrop */}

@@ -1106,3 +1106,20 @@ body.light-mode {
 .sidebar .primary-nav {
   flex-shrink: 0;
 }
+
+/* Transient highlight used when Global Search jumps to a record */
+@keyframes nuqtaFocusPulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--brand-soft-border);
+  }
+  30% {
+    box-shadow: 0 0 0 3px var(--brand-soft-border);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+.focus-flash {
+  animation: nuqtaFocusPulse 2.2s ease-out 1;
+  border-color: var(--brand-strong) !important;
+}

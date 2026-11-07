@@ -56,6 +56,11 @@ interface NuqtaStoreState {
   setSearchQuery: (query: string) => void;
   setSelectedTagFilter: (tag: string | null) => void;
 
+  // Transient cross-screen focus request — UI only, never persisted
+  focusRequest: { domain: string; entityId: string; nonce: number } | null;
+  requestFocus: (domain: string, entityId: string) => void;
+  consumeFocus: () => void;
+
   // Task Actions
   addTaskFromNLP: (rawText: string) => Task;
   createTask: (draft: Partial<Task>) => void;
@@ -184,6 +189,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   isQuickCaptureOpen: false,
   isSundayRitualOpen: false,
   activeNavTab: 'today',
+  focusRequest: null,
   searchQuery: '',
   selectedTagFilter: null,
 
@@ -238,6 +244,8 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   setActiveNavTab: (tab) => set({ activeNavTab: tab }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSelectedTagFilter: (tag) => set({ selectedTagFilter: tag }),
+  requestFocus: (domain, entityId) => set({ focusRequest: { domain, entityId, nonce: Date.now() } }),
+  consumeFocus: () => set({ focusRequest: null }),
 
   // TASK ACTIONS
   addTaskFromNLP: (rawText: string) => {

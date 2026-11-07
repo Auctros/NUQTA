@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { PriorityLevel, Task, TaskStatus } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
@@ -20,11 +20,29 @@ export const TasksView: React.FC = () => {
     goals,
     archiveTask,
     restoreTask,
-    setActiveNavTab
+    setActiveNavTab,
+    focusRequest,
+    consumeFocus
   } = useNuqtaStore();
 
   const isAr = profile.language === 'ar';
   const [viewMode, setViewMode] = useState<'list' | 'board' | 'matrix'>('list');
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!focusRequest || focusRequest.domain !== 'tasks') return;
+    const id = focusRequest.entityId;
+    setViewMode('list');
+    setStatusFilter('all');
+    setFocusedTaskId(id);
+    consumeFocus();
+    window.setTimeout(() => {
+      document.getElementById('task-' + id)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 120);
+    const timer = window.setTimeout(() => setFocusedTaskId(null), 2600);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
   const [sortBy, setSortBy] = useState<'due' | 'priority'>('due');
@@ -313,8 +331,8 @@ export const TasksView: React.FC = () => {
                 const isExpanded = expandedTaskId === task.id;
 
                 return (
-                  <div key={task.id} className="space-y-2">
-                    <div className={`task-row ${isCompleted ? 'done' : ''}`}>
+                  <div key={task.id} className="space-y-2" id={'task-' + task.id}>
+                    <div className={`task-row ${isCompleted ? 'done' : ''} ${focusedTaskId === task.id ? 'focus-flash' : ''}`}>
                       <button
                         className={`check-circle ${isCompleted ? 'checked' : ''}`}
                         onClick={() => toggleTaskStatus(task.id)}

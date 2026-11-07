@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { BookItem, BookCategory } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
@@ -24,8 +24,27 @@ export const ReadingView: React.FC = () => {
     addBookQuote,
     deleteBookQuote,
     updateReadingTargets,
-    setActiveNavTab
+    setActiveNavTab,
+    focusRequest,
+    consumeFocus
   } = useNuqtaStore();
+
+  const [focusedEntityId, setFocusedEntityId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!focusRequest || focusRequest.domain !== 'reading') return;
+    const id = focusRequest.entityId;
+    setActiveTab('library');
+    setLibraryFilter('all');
+    setFocusedEntityId(id);
+    consumeFocus();
+    window.setTimeout(() => {
+      document.getElementById('book-' + id)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 120);
+    const timer = window.setTimeout(() => setFocusedEntityId(null), 2600);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest]);
 
   const isAr = profile.language === 'ar';
   const todayStr = new Date().toISOString().split('T')[0];
@@ -766,7 +785,10 @@ export const ReadingView: React.FC = () => {
               return (
                 <div
                   key={b.id}
-                  className="p-4 rounded-xl border border-[var(--d-reading-border)] bg-[var(--d-reading-deep)] flex flex-col justify-between gap-3"
+                  id={'book-' + b.id}
+                  className={`p-4 rounded-xl border border-[var(--d-reading-border)] bg-[var(--d-reading-deep)] flex flex-col justify-between gap-3 ${
+                    focusedEntityId === b.id ? 'focus-flash' : ''
+                  }`}
                 >
                   <div>
                     <div className="flex items-start gap-3 mb-2">

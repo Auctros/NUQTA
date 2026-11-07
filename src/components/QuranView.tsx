@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import {
   QURAN_SURAHS,
@@ -31,8 +31,26 @@ export const QuranView: React.FC = () => {
     updateQuranRevisionSchedule,
     deleteQuranSession,
     profile,
-    setActiveNavTab
+    setActiveNavTab,
+    focusRequest,
+    consumeFocus
   } = useNuqtaStore();
+
+  const [focusedEntityId, setFocusedEntityId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!focusRequest || focusRequest.domain !== 'quran') return;
+    const id = focusRequest.entityId;
+    setActiveTab('map');
+    setFocusedEntityId(id);
+    consumeFocus();
+    window.setTimeout(() => {
+      document.getElementById('surah-' + id)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 150);
+    const timer = window.setTimeout(() => setFocusedEntityId(null), 2600);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest]);
 
   const isAr = profile.language === 'ar';
   const todayStr = new Date().toISOString().split('T')[0];
@@ -884,7 +902,10 @@ export const QuranView: React.FC = () => {
               return (
                 <div
                   key={meta.number}
+                  id={'surah-' + meta.number}
                   className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
+                    focusedEntityId === String(meta.number) ? 'focus-flash ' : ''
+                  }${
                     isCompleted
                       ? 'border-[var(--d-quran-status-done-border)] bg-[var(--d-quran-status-done-bg)]'
                       : isInProgress
