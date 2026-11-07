@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { WorkoutRoutine, ExerciseEntry, ExerciseSet } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { TabBar } from './ui';
+import { StudioShell, TabBar } from './ui';
 
 const STUDIO_TABS = [
   { id: 'dashboard', ar: 'لوحة اللياقة', en: 'Fitness Dashboard' },
@@ -175,25 +175,15 @@ export const WorkoutView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-      {/* 1. Page Heading */}
-      <div className="page-heading flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="eyebrow flex items-center gap-2">
-            <span className="line"></span>
-            <span className="font-mono text-[var(--d-workout-accent)]">NUQTA / HOME FITNESS</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[var(--text-primary)]">
-            {isAr ? 'استوديو اللياقة المنزلية' : 'Home Fitness & Calisthenics'}
-          </h1>
-          <p className="text-xs md:text-sm text-muted">
-            {isAr
-              ? 'مساحة التدريب المنزلي، تكرارات وزن الجسم، وبرامج الكاليسثنكس والرشاقة.'
-              : 'Bodyweight training sanctuary, volume tracking, and daily physical vitality.'}
-          </p>
-        </div>
-
+    <StudioShell
+      eyebrow="NUQTA / HOME FITNESS"
+      title={isAr ? 'استوديو اللياقة المنزلية' : 'Home Fitness & Calisthenics'}
+      description={
+        isAr
+          ? 'مساحة التدريب المنزلي، تكرارات وزن الجسم، وبرامج الكاليسثنكس والرشاقة.'
+          : 'Bodyweight training sanctuary, volume tracking, and daily physical vitality.'
+      }
+      actions={
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('session')}
@@ -218,9 +208,9 @@ export const WorkoutView: React.FC = () => {
             <span>→</span>
           </button>
         </div>
-      </div>
-
-      {/* 2. Top Metric Strip */}
+      }
+      meta={
+        <>
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
         {/* Total Reps */}
         <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1">
@@ -305,12 +295,12 @@ export const WorkoutView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Studio Navigation Tabs */}
-            <TabBar
-        items={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
-        value={activeTab}
-        onChange={(id) => setActiveTab(id as any)}
-      />
+        </>
+      }
+      tabs={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
+      activeTab={activeTab}
+      onTabChange={(id) => setActiveTab(id as any)}
+    >
 
       {/* =========================================================================
           TAB 1: DASHBOARD
@@ -748,6 +738,6 @@ export const WorkoutView: React.FC = () => {
           </form>
         </div>
       )}
-    </div>
+    </StudioShell>
   );
 };
