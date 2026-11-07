@@ -5,7 +5,6 @@ import { NuqtaIcon } from './NuqtaIcon';
 import { QuickCaptureBar } from './QuickCaptureBar';
 import { ReadingAppModal } from './ReadingAppModal';
 import { WorkoutAppModal } from './WorkoutAppModal';
-import { DrawingAppModal } from './DrawingAppModal';
 import { GoalDetailModal } from './GoalDetailModal';
 import { evaluateGoalProgress } from '../lib/goalProgressEngine';
 import confetti from 'canvas-confetti';
@@ -32,7 +31,6 @@ export const DashboardView: React.FC = () => {
   // Modals for Specialized Habit Studios & Goals
   const [activeReadingModalHabit, setActiveReadingModalHabit] = useState<Habit | null>(null);
   const [activeWorkoutModalHabit, setActiveWorkoutModalHabit] = useState<Habit | null>(null);
-  const [activeDrawingModalHabit, setActiveDrawingModalHabit] = useState<Habit | null>(null);
   const [inspectingGoal, setInspectingGoal] = useState<Goal | null>(null);
 
   // Daily Focus Selector Modal State
@@ -1580,13 +1578,6 @@ export const DashboardView: React.FC = () => {
         <WorkoutAppModal
           habit={activeWorkoutModalHabit}
           onClose={() => setActiveWorkoutModalHabit(null)}
-        />
-      )}
-
-      {activeDrawingModalHabit && (
-        <DrawingAppModal
-          habit={activeDrawingModalHabit}
-          onClose={() => setActiveDrawingModalHabit(null)}
         />
       )}
 

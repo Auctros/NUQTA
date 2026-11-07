@@ -4,7 +4,6 @@ import { Habit, SpecializedHabitType } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
 import { ReadingAppModal } from './ReadingAppModal';
 import { WorkoutAppModal } from './WorkoutAppModal';
-import { DrawingAppModal } from './DrawingAppModal';
 
 export const HabitsView: React.FC = () => {
   const {
@@ -29,7 +28,6 @@ export const HabitsView: React.FC = () => {
   // Active specialized sub-app modal state
   const [activeReadingModalHabit, setActiveReadingModalHabit] = useState<Habit | null>(null);
   const [activeWorkoutModalHabit, setActiveWorkoutModalHabit] = useState<Habit | null>(null);
-  const [activeDrawingModalHabit, setActiveDrawingModalHabit] = useState<Habit | null>(null);
 
   const [formName, setFormName] = useState('');
   const [formAnchor, setFormAnchor] = useState('');
@@ -806,13 +804,6 @@ export const HabitsView: React.FC = () => {
         <WorkoutAppModal
           habit={activeWorkoutModalHabit}
           onClose={() => setActiveWorkoutModalHabit(null)}
-        />
-      )}
-
-      {activeDrawingModalHabit && (
-        <DrawingAppModal
-          habit={activeDrawingModalHabit}
-          onClose={() => setActiveDrawingModalHabit(null)}
         />
       )}
     </div>
