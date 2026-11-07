@@ -65,17 +65,36 @@ export default function App() {
   // Global hotkeys (Q for new task, Escape to close sidebar)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        (e.key === 'q' || e.key === 'Q') &&
-        !['INPUT', 'TEXTAREA', 'SELECT'].includes((document.activeElement as HTMLElement)?.tagName) &&
-        !e.ctrlKey &&
-        !e.metaKey
-      ) {
-        e.preventDefault();
-        setActiveNavTab('tasks');
-      }
       if (e.key === 'Escape') {
         setSidebarOpen(false);
+        return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const isEditable =
+        !!target &&
+        ((!!tag && ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) || target.isContentEditable);
+      const isComposing = e.isComposing || e.keyCode === 229;
+      const isQuickCaptureKey =
+        (e.key === 'q' || e.key === 'Q') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
+
+      if (!isQuickCaptureKey || isEditable || isComposing) return;
+
+      e.preventDefault();
+      const focusInput = () => {
+        const el = document.getElementById('quick-capture-input') as HTMLInputElement | null;
+        if (el) {
+          el.focus();
+          el.select();
+          return true;
+        }
+        return false;
+      };
+
+      if (!focusInput()) {
+        setActiveNavTab('today');
+        window.setTimeout(focusInput, 80);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -205,6 +224,8 @@ export default function App() {
             return (
               <button
                 key={item.id}
+                title={item.label}
+                aria-label={item.label}
                 onClick={() => {
                   setActiveNavTab(item.id);
                   if (window.innerWidth < 1024) setSidebarOpen(false);
@@ -235,6 +256,8 @@ export default function App() {
             return (
               <button
                 key={item.id}
+                title={item.label}
+                aria-label={item.label}
                 onClick={() => {
                   setActiveNavTab(item.id);
                   if (window.innerWidth < 1024) setSidebarOpen(false);
@@ -260,6 +283,8 @@ export default function App() {
             return (
               <button
                 key={item.id}
+                title={item.label}
+                aria-label={item.label}
                 onClick={() => {
                   setActiveNavTab(item.id);
                   if (window.innerWidth < 1024) setSidebarOpen(false);
@@ -392,7 +417,7 @@ export default function App() {
               >
                 <NuqtaIcon name="bell" className="w-4 h-4" />
                 {todayDueCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-accent-strong animate-pulse"></span>
+                  <span className="absolute top-1 end-1 w-2 h-2 rounded-full bg-accent-strong animate-pulse"></span>
                 )}
               </button>
 

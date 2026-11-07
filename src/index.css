@@ -1038,3 +1038,71 @@ body.light-mode {
     transform: translateX(0);
   }
 }
+
+/* ============================================================
+   APP SHELL — Icon Rail (desktop) & sidebar scrolling
+   Collapsing no longer hides the navigation: it becomes a rail
+   that keeps every destination reachable as an icon.
+   ============================================================ */
+@media (min-width: 901px) {
+  .app-shell.sidebar-collapsed .sidebar {
+    transform: none !important;
+    width: 76px;
+    padding-inline: 10px;
+  }
+  [dir="rtl"] .app-shell.sidebar-collapsed .sidebar {
+    transform: none !important;
+  }
+  .app-shell.sidebar-collapsed .main-area {
+    margin-inline-start: 76px !important;
+  }
+
+  /* hide text, keep icons */
+  .app-shell.sidebar-collapsed .brand-copy,
+  .app-shell.sidebar-collapsed .nav-label,
+  .app-shell.sidebar-collapsed .nav-trailing,
+  .app-shell.sidebar-collapsed .sidebar-footer-card,
+  .app-shell.sidebar-collapsed .profile-details,
+  .app-shell.sidebar-collapsed .more-dots,
+  .app-shell.sidebar-collapsed .capture-shortcut > span:not(.capture-plus),
+  .app-shell.sidebar-collapsed .capture-shortcut kbd,
+  .app-shell.sidebar-collapsed .nav-item > span:not(.nav-icon) {
+    display: none !important;
+  }
+
+  .app-shell.sidebar-collapsed .brand-row,
+  .app-shell.sidebar-collapsed .profile-row {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .app-shell.sidebar-collapsed .capture-shortcut,
+  .app-shell.sidebar-collapsed .nav-item {
+    justify-content: center;
+    padding-inline: 0;
+    gap: 0;
+  }
+  .app-shell.sidebar-collapsed .nav-item .nav-icon {
+    margin: 0;
+  }
+}
+
+/* The sidebar scrolls internally instead of clipping destinations */
+.sidebar {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--r-full);
+}
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar .primary-nav {
+  flex-shrink: 0;
+}

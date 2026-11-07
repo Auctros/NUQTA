@@ -238,14 +238,6 @@ export const DashboardView: React.FC = () => {
         </div>
         <div className="heading-actions flex items-center gap-2">
           <button
-            className="btn subtle text-xs border border-amber-500/30 text-[var(--state-warning-strong)] hover:bg-amber-500/10 flex items-center gap-1.5"
-            onClick={() => setRescueModeOpen(true)}
-            title={isAr ? 'تفعيل وضع الإنقاذ عند تزاحم المهام' : 'Anti-overwhelm rescue mode'}
-          >
-            <span className="text-[var(--state-warning)] font-bold">✳</span>
-            <span>{isAr ? 'وضع الإنقاذ' : 'Rescue Mode'}</span>
-          </button>
-          <button
             className="btn subtle text-xs border border-accent/40 text-accent hover:bg-accent/10 flex items-center gap-1.5"
             onClick={() => openFocusLauncher()}
           >
