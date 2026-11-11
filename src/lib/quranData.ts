@@ -1,3 +1,4 @@
+import { localDateKey } from './dateKey';
 import { AyahRange, SurahMemorizationState } from '../types';
 
 export interface SurahMeta {
@@ -191,7 +192,7 @@ export const generateInitialQuranSurahs = (): SurahMemorizationState[] => {
         status: 'completed',
         memorizedAyahsRanges: [{ start: 1, end: 7 }],
         memorizedAyahsCount: 7,
-        lastReviewedDate: new Date().toISOString().split('T')[0],
+        lastReviewedDate: localDateKey(),
         masteryRating: 5,
         notes: 'متقنة تماماً كالفاتحة'
       };
@@ -202,7 +203,7 @@ export const generateInitialQuranSurahs = (): SurahMemorizationState[] => {
         status: 'completed',
         memorizedAyahsRanges: [{ start: 1, end: 6 }],
         memorizedAyahsCount: 6,
-        lastReviewedDate: new Date().toISOString().split('T')[0],
+        lastReviewedDate: localDateKey(),
         masteryRating: 5
       };
     }
@@ -212,7 +213,7 @@ export const generateInitialQuranSurahs = (): SurahMemorizationState[] => {
         status: 'completed',
         memorizedAyahsRanges: [{ start: 1, end: 5 }],
         memorizedAyahsCount: 5,
-        lastReviewedDate: new Date().toISOString().split('T')[0],
+        lastReviewedDate: localDateKey(),
         masteryRating: 5
       };
     }
@@ -222,7 +223,7 @@ export const generateInitialQuranSurahs = (): SurahMemorizationState[] => {
         status: 'completed',
         memorizedAyahsRanges: [{ start: 1, end: 4 }],
         memorizedAyahsCount: 4,
-        lastReviewedDate: new Date().toISOString().split('T')[0],
+        lastReviewedDate: localDateKey(),
         masteryRating: 5
       };
     }
@@ -232,7 +233,7 @@ export const generateInitialQuranSurahs = (): SurahMemorizationState[] => {
         status: 'in_progress',
         memorizedAyahsRanges: [{ start: 1, end: 25 }],
         memorizedAyahsCount: 25,
-        lastReviewedDate: new Date().toISOString().split('T')[0],
+        lastReviewedDate: localDateKey(),
         masteryRating: 4,
         notes: 'أول حزب من البقرة'
       };
@@ -243,7 +244,7 @@ export const generateInitialQuranSurahs = (): SurahMemorizationState[] => {
         status: 'in_progress',
         memorizedAyahsRanges: [{ start: 1, end: 15 }],
         memorizedAyahsCount: 15,
-        lastReviewedDate: new Date().toISOString().split('T')[0],
+        lastReviewedDate: localDateKey(),
         masteryRating: 4
       };
     }

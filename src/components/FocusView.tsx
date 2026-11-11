@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState, useEffect } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
@@ -16,7 +17,7 @@ export const FocusView: React.FC = () => {
   const [beforeMood, setBeforeMood] = useState<number>(3);
   const [distractions, setDistractions] = useState<number>(0);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;

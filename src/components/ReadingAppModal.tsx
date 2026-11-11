@@ -1,3 +1,4 @@
+import { localDateKey, parseDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { Habit, BookItem, BookCategory } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
@@ -20,7 +21,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
   } = useNuqtaStore();
 
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   const readingData = habit.readingData || {
     books: [],
@@ -95,7 +96,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
   const past7DaysStart = new Date();
   past7DaysStart.setDate(past7DaysStart.getDate() - 7);
   const pagesReadThisWeek = readingData.sessions
-    .filter((s) => new Date(s.date) >= past7DaysStart)
+    .filter((s) => (parseDateKey(s.date) ?? new Date(s.date)) >= past7DaysStart)
     .reduce((acc, s) => acc + s.pagesRead, 0);
 
   const completedBooks = readingData.books.filter((b) => b.status === 'completed');

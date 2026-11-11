@@ -11,16 +11,23 @@ import {
   SundayRitualReview,
   HistoryAuditLogEntry
 } from '../types';
-import {
-  INITIAL_TASKS,
-  INITIAL_HABITS,
-  INITIAL_GOALS,
-  INITIAL_EXPENSES,
-  INITIAL_SAVINGS_GOALS,
-  INITIAL_PROFILE
-} from './initialData';
+import { DEMO_TASKS, DEMO_HABITS, DEMO_GOALS, DEMO_EXPENSES, DEMO_SAVINGS_GOALS } from './demoData';
 import { NuqtaIndexedDB, STORES } from './indexedDB';
-import { encryptPayload, decryptPayload } from './crypto';
+import {
+  BackupData,
+  ParseBackupResult,
+  BackupError,
+  buildBackupFile,
+  parseBackup,
+  isHealthMap,
+  isPlainObject,
+  isRecordList
+} from './backupSchema';
+
+/** Kept importable from here for backward compatibility; the implementation lives in dateKey.ts. */
+export { localDateKey } from './dateKey';
+
+const KEY_PREFIX = 'nuqta_';
 
 const STORAGE_KEYS = {
   TASKS: 'nuqta_tasks_v1',
@@ -33,333 +40,283 @@ const STORAGE_KEYS = {
   JOURNAL: 'nuqta_journal_v1',
   PROFILE: 'nuqta_profile_v1',
   SUNDAY_REVIEWS: 'nuqta_sunday_reviews_v1',
-  HISTORY_AUDIT: 'nuqta_history_audit_v1'
+  HISTORY_AUDIT: 'nuqta_history_audit_v1',
+  META: 'nuqta_meta_v1'
 } as const;
 
-type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];
+export const SCHEMA_VERSION = 1;
+const MAX_QUARANTINE_COPIES = 3;
 
-/**
- * Returns today's date in the user's local timezone (YYYY-MM-DD).
- * Fixes the UTC offset bug where toISOString().split('T')[0] returns
- * yesterday's date for users behind UTC (e.g. Cairo UTC+2 between 00:00-02:00).
- */
-export function localDateKey(date: Date = new Date()): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+/** Something went wrong with persistence that the user should be told about. */
+export interface StorageIssue {
+  kind: 'write_failed' | 'corrupt';
+  key: string;
+  detail?: string;
+}
+
+interface StorageMeta {
+  schemaVersion: number;
+  createdAt: string;
+  /** True while the data is the optional sample data, not the user's own. */
+  demo?: boolean;
+}
+
+export type ImportResult =
+  | { ok: true; version: number; legacy: boolean }
+  | { ok: false; error: BackupError | 'write_failed'; section?: string };
+
+const issues: StorageIssue[] = [];
+const listeners = new Set<(issue: StorageIssue) => void>();
+
+function report(issue: StorageIssue): void {
+  issues.push(issue);
+  listeners.forEach((fn) => {
+    try {
+      fn(issue);
+    } catch {
+      /* a broken listener must never break persistence */
+    }
+  });
+}
+
+/** Subscribe to persistence problems (quota exceeded, unreadable data...). */
+export function subscribeStorageIssues(fn: (issue: StorageIssue) => void): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+/** Issues raised so far (so a late subscriber does not miss early ones). */
+export function getStorageIssues(): StorageIssue[] {
+  return [...issues];
+}
+
+export function clearStorageIssues(): void {
+  issues.length = 0;
+}
+
+export function defaultProfile(): UserProfile {
+  const lang =
+    typeof navigator !== 'undefined' && /^ar/i.test(navigator.language || '') ? 'ar' : 'en';
+  return {
+    name: '',
+    theme: 'dark',
+    language: lang,
+    experiencePoints: 0,
+    level: 1,
+    biometricLocked: false,
+    encryptionPassphraseSet: false,
+    weeklySundayReviewDue: false
+  };
+}
+
+function normalizeProfile(p: Partial<UserProfile> | null | undefined): UserProfile {
+  const base = defaultProfile();
+  const merged: UserProfile = { ...base, ...(p || {}) };
+  if (merged.language !== 'en' && merged.language !== 'ar') merged.language = base.language;
+  if (typeof merged.name !== 'string') merged.name = '';
+  if (typeof merged.experiencePoints !== 'number' || !isFinite(merged.experiencePoints)) {
+    merged.experiencePoints = 0;
+  }
+  if (typeof merged.level !== 'number' || !isFinite(merged.level) || merged.level < 1) merged.level = 1;
+  return merged;
+}
+
+/** Keep an unreadable value instead of letting the next save overwrite it. */
+function quarantine(key: string, raw: string, reason: string): void {
+  try {
+    localStorage.setItem(`${key}__corrupt_${Date.now()}`, raw);
+    const copies = Object.keys(localStorage)
+      .filter((k) => k.startsWith(`${key}__corrupt_`))
+      .sort();
+    while (copies.length > MAX_QUARANTINE_COPIES) localStorage.removeItem(copies.shift() as string);
+  } catch {
+    /* storage is full: nothing more we can do */
+  }
+  console.warn(`NUQTA: "${key}" was unreadable (${reason}); a copy was preserved.`);
+  report({ kind: 'corrupt', key, detail: reason });
 }
 
 /**
- * Safely writes to localStorage with QuotaExceededError handling.
- * Returns true on success, false on failure.
+ * Pure read: never writes, never seeds. A missing key is just "no data yet".
+ * An unreadable or wrongly-shaped value is preserved under *__corrupt_<time>.
  */
-function safeSetItem(key: string, value: string): boolean {
+function readValue<T>(key: string, fallback: () => T, isValid: (v: unknown) => boolean): T {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(key);
+  } catch {
+    return fallback();
+  }
+  if (raw === null) return fallback();
+  try {
+    const parsed = JSON.parse(raw);
+    if (isValid(parsed)) return parsed as T;
+    quarantine(key, raw, 'unexpected shape');
+  } catch {
+    quarantine(key, raw, 'invalid JSON');
+  }
+  return fallback();
+}
+
+function writeRaw(key: string, value: string): boolean {
   try {
     localStorage.setItem(key, value);
     return true;
   } catch (e) {
-    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-      console.error(`Storage quota exceeded for key "${key}"`);
-    } else {
-      console.error(`localStorage.setItem failed for key "${key}":`, e);
-    }
+    report({ kind: 'write_failed', key, detail: e instanceof Error ? e.name : String(e) });
     return false;
   }
 }
 
-/**
- * Safely reads from localStorage with JSON.parse error handling.
- * Returns the parsed value or null on failure (no side effects).
- */
-function safeGetItem<T>(key: string): T | null {
-  const raw = localStorage.getItem(key);
-  if (!raw) return null;
+function readMeta(): StorageMeta | null {
   try {
-    return JSON.parse(raw) as T;
+    const raw = localStorage.getItem(STORAGE_KEYS.META);
+    if (!raw) return null;
+    const m = JSON.parse(raw);
+    return isPlainObject(m) && typeof m.schemaVersion === 'number' ? (m as unknown as StorageMeta) : null;
   } catch {
     return null;
   }
 }
 
-/**
- * Backup of current state before a destructive import, stored under a
- * timestamped key so the user can recover if the import fails.
- */
-function snapshotCurrentState(): Record<string, string> {
-  const snapshot: Record<string, string> = {};
-  for (const key of Object.values(STORAGE_KEYS)) {
-    const val = localStorage.getItem(key);
-    if (val !== null) snapshot[key] = val;
-  }
-  return snapshot;
+function writeMeta(meta: StorageMeta): boolean {
+  if (!writeRaw(STORAGE_KEYS.META, JSON.stringify(meta))) return false;
+  void NuqtaIndexedDB.replaceAll(STORES.META, [{ id: 'meta', ...meta }]);
+  return true;
 }
 
-function restoreSnapshot(snapshot: Record<string, string>): void {
-  // Clear all NUQTA keys first
-  for (const key of Object.values(STORAGE_KEYS)) {
-    localStorage.removeItem(key);
-  }
-  // Restore from snapshot
-  for (const [key, value] of Object.entries(snapshot)) {
-    safeSetItem(key, value);
-  }
+function ensureMeta(): void {
+  if (readMeta()) return;
+  writeMeta({ schemaVersion: SCHEMA_VERSION, createdAt: new Date().toISOString() });
 }
 
-/**
- * Validates that a parsed backup object matches the expected NUQTA schema.
- * Returns { valid: true } or { valid: false, reason: string }.
- */
-function validateBackupSchema(data: unknown): { valid: true } | { valid: false; reason: string } {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    return { valid: false, reason: 'Backup root must be a JSON object' };
+/** Persist one section to localStorage (source of truth); mirror to IndexedDB on success. */
+function persist(key: string, value: unknown, mirror: () => Promise<unknown>): boolean {
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch (e) {
+    report({ kind: 'write_failed', key, detail: 'not serializable' });
+    return false;
   }
-
-  const obj = data as Record<string, unknown>;
-
-  const arrayFields: string[] = [
-    'tasks', 'habits', 'goals', 'focusSessions', 'expenses',
-    'savingsGoals', 'journalEntries', 'sundayReviews', 'historyAuditLogs'
-  ];
-
-  for (const field of arrayFields) {
-    if (field in obj && !Array.isArray(obj[field])) {
-      return { valid: false, reason: `Field "${field}" must be an array` };
-    }
-  }
-
-  if ('healthMetrics' in obj && obj.healthMetrics !== undefined) {
-    if (typeof obj.healthMetrics !== 'object' || Array.isArray(obj.healthMetrics) || obj.healthMetrics === null) {
-      return { valid: false, reason: 'Field "healthMetrics" must be an object' };
-    }
-  }
-
-  if ('profile' in obj && obj.profile !== undefined) {
-    if (typeof obj.profile !== 'object' || Array.isArray(obj.profile) || obj.profile === null) {
-      return { valid: false, reason: 'Field "profile" must be an object' };
-    }
-  }
-
-  if ('version' in obj && obj.version !== undefined && typeof obj.version !== 'string') {
-    return { valid: false, reason: 'Field "version" must be a string' };
-  }
-
-  return { valid: true };
+  if (!writeRaw(key, serialized)) return false;
+  ensureMeta();
+  void mirror();
+  return true;
 }
 
+const asList = <T>(): T[] => [];
+
 /**
- * Hybrid storage engine:
- * 1. Synchronous localStorage for instantaneous React rendering
- * 2. Asynchronous IndexedDB for persistent, high-capacity local offline storage
- * 3. 100% offline, zero server or API key required
- * 4. All read operations are pure (no side effects)
- * 5. All write operations handle QuotaExceededError gracefully
+ * Storage design:
+ *  - localStorage is the single SOURCE OF TRUTH (synchronous reads for first render).
+ *  - IndexedDB is an exact MIRROR (replace-all on every save, so deletions propagate),
+ *    used only to recover when localStorage has been lost but the mirror survived.
+ *  - Reads never write. A first run is genuinely empty. Sample data is opt-in.
  */
 export class NuqtaStorageEngine {
-  // =========================================================================
   // Tasks
-  // =========================================================================
   static getTasks(): Task[] {
-    const parsed = safeGetItem<Task[]>(STORAGE_KEYS.TASKS);
-    if (parsed === null) {
-      const initial = INITIAL_TASKS;
-      safeSetItem(STORAGE_KEYS.TASKS, JSON.stringify(initial));
-      NuqtaIndexedDB.bulkPut(STORES.TASKS, initial).catch(() => {});
-      return initial;
-    }
-    return parsed;
+    return readValue(STORAGE_KEYS.TASKS, asList<Task>, isRecordList);
   }
-
   static saveTasks(tasks: Task[]): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
-    NuqtaIndexedDB.bulkPut(STORES.TASKS, tasks).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.TASKS, tasks, () => NuqtaIndexedDB.replaceAll(STORES.TASKS, tasks));
   }
 
-  // =========================================================================
   // Habits
-  // =========================================================================
   static getHabits(): Habit[] {
-    const parsed = safeGetItem<Habit[]>(STORAGE_KEYS.HABITS);
-    if (parsed === null) {
-      const initial = INITIAL_HABITS;
-      safeSetItem(STORAGE_KEYS.HABITS, JSON.stringify(initial));
-      NuqtaIndexedDB.bulkPut(STORES.HABITS, initial).catch(() => {});
-      return initial;
-    }
-    return parsed;
+    return readValue(STORAGE_KEYS.HABITS, asList<Habit>, isRecordList);
   }
-
   static saveHabits(habits: Habit[]): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.HABITS, JSON.stringify(habits));
-    NuqtaIndexedDB.bulkPut(STORES.HABITS, habits).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.HABITS, habits, () => NuqtaIndexedDB.replaceAll(STORES.HABITS, habits));
   }
 
-  // =========================================================================
   // Goals
-  // =========================================================================
   static getGoals(): Goal[] {
-    const parsed = safeGetItem<Goal[]>(STORAGE_KEYS.GOALS);
-    if (parsed === null) {
-      const initial = INITIAL_GOALS;
-      safeSetItem(STORAGE_KEYS.GOALS, JSON.stringify(initial));
-      NuqtaIndexedDB.bulkPut(STORES.GOALS, initial).catch(() => {});
-      return initial;
-    }
-    return parsed;
+    return readValue(STORAGE_KEYS.GOALS, asList<Goal>, isRecordList);
   }
-
   static saveGoals(goals: Goal[]): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
-    NuqtaIndexedDB.bulkPut(STORES.GOALS, goals).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.GOALS, goals, () => NuqtaIndexedDB.replaceAll(STORES.GOALS, goals));
   }
 
-  // =========================================================================
-  // Focus Sessions
-  // =========================================================================
+  // Focus sessions
   static getFocusSessions(): FocusSession[] {
-    const parsed = safeGetItem<FocusSession[]>(STORAGE_KEYS.FOCUS);
-    return parsed ?? [];
+    return readValue(STORAGE_KEYS.FOCUS, asList<FocusSession>, isRecordList);
   }
-
   static saveFocusSessions(sessions: FocusSession[]): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.FOCUS, JSON.stringify(sessions));
-    NuqtaIndexedDB.bulkPut(STORES.FOCUS, sessions).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.FOCUS, sessions, () => NuqtaIndexedDB.replaceAll(STORES.FOCUS, sessions));
   }
 
-  // =========================================================================
-  // Health Metrics
-  // =========================================================================
+  // Health: only what the user actually logged. No invented values.
   static getHealthMetrics(): Record<string, HealthMetric> {
-    const parsed = safeGetItem<Record<string, HealthMetric>>(STORAGE_KEYS.HEALTH);
-    if (parsed === null) return {};
-    return parsed;
+    return readValue(STORAGE_KEYS.HEALTH, () => ({}) as Record<string, HealthMetric>, isHealthMap);
   }
-
   static saveHealthMetrics(metrics: Record<string, HealthMetric>): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.HEALTH, JSON.stringify(metrics));
-    const items = Object.values(metrics);
-    NuqtaIndexedDB.bulkPut(STORES.HEALTH, items).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.HEALTH, metrics, () =>
+      NuqtaIndexedDB.replaceAll(STORES.HEALTH, Object.values(metrics))
+    );
   }
 
-  // =========================================================================
   // Expenses
-  // =========================================================================
   static getExpenses(): ExpenseRecord[] {
-    const parsed = safeGetItem<ExpenseRecord[]>(STORAGE_KEYS.EXPENSES);
-    if (parsed === null) {
-      const initial = INITIAL_EXPENSES;
-      safeSetItem(STORAGE_KEYS.EXPENSES, JSON.stringify(initial));
-      NuqtaIndexedDB.bulkPut(STORES.EXPENSES, initial).catch(() => {});
-      return initial;
-    }
-    return parsed;
+    return readValue(STORAGE_KEYS.EXPENSES, asList<ExpenseRecord>, isRecordList);
   }
-
   static saveExpenses(expenses: ExpenseRecord[]): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
-    NuqtaIndexedDB.bulkPut(STORES.EXPENSES, expenses).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.EXPENSES, expenses, () => NuqtaIndexedDB.replaceAll(STORES.EXPENSES, expenses));
   }
 
-  // =========================================================================
-  // Savings Goals
-  // =========================================================================
+  // Savings goals
   static getSavingsGoals(): SavingsGoal[] {
-    const parsed = safeGetItem<SavingsGoal[]>(STORAGE_KEYS.SAVINGS);
-    if (parsed === null) {
-      const initial = INITIAL_SAVINGS_GOALS;
-      safeSetItem(STORAGE_KEYS.SAVINGS, JSON.stringify(initial));
-      NuqtaIndexedDB.bulkPut(STORES.SAVINGS, initial).catch(() => {});
-      return initial;
-    }
-    return parsed;
+    return readValue(STORAGE_KEYS.SAVINGS, asList<SavingsGoal>, isRecordList);
   }
-
   static saveSavingsGoals(savings: SavingsGoal[]): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.SAVINGS, JSON.stringify(savings));
-    NuqtaIndexedDB.bulkPut(STORES.SAVINGS, savings).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.SAVINGS, savings, () => NuqtaIndexedDB.replaceAll(STORES.SAVINGS, savings));
   }
 
-  // =========================================================================
   // Journal
-  // =========================================================================
   static getJournalEntries(): JournalEntry[] {
-    const parsed = safeGetItem<JournalEntry[]>(STORAGE_KEYS.JOURNAL);
-    if (parsed === null) return [];
-    return parsed;
+    return readValue(STORAGE_KEYS.JOURNAL, asList<JournalEntry>, isRecordList);
   }
-
   static saveJournalEntries(entries: JournalEntry[]): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.JOURNAL, JSON.stringify(entries));
-    NuqtaIndexedDB.bulkPut(STORES.JOURNAL, entries).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.JOURNAL, entries, () => NuqtaIndexedDB.replaceAll(STORES.JOURNAL, entries));
   }
 
-  // =========================================================================
-  // Profile & Preferences
-  // =========================================================================
+  // Profile
   static getProfile(): UserProfile {
-    const parsed = safeGetItem<UserProfile>(STORAGE_KEYS.PROFILE);
-    if (parsed === null) {
-      safeSetItem(STORAGE_KEYS.PROFILE, JSON.stringify(INITIAL_PROFILE));
-      NuqtaIndexedDB.put(STORES.PROFILE, { id: 'primary', ...INITIAL_PROFILE }).catch(() => {});
-      return INITIAL_PROFILE;
-    }
-    return parsed;
+    const stored = readValue<UserProfile | null>(STORAGE_KEYS.PROFILE, () => null, isPlainObject);
+    return normalizeProfile(stored);
   }
-
   static saveProfile(profile: UserProfile): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
-    NuqtaIndexedDB.put(STORES.PROFILE, { id: 'primary', ...profile }).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.PROFILE, profile, () =>
+      NuqtaIndexedDB.replaceAll(STORES.PROFILE, [{ id: 'primary', ...profile }])
+    );
   }
 
-  // =========================================================================
-  // Sunday Rituals
-  // =========================================================================
+  // Sunday rituals
   static getSundayReviews(): SundayRitualReview[] {
-    const parsed = safeGetItem<SundayRitualReview[]>(STORAGE_KEYS.SUNDAY_REVIEWS);
-    return parsed ?? [];
+    return readValue(STORAGE_KEYS.SUNDAY_REVIEWS, asList<SundayRitualReview>, isRecordList);
   }
-
   static saveSundayReviews(reviews: SundayRitualReview[]): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.SUNDAY_REVIEWS, JSON.stringify(reviews));
-    NuqtaIndexedDB.bulkPut(STORES.SUNDAY_REVIEWS, reviews).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.SUNDAY_REVIEWS, reviews, () =>
+      NuqtaIndexedDB.replaceAll(STORES.SUNDAY_REVIEWS, reviews)
+    );
   }
 
-  // =========================================================================
-  // History Audit Log
-  // =========================================================================
+  // History audit log
   static getHistoryAuditLogs(): HistoryAuditLogEntry[] {
-    const parsed = safeGetItem<HistoryAuditLogEntry[]>(STORAGE_KEYS.HISTORY_AUDIT);
-    return parsed ?? [];
+    return readValue(STORAGE_KEYS.HISTORY_AUDIT, asList<HistoryAuditLogEntry>, isRecordList);
   }
-
   static saveHistoryAuditLogs(logs: HistoryAuditLogEntry[]): boolean {
-    const ok = safeSetItem(STORAGE_KEYS.HISTORY_AUDIT, JSON.stringify(logs));
-    NuqtaIndexedDB.bulkPut(STORES.HISTORY_AUDIT, logs).catch(() => {});
-    return ok;
+    return persist(STORAGE_KEYS.HISTORY_AUDIT, logs, () => NuqtaIndexedDB.replaceAll(STORES.HISTORY_AUDIT, logs));
   }
 
-  // =========================================================================
-  // Export / Import / Wipe
-  // =========================================================================
+  // ---------------------------------------------------------------- backup
 
-  /**
-   * Export full archive as JSON string.
-   * All read operations are pure — no side effects, no data injection.
-   */
-  static exportFullBackup(): string {
-    const backup = {
-      version: '1.0.0',
-      exportedAt: new Date().toISOString(),
+  /** Snapshot of everything currently stored. Side-effect free. */
+  static collectData(): BackupData {
+    return {
       tasks: this.getTasks(),
       habits: this.getHabits(),
       goals: this.getGoals(),
@@ -372,107 +329,215 @@ export class NuqtaStorageEngine {
       sundayReviews: this.getSundayReviews(),
       historyAuditLogs: this.getHistoryAuditLogs()
     };
-    return JSON.stringify(backup, null, 2);
+  }
+
+  /** Versioned backup file contents (v2 envelope). Side-effect free. */
+  static exportFullBackup(): string {
+    return JSON.stringify(buildBackupFile(this.collectData()), null, 2);
+  }
+
+  /** Check a backup file without touching any stored data. */
+  static validateBackup(jsonString: string): ParseBackupResult {
+    return parseBackup(jsonString);
   }
 
   /**
-   * Import full archive from JSON string.
-   *
-   * Safety guarantees:
-   * 1. Schema validation before any write
-   * 2. Snapshot of current state taken before any modification
-   * 3. Atomic: all writes succeed or all are rolled back
-   * 4. Corrupted JSON is preserved under a *_corrupt_<timestamp> key
-   * 5. Returns { success: boolean, reason?: string }
+   * Replace ALL stored data with a backup. The file is validated in full first,
+   * then written all-or-nothing: if any write fails, every key is rolled back.
    */
-  static importBackup(jsonString: string): { success: boolean; reason?: string } {
-    // 1. Parse JSON — preserve corrupted original
-    let data: unknown;
-    try {
-      data = JSON.parse(jsonString);
-    } catch {
-      const ts = localDateKey(new Date()) + '_' + Date.now();
-      safeSetItem(`nuqta_corrupt_${ts}`, jsonString);
-      return { success: false, reason: 'Invalid JSON format' };
-    }
+  static importBackup(jsonString: string): ImportResult {
+    const parsed = parseBackup(jsonString);
+    if (!parsed.ok) return parsed;
+    const ok = this.restoreData(parsed.data);
+    if (!ok) return { ok: false, error: 'write_failed' };
+    return { ok: true, version: parsed.version, legacy: parsed.legacy };
+  }
 
-    // 2. Validate schema
-    const validation = validateBackupSchema(data);
-    if (!validation.valid) {
-      const ts = localDateKey(new Date()) + '_' + Date.now();
-      safeSetItem(`nuqta_corrupt_${ts}`, jsonString);
-      return { success: false, reason: validation.reason };
-    }
-
-    const obj = data as Record<string, unknown>;
-
-    // 3. Take snapshot of current state before any modification
-    const snapshot = snapshotCurrentState();
-
-    // 4. Attempt all writes — track success/failure
-    const writeResults: Array<{ key: string; ok: boolean }> = [];
-
-    const trySave = (key: string, fn: () => boolean): void => {
-      writeResults.push({ key, ok: fn() });
+  /** Atomic full replace of localStorage + mirror refresh. */
+  static restoreData(data: BackupData, meta?: Partial<StorageMeta>): boolean {
+    const profile = data.profile ? normalizeProfile(data.profile) : this.getProfile();
+    const previousMeta = readMeta();
+    const nextMeta: StorageMeta = {
+      schemaVersion: SCHEMA_VERSION,
+      createdAt: previousMeta?.createdAt ?? new Date().toISOString(),
+      ...(meta || {})
     };
 
-    if (obj.tasks) trySave(STORAGE_KEYS.TASKS, () => this.saveTasks(obj.tasks as Task[]));
-    if (obj.habits) trySave(STORAGE_KEYS.HABITS, () => this.saveHabits(obj.habits as Habit[]));
-    if (obj.goals) trySave(STORAGE_KEYS.GOALS, () => this.saveGoals(obj.goals as Goal[]));
-    if (obj.focusSessions) trySave(STORAGE_KEYS.FOCUS, () => this.saveFocusSessions(obj.focusSessions as FocusSession[]));
-    if (obj.healthMetrics) trySave(STORAGE_KEYS.HEALTH, () => this.saveHealthMetrics(obj.healthMetrics as Record<string, HealthMetric>));
-    if (obj.expenses) trySave(STORAGE_KEYS.EXPENSES, () => this.saveExpenses(obj.expenses as ExpenseRecord[]));
-    if (obj.savingsGoals) trySave(STORAGE_KEYS.SAVINGS, () => this.saveSavingsGoals(obj.savingsGoals as SavingsGoal[]));
-    if (obj.journalEntries) trySave(STORAGE_KEYS.JOURNAL, () => this.saveJournalEntries(obj.journalEntries as JournalEntry[]));
-    if (obj.profile) trySave(STORAGE_KEYS.PROFILE, () => this.saveProfile(obj.profile as UserProfile));
-    if (obj.sundayReviews) trySave(STORAGE_KEYS.SUNDAY_REVIEWS, () => this.saveSundayReviews(obj.sundayReviews as SundayRitualReview[]));
-    if (obj.historyAuditLogs) trySave(STORAGE_KEYS.HISTORY_AUDIT, () => this.saveHistoryAuditLogs(obj.historyAuditLogs as HistoryAuditLogEntry[]));
+    const entries: Array<[string, unknown]> = [
+      [STORAGE_KEYS.TASKS, data.tasks],
+      [STORAGE_KEYS.HABITS, data.habits],
+      [STORAGE_KEYS.GOALS, data.goals],
+      [STORAGE_KEYS.FOCUS, data.focusSessions],
+      [STORAGE_KEYS.HEALTH, data.healthMetrics],
+      [STORAGE_KEYS.EXPENSES, data.expenses],
+      [STORAGE_KEYS.SAVINGS, data.savingsGoals],
+      [STORAGE_KEYS.JOURNAL, data.journalEntries],
+      [STORAGE_KEYS.PROFILE, profile],
+      [STORAGE_KEYS.SUNDAY_REVIEWS, data.sundayReviews],
+      [STORAGE_KEYS.HISTORY_AUDIT, data.historyAuditLogs],
+      [STORAGE_KEYS.META, nextMeta]
+    ];
 
-    // 5. Check if all writes succeeded
-    const allOk = writeResults.every((r) => r.ok);
-
-    if (!allOk) {
-      // Rollback: restore snapshot
-      restoreSnapshot(snapshot);
-      const failed = writeResults.filter((r) => !r.ok).map((r) => r.key).join(', ');
-      return { success: false, reason: `Partial write failed, rolled back. Failed keys: ${failed}` };
+    const serialized: Array<[string, string]> = [];
+    try {
+      for (const [key, value] of entries) serialized.push([key, JSON.stringify(value)]);
+    } catch {
+      report({ kind: 'write_failed', key: 'restore', detail: 'not serializable' });
+      return false;
     }
 
-    return { success: true };
-  }
-
-  /**
-   * Wipe all data across localStorage AND IndexedDB.
-   * After wiping, does NOT re-seed initial data — caller decides.
-   */
-  static async wipeAll(): Promise<void> {
-    // Clear all NUQTA localStorage keys
-    for (const key of Object.values(STORAGE_KEYS)) {
-      localStorage.removeItem(key);
-    }
-    // Also clear any corrupt backups
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('nuqta_corrupt_')) {
-        localStorage.removeItem(key);
-        i--; // re-check same index after removal
+    const previous = serialized.map(([key]) => [key, localStorage.getItem(key)] as const);
+    try {
+      for (const [key, value] of serialized) localStorage.setItem(key, value);
+    } catch (e) {
+      for (const [key, old] of previous) {
+        try {
+          if (old === null) localStorage.removeItem(key);
+          else localStorage.setItem(key, old);
+        } catch {
+          /* best effort rollback */
+        }
       }
+      report({ kind: 'write_failed', key: 'restore', detail: e instanceof Error ? e.name : String(e) });
+      return false;
     }
-    // Clear IndexedDB
-    await NuqtaIndexedDB.wipeAll();
+
+    void this.refreshMirror({ ...data, profile }, nextMeta);
+    return true;
+  }
+
+  private static async refreshMirror(data: BackupData, meta: StorageMeta): Promise<void> {
+    await Promise.all([
+      NuqtaIndexedDB.replaceAll(STORES.TASKS, data.tasks),
+      NuqtaIndexedDB.replaceAll(STORES.HABITS, data.habits),
+      NuqtaIndexedDB.replaceAll(STORES.GOALS, data.goals),
+      NuqtaIndexedDB.replaceAll(STORES.FOCUS, data.focusSessions),
+      NuqtaIndexedDB.replaceAll(STORES.HEALTH, Object.values(data.healthMetrics)),
+      NuqtaIndexedDB.replaceAll(STORES.EXPENSES, data.expenses),
+      NuqtaIndexedDB.replaceAll(STORES.SAVINGS, data.savingsGoals),
+      NuqtaIndexedDB.replaceAll(STORES.JOURNAL, data.journalEntries),
+      NuqtaIndexedDB.replaceAll(STORES.PROFILE, [{ id: 'primary', ...data.profile }]),
+      NuqtaIndexedDB.replaceAll(STORES.SUNDAY_REVIEWS, data.sundayReviews),
+      NuqtaIndexedDB.replaceAll(STORES.HISTORY_AUDIT, data.historyAuditLogs),
+      NuqtaIndexedDB.replaceAll(STORES.META, [{ id: 'meta', ...meta }])
+    ]);
+  }
+
+  // -------------------------------------------------------------- recovery
+
+  /**
+   * If localStorage has lost NUQTA's data but the IndexedDB mirror still has it,
+   * restore from the mirror. A deliberate wipe clears BOTH, so it is never undone.
+   * Call once at startup, before the store initialises. Resolves true if restored.
+   */
+  static async recoverFromMirrorIfNeeded(): Promise<boolean> {
+    if (readMeta()) return false;
+    const metaRows = await NuqtaIndexedDB.getAll<StorageMeta & { id: string }>(STORES.META);
+    if (metaRows.length === 0) return false;
+
+    const [tasks, habits, goals, focusSessions, health, expenses, savingsGoals, journalEntries, profiles, sundayReviews, historyAuditLogs] =
+      await Promise.all([
+        NuqtaIndexedDB.getAll<Task>(STORES.TASKS),
+        NuqtaIndexedDB.getAll<Habit>(STORES.HABITS),
+        NuqtaIndexedDB.getAll<Goal>(STORES.GOALS),
+        NuqtaIndexedDB.getAll<FocusSession>(STORES.FOCUS),
+        NuqtaIndexedDB.getAll<HealthMetric>(STORES.HEALTH),
+        NuqtaIndexedDB.getAll<ExpenseRecord>(STORES.EXPENSES),
+        NuqtaIndexedDB.getAll<SavingsGoal>(STORES.SAVINGS),
+        NuqtaIndexedDB.getAll<JournalEntry>(STORES.JOURNAL),
+        NuqtaIndexedDB.getAll<UserProfile & { id: string }>(STORES.PROFILE),
+        NuqtaIndexedDB.getAll<SundayRitualReview>(STORES.SUNDAY_REVIEWS),
+        NuqtaIndexedDB.getAll<HistoryAuditLogEntry>(STORES.HISTORY_AUDIT)
+      ]);
+
+    const healthMetrics: Record<string, HealthMetric> = {};
+    health.forEach((h) => {
+      healthMetrics[h.date] = h;
+    });
+    const stripId = (p?: UserProfile & { id?: string }): Partial<UserProfile> | undefined => {
+      if (!p) return undefined;
+      const { id: _id, ...rest } = p;
+      return rest;
+    };
+
+    const data: BackupData = {
+      tasks,
+      habits,
+      goals,
+      focusSessions,
+      healthMetrics,
+      expenses,
+      savingsGoals,
+      journalEntries,
+      profile: stripId(profiles[0]),
+      sundayReviews,
+      historyAuditLogs
+    };
+    const { id: _metaId, ...meta } = metaRows[0];
+    return this.restoreData(data, meta);
+  }
+
+  // ------------------------------------------------------------ sample data
+
+  /** True when the user has no content of their own yet. */
+  static isEmpty(): boolean {
+    return (
+      this.getTasks().length === 0 &&
+      this.getHabits().length === 0 &&
+      this.getGoals().length === 0 &&
+      this.getExpenses().length === 0 &&
+      this.getSavingsGoals().length === 0 &&
+      this.getJournalEntries().length === 0 &&
+      this.getFocusSessions().length === 0
+    );
+  }
+
+  static isDemo(): boolean {
+    return readMeta()?.demo === true;
   }
 
   /**
-   * Re-seed initial data after a wipe. Called by the app on first load
-   * when no data exists.
+   * OPT-IN sample data, only into an empty app, and flagged as demo.
+   * Never touches the profile or journal.
    */
-  static async seedInitialData(): Promise<void> {
-    await this.saveTasks(INITIAL_TASKS);
-    await this.saveHabits(INITIAL_HABITS);
-    await this.saveGoals(INITIAL_GOALS);
-    await this.saveExpenses(INITIAL_EXPENSES);
-    await this.saveSavingsGoals(INITIAL_SAVINGS_GOALS);
-    await this.saveProfile(INITIAL_PROFILE);
+  static loadDemoData(): boolean {
+    if (!this.isEmpty()) return false;
+    const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+    const base = this.collectData();
+    return this.restoreData(
+      {
+        ...base,
+        tasks: clone(DEMO_TASKS),
+        habits: clone(DEMO_HABITS),
+        goals: clone(DEMO_GOALS),
+        expenses: clone(DEMO_EXPENSES),
+        savingsGoals: clone(DEMO_SAVINGS_GOALS)
+      },
+      { demo: true }
+    );
+  }
+
+  // ------------------------------------------------------------------ wipe
+
+  /**
+   * Delete every NUQTA record from BOTH localStorage and IndexedDB.
+   * Only touches keys that start with "nuqta_" (other apps on the same origin are untouched).
+   * Resolves true only when both stores were fully cleared.
+   */
+  static async wipeAll(): Promise<boolean> {
+    // Mirror first: if it cannot be cleared, keep localStorage so the mirror cannot
+    // later "recover" data the user asked to delete.
+    const mirrorCleared = await NuqtaIndexedDB.wipeAll();
+    if (!mirrorCleared) return false;
+    let localCleared = true;
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith(KEY_PREFIX))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      localCleared = false;
+    }
+    clearStorageIssues();
+    return localCleared;
   }
 }
-

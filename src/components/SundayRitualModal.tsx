@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
@@ -40,7 +41,7 @@ export const SundayRitualModal: React.FC = () => {
   };
 
   const handleFinish = () => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     completeSundayRitual({
       date: todayStr,
       wins,

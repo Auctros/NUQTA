@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
@@ -6,7 +7,7 @@ import confetti from 'canvas-confetti';
 export const JournalView: React.FC = () => {
   const { journalEntries, saveJournalEntry, profile, setActiveNavTab } = useNuqtaStore();
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   const existingToday = journalEntries.find((j) => j.date === todayStr);
 

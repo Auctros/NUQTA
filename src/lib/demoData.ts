@@ -1,3 +1,12 @@
+/**
+ * OPTIONAL sample data.
+ *
+ * Nothing in here is ever loaded automatically. A first run starts EMPTY.
+ * The data is only written when the user explicitly picks "Load sample data"
+ * in Settings (see NuqtaStorageEngine.loadDemoData), and the app is then flagged
+ * as demo so it is never mistaken for real user data.
+ */
+import { localDateKey } from './dateKey';
 import {
   Task,
   Habit,
@@ -7,11 +16,10 @@ import {
   ExpenseRecord,
   SavingsGoal,
   JournalEntry,
-  UserProfile,
   SundayRitualReview
 } from '../types';
 
-export const INITIAL_TASKS: Task[] = [
+export const DEMO_TASKS: Task[] = [
   {
     id: 't-1',
     title: 'Finalize Q4 strategic architecture blueprint',
@@ -19,7 +27,7 @@ export const INITIAL_TASKS: Task[] = [
     priority: 1,
     isTopThree: true,
     status: 'todo',
-    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledDate: localDateKey(),
     scheduledTime: '10:00',
     estimatedMinutes: 90,
     tags: ['deepwork', 'architecture', 'high-focus'],
@@ -39,7 +47,7 @@ export const INITIAL_TASKS: Task[] = [
     priority: 2,
     isTopThree: true,
     status: 'todo',
-    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledDate: localDateKey(),
     scheduledTime: '16:30',
     estimatedMinutes: 40,
     tags: ['health', 'recovery'],
@@ -58,7 +66,7 @@ export const INITIAL_TASKS: Task[] = [
     priority: 2,
     isTopThree: true,
     status: 'todo',
-    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledDate: localDateKey(),
     scheduledTime: '14:00',
     estimatedMinutes: 45,
     tags: ['code', 'engineering'],
@@ -74,7 +82,7 @@ export const INITIAL_TASKS: Task[] = [
     priority: 3,
     isTopThree: false,
     status: 'todo',
-    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledDate: localDateKey(),
     scheduledTime: '21:00',
     estimatedMinutes: 30,
     tags: ['mind', 'learning'],
@@ -90,7 +98,7 @@ export const INITIAL_TASKS: Task[] = [
     priority: 3,
     isTopThree: false,
     status: 'todo',
-    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledDate: localDateKey(),
     estimatedMinutes: 25,
     tags: ['finance'],
     energyLevelRequired: 'low',
@@ -100,7 +108,7 @@ export const INITIAL_TASKS: Task[] = [
   }
 ];
 
-export const INITIAL_HABITS: Habit[] = [
+export const DEMO_HABITS: Habit[] = [
   {
     id: 'h-1',
     name: 'Morning Hydration & Sunlight',
@@ -116,9 +124,9 @@ export const INITIAL_HABITS: Habit[] = [
     freezesRemaining: 2,
     freezesUsedDates: [],
     completedDates: [
-      new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      new Date(Date.now() - 172800000).toISOString().split('T')[0],
-      new Date(Date.now() - 259200000).toISOString().split('T')[0]
+      localDateKey(new Date(Date.now() - 86400000)),
+      localDateKey(new Date(Date.now() - 172800000)),
+      localDateKey(new Date(Date.now() - 259200000))
     ],
     createdAt: new Date().toISOString()
   },
@@ -137,8 +145,8 @@ export const INITIAL_HABITS: Habit[] = [
     freezesRemaining: 1,
     freezesUsedDates: [],
     completedDates: [
-      new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      new Date(Date.now() - 172800000).toISOString().split('T')[0]
+      localDateKey(new Date(Date.now() - 86400000)),
+      localDateKey(new Date(Date.now() - 172800000))
     ],
     createdAt: new Date().toISOString()
   },
@@ -157,7 +165,7 @@ export const INITIAL_HABITS: Habit[] = [
     freezesRemaining: 2,
     freezesUsedDates: [],
     completedDates: [
-      new Date(Date.now() - 86400000).toISOString().split('T')[0]
+      localDateKey(new Date(Date.now() - 86400000))
     ],
     createdAt: new Date().toISOString()
   },
@@ -176,9 +184,9 @@ export const INITIAL_HABITS: Habit[] = [
     freezesRemaining: 2,
     freezesUsedDates: [],
     completedDates: [
-      new Date().toISOString().split('T')[0],
-      new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      new Date(Date.now() - 172800000).toISOString().split('T')[0]
+      localDateKey(),
+      localDateKey(new Date(Date.now() - 86400000)),
+      localDateKey(new Date(Date.now() - 172800000))
     ],
     createdAt: new Date().toISOString(),
     specializedType: 'reading',
@@ -222,7 +230,7 @@ export const INITIAL_HABITS: Habit[] = [
       sessions: [
         {
           id: 'rs-1',
-          date: new Date().toISOString().split('T')[0],
+          date: localDateKey(),
           bookId: 'book-1',
           bookTitle: 'العادات الذرية (Atomic Habits)',
           pagesRead: 22,
@@ -232,7 +240,7 @@ export const INITIAL_HABITS: Habit[] = [
         },
         {
           id: 'rs-2',
-          date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+          date: localDateKey(new Date(Date.now() - 86400000)),
           bookId: 'book-1',
           bookTitle: 'العادات الذرية (Atomic Habits)',
           pagesRead: 25,
@@ -259,9 +267,9 @@ export const INITIAL_HABITS: Habit[] = [
     freezesRemaining: 2,
     freezesUsedDates: [],
     completedDates: [
-      new Date().toISOString().split('T')[0],
-      new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      new Date(Date.now() - 259200000).toISOString().split('T')[0]
+      localDateKey(),
+      localDateKey(new Date(Date.now() - 86400000)),
+      localDateKey(new Date(Date.now() - 259200000))
     ],
     createdAt: new Date().toISOString(),
     specializedType: 'workout',
@@ -274,7 +282,7 @@ export const INITIAL_HABITS: Habit[] = [
       sessions: [
         {
           id: 'ws-1',
-          date: new Date().toISOString().split('T')[0],
+          date: localDateKey(),
           title: 'Upper Body Hypertrophy & Core',
           workoutType: 'strength',
           durationMinutes: 52,
@@ -317,7 +325,7 @@ export const INITIAL_HABITS: Habit[] = [
         },
         {
           id: 'ws-2',
-          date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+          date: localDateKey(new Date(Date.now() - 86400000)),
           title: 'Zone 2 Recovery Aerobics',
           workoutType: 'cardio',
           durationMinutes: 40,
@@ -340,7 +348,7 @@ export const INITIAL_HABITS: Habit[] = [
   }
 ];
 
-export const INITIAL_GOALS: Goal[] = [
+export const DEMO_GOALS: Goal[] = [
   {
     id: 'g-1',
     title: 'Achieve Peak Cognitive & Physical Energy',
@@ -348,7 +356,7 @@ export const INITIAL_GOALS: Goal[] = [
     category: 'health',
     priority: 'high',
     timeframe: 'annual',
-    startDate: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0],
+    startDate: localDateKey(new Date(Date.now() - 30 * 86400000)),
     deadline: '2026-12-31',
     status: 'active',
     color: '#10b981',
@@ -364,10 +372,7 @@ export const INITIAL_GOALS: Goal[] = [
     ],
     linkedHabitIds: ['h-2', 'h-3'],
     visionNotes: 'Vitality is the foundation of high judgment, tranquility, and sustained execution.',
-    visionImages: [
-      'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=600&q=80'
-    ],
+    visionImages: [],
     createdAt: new Date(Date.now() - 30 * 86400000).toISOString()
   },
   {
@@ -377,7 +382,7 @@ export const INITIAL_GOALS: Goal[] = [
     category: 'career',
     priority: 'urgent',
     timeframe: 'quarterly',
-    startDate: new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0],
+    startDate: localDateKey(new Date(Date.now() - 14 * 86400000)),
     deadline: '2026-12-15',
     status: 'active',
     color: '#f59e0b',
@@ -395,34 +400,20 @@ export const INITIAL_GOALS: Goal[] = [
     linkedHabitIds: ['h-1'],
     linkedBookIds: ['b-1'],
     visionNotes: 'Craft is about eliminating everything unnecessary until only the truth remains.',
-    visionImages: [
-      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80'
-    ],
+    visionImages: [],
     createdAt: new Date(Date.now() - 14 * 86400000).toISOString()
   }
 ];
 
-export const INITIAL_EXPENSES: ExpenseRecord[] = [
-  { id: 'exp-1', title: 'Supermarket Organics & Groceries', amount: 84.50, type: 'expense', category: 'food', date: new Date().toISOString().split('T')[0] },
-  { id: 'exp-2', title: 'Cloud Infrastructure & Server Backup', amount: 28.00, type: 'expense', category: 'tech', date: new Date(Date.now() - 86400000).toISOString().split('T')[0] },
-  { id: 'exp-3', title: 'High-Performance Running Shoes', amount: 160.00, type: 'expense', category: 'health', date: new Date(Date.now() - 172800000).toISOString().split('T')[0] },
-  { id: 'exp-4', title: 'Consulting Honorarium Deposit', amount: 1250.00, type: 'income', category: 'savings', date: new Date(Date.now() - 259200000).toISOString().split('T')[0] }
+export const DEMO_EXPENSES: ExpenseRecord[] = [
+  { id: 'exp-1', title: 'Supermarket Organics & Groceries', amount: 84.50, type: 'expense', category: 'food', date: localDateKey() },
+  { id: 'exp-2', title: 'Cloud Infrastructure & Server Backup', amount: 28.00, type: 'expense', category: 'tech', date: localDateKey(new Date(Date.now() - 86400000)) },
+  { id: 'exp-3', title: 'High-Performance Running Shoes', amount: 160.00, type: 'expense', category: 'health', date: localDateKey(new Date(Date.now() - 172800000)) },
+  { id: 'exp-4', title: 'Consulting Honorarium Deposit', amount: 1250.00, type: 'income', category: 'savings', date: localDateKey(new Date(Date.now() - 259200000)) }
 ];
 
-export const INITIAL_SAVINGS_GOALS: SavingsGoal[] = [
+export const DEMO_SAVINGS_GOALS: SavingsGoal[] = [
   { id: 'sg-1', title: 'Emergency Freedom Reserve (6 Months)', targetAmount: 18000, currentAmount: 14200, icon: 'shield' },
   { id: 'sg-2', title: 'Ergonomic Workspace & Studio Upgrade', targetAmount: 3500, currentAmount: 2450, icon: 'laptop' }
 ];
-
-export const INITIAL_PROFILE: UserProfile = {
-  name: 'Tariq',
-  email: 'tariq@nuqta.local',
-  theme: 'dark',
-  language: 'en',
-  experiencePoints: 1420,
-  level: 4,
-  biometricLocked: false,
-  encryptionPassphraseSet: false,
-  weeklySundayReviewDue: false
-};
 

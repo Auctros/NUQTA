@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { PriorityLevel, Task, TaskStatus } from '../types';
@@ -63,7 +64,7 @@ export const TasksView: React.FC = () => {
   const [formTags, setFormTags] = useState('');
   const [formLinkedGoalId, setFormLinkedGoalId] = useState<string>('');
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   // Overdue detection
   const overdueTasks = tasks.filter(

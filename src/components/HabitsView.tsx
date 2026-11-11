@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, SpecializedHabitType } from '../types';
@@ -37,7 +38,7 @@ export const HabitsView: React.FC = () => {
   const [formSpecializedType, setFormSpecializedType] = useState<SpecializedHabitType>('standard');
   const [formLinkedGoalId, setFormLinkedGoalId] = useState<string>('');
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   // Past 7 days calculation
   const dayLabelsAr = ['أح', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب'];
@@ -46,7 +47,7 @@ export const HabitsView: React.FC = () => {
   const past7Days = Array.from({ length: 7 }).map((_, idx) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - idx));
-    const key = d.toISOString().split('T')[0];
+    const key = localDateKey(d);
     const dayIndex = d.getDay();
     return {
       key,
@@ -59,7 +60,7 @@ export const HabitsView: React.FC = () => {
   const past14Days = Array.from({ length: 14 }).map((_, idx) => {
     const d = new Date();
     d.setDate(d.getDate() - (13 - idx));
-    return d.toISOString().split('T')[0];
+    return localDateKey(d);
   });
 
   const habitsDoneToday = habits.filter((h) => h.completedDates.includes(todayStr)).length;

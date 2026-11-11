@@ -1,3 +1,4 @@
+import { localDateKey, parseDateKey } from '../lib/dateKey';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { BookItem, BookCategory } from '../types';
@@ -47,7 +48,7 @@ export const ReadingView: React.FC = () => {
   }, [focusRequest]);
 
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   const readingHabit = habits.find((h) => h.specializedType === 'reading');
 
@@ -132,7 +133,7 @@ export const ReadingView: React.FC = () => {
   const past7DaysStart = new Date();
   past7DaysStart.setDate(past7DaysStart.getDate() - 7);
   const pagesReadThisWeek = readingData.sessions
-    .filter((s) => new Date(s.date) >= past7DaysStart)
+    .filter((s) => (parseDateKey(s.date) ?? new Date(s.date)) >= past7DaysStart)
     .reduce((acc, s) => acc + s.pagesRead, 0);
 
   const completedBooks = readingData.books.filter((b) => b.status === 'completed');

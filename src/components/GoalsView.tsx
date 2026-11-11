@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Goal, GoalPriority, KeyResult, KeyResultDataSource } from '../types';
@@ -19,7 +20,7 @@ export const GoalsView: React.FC = () => {
   } = useNuqtaStore();
 
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   // Modals state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -92,7 +93,7 @@ export const GoalsView: React.FC = () => {
       });
     } else {
       const initialKr: KeyResult = {
-        id: 'kr-' + Math.random().toString(36).substring(2, 8),
+        id: 'kr-' + crypto.randomUUID().slice(0, 8),
         title: formKrTitle.trim() || (isAr ? 'المؤشر الأساسي' : 'Primary Metric'),
         targetValue: Number(formKrTarget) || 10,
         currentValue: 0,

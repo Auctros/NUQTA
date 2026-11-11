@@ -1,36 +1,24 @@
+import { emptyHealthRecord } from '../lib/healthDefaults';
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
-import { localDateKey } from '../lib/storage';
 
 export const HealthView: React.FC = () => {
   const { healthMetrics, updateTodayHealth, addHydration, profile } = useNuqtaStore();
   const isAr = profile.language === 'ar';
   const todayStr = localDateKey();
 
-  const today = healthMetrics[todayStr] || {
-    date: todayStr,
-    sleepHours: 7.5,
-    sleepQuality: 4,
-    hydrationMl: 1500,
-    targetHydrationMl: 2500,
-    workoutLogged: false,
-    moodRating: 4,
-    weightKg: 73
-  };
+  const today = healthMetrics[todayStr] ?? emptyHealthRecord(todayStr);
 
   const [waterCupsToAdd, setWaterCupsToAdd] = useState(1);
-  const [sleepInput, setSleepInput] = useState(String(today.sleepHours || 7.5));
-  const [weightInput, setWeightInput] = useState(String(today.weightKg || 73));
+  const [sleepInput, setSleepInput] = useState(today.sleepHours > 0 ? String(today.sleepHours) : '');
+  const [weightInput, setWeightInput] = useState(today.weightKg ? String(today.weightKg) : '');
   const [activityName, setActivityName] = useState('');
   const [activityMinutes, setActivityMinutes] = useState(30);
 
   // History log of health entries
-  const [healthLogs, setHealthLogs] = useState<Array<{ id: string; type: string; title: string; value: string; date: string }>>([
-    { id: '1', type: 'sleep', title: isAr ? 'ساعات النوم' : 'Sleep', value: '7.5h', date: todayStr },
-    { id: '2', type: 'water', title: isAr ? 'الماء والترطيب' : 'Water', value: `${Math.round(today.hydrationMl / 250)} cups`, date: todayStr },
-    { id: '3', type: 'workout', title: isAr ? 'المشي الصباحي' : 'Morning Walk', value: '30 mins', date: todayStr }
-  ]);
+  const [healthLogs, setHealthLogs] = useState<Array<{ id: string; type: string; title: string; value: string; date: string }>>([]);
 
   const handleAddWater = () => {
     addHydration(waterCupsToAdd * 250);
@@ -82,10 +70,14 @@ export const HealthView: React.FC = () => {
 
   const handleSaveWorkout = () => {
     if (!activityName.trim()) return;
-    updateTodayHealth({ workoutLogged: true });
+    updateTodayHealth({
+      workoutLogged: true,
+      workoutType: activityName.trim(),
+      workoutMinutes: (today.workoutMinutes ?? 0) + activityMinutes
+    });
     setHealthLogs((prev) => [
       {
-        id: Math.random().toString(),
+        id: crypto.randomUUID(),
         type: 'workout',
         title: activityName.trim(),
         value: `${activityMinutes} mins`,
@@ -137,7 +129,7 @@ export const HealthView: React.FC = () => {
             <span className="small-muted">{isAr ? 'اليوم' : 'Today'}</span>
           </div>
           <strong>
-            {today.sleepHours || 7.5}
+            {today.sleepHours > 0 ? today.sleepHours : '–'}
             <small style={{ display: 'inline', marginInlineStart: '5px' }}>{isAr ? 'ساعات' : 'hrs'}</small>
           </strong>
           <small>{isAr ? 'ساعات النوم' : 'Sleep Duration'}</small>
@@ -163,7 +155,7 @@ export const HealthView: React.FC = () => {
             <span className="small-muted">{isAr ? 'اليوم' : 'Today'}</span>
           </div>
           <strong>
-            {today.workoutLogged ? '30+' : '0'}
+            {today.workoutMinutes ?? (today.workoutLogged ? '✓' : '0')}
             <small style={{ display: 'inline', marginInlineStart: '5px' }}>{isAr ? 'د' : 'min'}</small>
           </strong>
           <small>{isAr ? 'الحركة والتمرين' : 'Movement'}</small>

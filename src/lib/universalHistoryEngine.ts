@@ -1,3 +1,4 @@
+import { localDateKey } from './dateKey';
 import {
   Task,
   Habit,
@@ -38,7 +39,7 @@ export interface HistoryFilterCriteria {
  */
 export function generateUniversalHistory(sources: HistoryDataSources): UniversalHistoryItem[] {
   const events: UniversalHistoryItem[] = [];
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   // Helper to map goal ID to goal title
   const goalMap = new Map<string, string>();

@@ -1,15 +1,12 @@
+import { localDateKey } from './dateKey';
+import { isReminderDue } from './reminderTiming';
 import { useEffect, useRef } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaNotificationEngine } from './notifications';
-import { localDateKey } from './storage';
 
 /**
  * Hook to monitor tasks and habit schedule intervals,
  * emitting ambient notifications and synth audio chimes when due.
- *
- * Reminder logic: fires when current time >= scheduled time and the reminder
- * hasn't fired yet today. This avoids missing reminders due to tab throttling
- * or exact-minute matching.
  */
 export function useNuqtaReminders() {
   const { tasks, habits, profile } = useNuqtaStore();
@@ -21,19 +18,16 @@ export function useNuqtaReminders() {
     const checkSchedule = () => {
       const now = new Date();
       const todayStr = localDateKey(now);
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const currentHHmm = `${hours}:${minutes}`;
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-      // 1. Task Reminders — fire when current time >= scheduled time
+      // 1. Task Reminders
       tasks.forEach((task) => {
         if (
           task.status !== 'completed' &&
           task.scheduledDate === todayStr &&
-          task.scheduledTime &&
-          currentHHmm >= task.scheduledTime
+          isReminderDue(task.scheduledTime, nowMinutes)
         ) {
-          const key = `task-${task.id}-${todayStr}`;
+          const key = `task-${task.id}-${todayStr}-${task.scheduledTime}`;
           if (!firedRemindersRef.current.has(key)) {
             firedRemindersRef.current.add(key);
             NuqtaNotificationEngine.notify({
@@ -49,7 +43,7 @@ export function useNuqtaReminders() {
       });
 
       // 2. Morning Habit Cue (default 08:00 AM)
-      if (currentHHmm >= '08:00' && currentHHmm < '08:01') {
+      if (isReminderDue('08:00', nowMinutes)) {
         const key = `habit-morning-${todayStr}`;
         if (!firedRemindersRef.current.has(key)) {
           firedRemindersRef.current.add(key);
@@ -70,7 +64,7 @@ export function useNuqtaReminders() {
       }
 
       // 3. Evening Reflection & Habit Cue (default 20:30 PM)
-      if (currentHHmm >= '20:30' && currentHHmm < '20:31') {
+      if (isReminderDue('20:30', nowMinutes)) {
         const key = `habit-evening-${todayStr}`;
         if (!firedRemindersRef.current.has(key)) {
           firedRemindersRef.current.add(key);

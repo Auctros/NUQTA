@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState, useEffect } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, Goal, Task } from '../types';
@@ -49,10 +50,10 @@ export const DashboardView: React.FC = () => {
 
   const isAr = profile.language === 'ar';
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = localDateKey(now);
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const tomorrowStr = localDateKey(tomorrow);
 
   const currentHour = now.getHours();
   const currentMinutes = now.getMinutes();
@@ -207,7 +208,7 @@ export const DashboardView: React.FC = () => {
   const weekDays = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + i);
-    const key = d.toISOString().split('T')[0];
+    const key = localDateKey(d);
     const dayNames = isAr ? ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const count = tasks.filter((t) => t.scheduledDate === key && t.status !== 'completed').length;
     return {

@@ -1,3 +1,5 @@
+import { localDateKey, parseDateKey } from './dateKey';
+import { habitCompliance } from './habitSchedule';
 import { Goal, KeyResult, Task, Habit, BookItem, ArtProject } from '../types';
 
 export interface EvaluatedKeyResult extends KeyResult {
@@ -9,7 +11,7 @@ export interface EvaluatedKeyResult extends KeyResult {
 
 export interface ActivityContributionItem {
   id: string;
-  type: 'task' | 'reading' | 'workout' | 'drawing' | 'quran';
+  type: 'task' | 'habit' | 'reading' | 'workout' | 'drawing' | 'quran';
   title: string;
   date: string; // YYYY-MM-DD
   contributionNote: string;
@@ -58,22 +60,24 @@ export function evaluateGoalProgress(
   allTasks: Task[],
   allHabits: Habit[]
 ): GoalIntelligenceSummary {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
   const now = new Date();
 
   // 1. Gather all linked tasks (unique by ID)
-  const linkedTaskIds = new Set(goal.linkedTaskIds || []);
-  allTasks.forEach((t) => {
-    if (t.linkedGoalId === goal.id) linkedTaskIds.add(t.id);
-  });
-  const linkedTasks = allTasks.filter((t) => linkedTaskIds.has(t.id));
+  // Single source of truth: the item's own linkedGoalId. The goal's id list is only a
+  // legacy fallback for items that carry no linkedGoalId, so an item re-linked to another
+  // goal can never be counted in two goals.
+  const listedTaskIds = new Set(goal.linkedTaskIds || []);
+  const linkedTasks = allTasks.filter((t) =>
+    t.linkedGoalId !== undefined ? t.linkedGoalId === goal.id : listedTaskIds.has(t.id)
+  );
 
   // 2. Gather all linked habits (unique by ID)
-  const linkedHabitIds = new Set(goal.linkedHabitIds || []);
-  allHabits.forEach((h) => {
-    if (h.linkedGoalId === goal.id) linkedHabitIds.add(h.id);
-  });
-  const linkedHabits = allHabits.filter((h) => linkedHabitIds.has(h.id));
+  const listedHabitIds = new Set(goal.linkedHabitIds || []);
+  const linkedHabits = allHabits.filter((h) =>
+    h.linkedGoalId !== undefined ? h.linkedGoalId === goal.id : listedHabitIds.has(h.id)
+  );
+  const linkedHabitIds = new Set(linkedHabits.map((h) => h.id));
 
   // 3. Gather linked books from reading habits (unique by ID)
   const linkedBookIds = new Set(goal.linkedBookIds || []);
@@ -137,16 +141,25 @@ export function evaluateGoalProgress(
           const past14Days = Array.from({ length: 14 }).map((_, i) => {
             const d = new Date();
             d.setDate(d.getDate() - (13 - i));
-            return d.toISOString().split('T')[0];
+            return localDateKey(d);
           });
-          const totalDays = linkedHabits.length * 14;
-          const totalChecks = linkedHabits.reduce((acc, h) => {
-            const hits = past14Days.filter((dt) => h.completedDates.includes(dt)).length;
-            return acc + hits;
-          }, 0);
-          const ratePercent = totalDays > 0 ? Math.round((totalChecks / totalDays) * 100) : 0;
-          evaluatedVal = ratePercent;
-          dataExplanation = `محسوب من متوسط التزام ${linkedHabits.length} عادات خلال آخر 14 يوماً (${ratePercent}%)`;
+          // Only days a habit was actually due count (daily / weekdays / custom days).
+          const totals = linkedHabits.reduce(
+            (acc, h) => {
+              const c = habitCompliance(h, past14Days);
+              return { due: acc.due + c.due, done: acc.done + c.done };
+            },
+            { due: 0, done: 0 }
+          );
+          if (totals.due === 0) {
+            hasInsufficientData = true;
+            dataExplanation = 'لا توجد أيام مستحقة للعادات المرتبطة خلال آخر 14 يوماً بعد';
+            evaluatedVal = 0;
+          } else {
+            const ratePercent = Math.round((totals.done / totals.due) * 100);
+            evaluatedVal = ratePercent;
+            dataExplanation = `محسوب من ${totals.done} إنجازاً في ${totals.due} يوم مستحق لـ ${linkedHabits.length} عادات خلال آخر 14 يوماً (${ratePercent}%)`;
+          }
         }
         break;
       }
@@ -418,13 +431,16 @@ export function evaluateGoalProgress(
   const past14Days = Array.from({ length: 14 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (13 - i));
-    return d.toISOString().split('T')[0];
+    return localDateKey(d);
   });
-  const totalHabitDays = linkedHabits.length * 14;
-  const totalHabitHits = linkedHabits.reduce((acc, h) => {
-    return acc + past14Days.filter((dt) => h.completedDates.includes(dt)).length;
-  }, 0);
-  const habitsConsistencyPercent = totalHabitDays > 0 ? Math.round((totalHabitHits / totalHabitDays) * 100) : 0;
+  const habitTotals = linkedHabits.reduce(
+    (acc, h) => {
+      const c = habitCompliance(h, past14Days);
+      return { due: acc.due + c.due, done: acc.done + c.done };
+    },
+    { due: 0, done: 0 }
+  );
+  const habitsConsistencyPercent = habitTotals.due > 0 ? Math.round((habitTotals.done / habitTotals.due) * 100) : 0;
 
   let executionProgressPercent = 0;
   if (linkedTasks.length > 0 && linkedHabits.length > 0) {
@@ -458,7 +474,7 @@ export function evaluateGoalProgress(
 
   const startDateStr = goal.startDate || goal.createdAt.split('T')[0];
   if (goal.deadline) {
-    const startMs = new Date(startDateStr).getTime();
+    const startMs = (parseDateKey(startDateStr) ?? new Date(startDateStr)).getTime();
     const deadlineMs = new Date(goal.deadline).getTime();
     const nowMs = now.getTime();
 
@@ -557,6 +573,22 @@ export function evaluateGoalProgress(
     }
   });
 
+  // Regular habit completions are real activity too (recent window only, to keep the list light).
+  linkedHabits.forEach((h) => {
+    (h.completedDates || [])
+      .filter((d) => past14Days.includes(d))
+      .forEach((d) => {
+        contributions.push({
+          id: `c-habit-${h.id}-${d}`,
+          type: 'habit',
+          title: h.name,
+          date: d,
+          contributionNote: 'إنجاز عادة',
+          icon: '🔁'
+        });
+      });
+  });
+
   // Sort contributions descending by date
   contributions.sort((a, b) => b.date.localeCompare(a.date));
 
@@ -567,7 +599,7 @@ export function evaluateGoalProgress(
     if (!lastActivityDate) {
       isDormant = true;
     } else {
-      const daysSince = Math.floor((now.getTime() - new Date(lastActivityDate).getTime()) / (1000 * 60 * 60 * 24));
+      const daysSince = Math.floor((now.getTime() - (parseDateKey(lastActivityDate) ?? new Date(lastActivityDate)).getTime()) / (1000 * 60 * 60 * 24));
       if (daysSince >= 7) {
         isDormant = true;
       }

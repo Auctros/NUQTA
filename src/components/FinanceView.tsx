@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { ExpenseRecord } from '../types';
@@ -32,7 +33,7 @@ export const FinanceView: React.FC = () => {
   const [savingTarget, setSavingTarget] = useState(1000);
   const [savingInitial, setSavingInitial] = useState(0);
 
-  const currentMonthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentMonthStr = localDateKey().slice(0, 7); // YYYY-MM
   const monthExpenses = expenses.filter((e) => e.date?.startsWith(currentMonthStr));
 
   const totalSpent = monthExpenses
@@ -75,7 +76,7 @@ export const FinanceView: React.FC = () => {
       amount: num,
       type: formType,
       category: formCategory,
-      date: new Date().toISOString().split('T')[0]
+      date: localDateKey()
     });
 
     setFormTitle('');
@@ -91,7 +92,7 @@ export const FinanceView: React.FC = () => {
       title: savingName.trim(),
       targetAmount: Number(savingTarget) || 1000,
       currentAmount: Number(savingInitial) || 0,
-      targetDate: new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0]
+      targetDate: localDateKey(new Date(Date.now() + 180 * 86400000))
     });
 
     setSavingName('');

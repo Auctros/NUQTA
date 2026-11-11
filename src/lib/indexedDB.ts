@@ -5,7 +5,7 @@
  */
 
 const DB_NAME = 'nuqta_local_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const STORES = {
   TASKS: 'tasks',
@@ -17,7 +17,9 @@ export const STORES = {
   SAVINGS: 'savings_goals',
   JOURNAL: 'journal_entries',
   PROFILE: 'profile',
-  SUNDAY_REVIEWS: 'sunday_reviews'
+  SUNDAY_REVIEWS: 'sunday_reviews',
+  HISTORY_AUDIT: 'history_audit',
+  META: 'meta'
 } as const;
 
 type StoreName = typeof STORES[keyof typeof STORES];
@@ -89,14 +91,29 @@ export function openNuqtaDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.SUNDAY_REVIEWS)) {
         db.createObjectStore(STORES.SUNDAY_REVIEWS, { keyPath: 'id' });
       }
+
+      if (!db.objectStoreNames.contains(STORES.HISTORY_AUDIT)) {
+        db.createObjectStore(STORES.HISTORY_AUDIT, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(STORES.META)) {
+        db.createObjectStore(STORES.META, { keyPath: 'id' });
+      }
     };
 
     request.onsuccess = () => {
-      resolve(request.result);
+      const db = request.result;
+      // Let schema upgrades / deletes from another tab proceed instead of blocking forever.
+      db.onversionchange = () => {
+        db.close();
+        dbPromise = null;
+      };
+      resolve(db);
     };
 
     request.onerror = () => {
       console.warn('Failed to open NUQTA IndexedDB, falling back to LocalStorage:', request.error);
+      dbPromise = null; // allow a later retry instead of caching the failure forever
       reject(request.error);
     };
   });
@@ -166,6 +183,28 @@ export class NuqtaIndexedDB {
     }
   }
 
+  /**
+   * Make the store an exact copy of `items` (clear + put in ONE transaction),
+   * so records deleted in the app are also removed here. Resolves true on commit.
+   */
+  static async replaceAll<T>(storeName: StoreName, items: T[]): Promise<boolean> {
+    try {
+      const db = await openNuqtaDB();
+      return await new Promise<boolean>((resolve) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        store.clear();
+        (items || []).forEach((item) => store.put(item));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+        tx.onabort = () => resolve(false);
+      });
+    } catch (e) {
+      console.warn(`NuqtaIndexedDB.replaceAll failed for store ${storeName}`, e);
+      return false;
+    }
+  }
+
   static async clearStore(storeName: StoreName): Promise<void> {
     try {
       const db = await openNuqtaDB();
@@ -196,27 +235,31 @@ export class NuqtaIndexedDB {
     }
   }
 
-  static async wipeAll(): Promise<void> {
+  static async wipeAll(): Promise<boolean> {
     try {
       const db = await openNuqtaDB();
-      const names = Object.values(STORES);
-      await Promise.all(
-        names.map(
+      const results = await Promise.all(
+        Object.values(STORES).map(
           (name) =>
-            new Promise<void>((resolve) => {
+            new Promise<boolean>((resolve) => {
               try {
                 const tx = db.transaction(name, 'readwrite');
                 tx.objectStore(name).clear();
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => resolve();
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+                tx.onabort = () => resolve(false);
               } catch {
-                resolve();
+                resolve(false);
               }
             })
         )
       );
+      return results.every(Boolean);
     } catch (e) {
-      console.warn('NuqtaIndexedDB.wipeAll failed:', e);
+      // The database cannot even be opened (e.g. private mode): there is no mirror to
+      // recover from either, so there is nothing left to wipe.
+      console.warn('NuqtaIndexedDB unavailable during wipe:', e);
+      return true;
     }
   }
 }

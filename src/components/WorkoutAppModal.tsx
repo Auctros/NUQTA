@@ -1,3 +1,4 @@
+import { localDateKey, parseDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import {
   Habit,
@@ -35,7 +36,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
   } = useNuqtaStore();
 
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   const workoutData = habit.workoutData || {
     sessions: [],
@@ -257,12 +258,12 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
   // Helper calculations
   const past7DaysStart = new Date();
   past7DaysStart.setDate(past7DaysStart.getDate() - 7);
-  const sessionsThisWeek = workoutData.sessions.filter((s) => new Date(s.date) >= past7DaysStart);
+  const sessionsThisWeek = workoutData.sessions.filter((s) => (parseDateKey(s.date) ?? new Date(s.date)) >= past7DaysStart);
 
   const past30DaysStart = new Date();
   past30DaysStart.setDate(past30DaysStart.getDate() - 30);
   const repsThisMonth = workoutData.sessions
-    .filter((s) => new Date(s.date) >= past30DaysStart)
+    .filter((s) => (parseDateKey(s.date) ?? new Date(s.date)) >= past30DaysStart)
     .reduce((acc, s) => acc + (s.totalReps || 0), 0);
 
   // Current session calculated metrics

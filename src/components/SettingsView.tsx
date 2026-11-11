@@ -1,7 +1,9 @@
+import { csvCell, downloadBackupFile, downloadTextFile, restoreBackupFromFile } from '../lib/backupActions';
+import { localDateKey } from '../lib/dateKey';
 import React, { useState, useEffect } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
-import { NuqtaStorageEngine, localDateKey } from '../lib/storage';
+import { NuqtaStorageEngine } from '../lib/storage';
 import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 
 export const SettingsView: React.FC = () => {
@@ -21,65 +23,28 @@ export const SettingsView: React.FC = () => {
 
   const isAr = profile.language === 'ar';
 
-  const handleExportJSON = () => {
-    const json = NuqtaStorageEngine.exportFullBackup();
-    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', url);
-    downloadAnchor.setAttribute('download', `nuqta_backup_${localDateKey()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    URL.revokeObjectURL(url);
-  };
+  const handleExportJSON = () => downloadBackupFile('nuqta-backup');
 
   const handleExportCSV = () => {
     const tasks = NuqtaStorageEngine.getTasks();
     const headers = ['id', 'title', 'status', 'priority', 'dueDate', 'time', 'estimatedMinutes', 'tags'];
-    const rows = [headers.join(',')];
+    const rows = [headers.map(csvCell).join(',')];
     tasks.forEach((t) => {
       rows.push(
-        [
-          `"${t.id}"`,
-          `"${(t.title || '').replace(/"/g, '""')}"`,
-          `"${t.status}"`,
-          `"${t.priority}"`,
-          `"${t.scheduledDate || ''}"`,
-          `"${t.scheduledTime || ''}"`,
-          `"${t.estimatedMinutes || ''}"`,
-          `"${(t.tags || []).join(';')}"`
-        ].join(',')
+        [t.id, t.title, t.status, t.priority, t.scheduledDate, t.scheduledTime, t.estimatedMinutes, (t.tags || []).join(';')]
+          .map(csvCell)
+          .join(',')
       );
     });
-    const csvContent = '\uFEFF' + rows.join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', url);
-    downloadAnchor.setAttribute('download', `nuqta_tasks_${localDateKey()}.csv`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    URL.revokeObjectURL(url);
+    downloadTextFile(`nuqta-tasks-${localDateKey()}.csv`, '\uFEFF' + rows.join('\r\n'), 'text/csv;charset=utf-8');
   };
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      const result = NuqtaStorageEngine.importBackup(content);
-      if (result.success) {
-        setImportStatus(isAr ? 'تمت استعادة البيانات بنجاح! يتم التحديث الآن...' : 'Backup restored successfully! Refreshing...');
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        setImportStatus(isAr ? `فشل الاستعادة: ${result.reason}` : `Restore failed: ${result.reason}`);
-      }
-    };
-    reader.readAsText(file);
+    const result = await restoreBackupFromFile(file, isAr, setImportStatus);
+    if (result && result.ok) setTimeout(() => window.location.reload(), 1000);
   };
 
   const handleSaveName = (e: React.FormEvent) => {
@@ -91,16 +56,26 @@ export const SettingsView: React.FC = () => {
   };
 
   const handleWipeData = async () => {
-    if (
-      confirm(
+    const ok = window.confirm(
+      isAr
+        ? 'سيتم حذف كل بيانات نقطة من هذا المتصفح نهائياً (التخزين الأساسي والنسخة الاحتياطية الداخلية). صدّر نسخة احتياطية أولاً إن أردت الاحتفاظ بها. متابعة؟'
+        : 'This permanently deletes ALL NUQTA data from this browser (primary storage and its internal mirror). Export a backup first if you want to keep it. Continue?'
+    );
+    if (!ok) return;
+    const wiped = await NuqtaStorageEngine.wipeAll();
+    if (!wiped) {
+      window.alert(
         isAr
-          ? 'هل أنت متأكد من مسح كافة البيانات المحلية من هذا المتصفح؟ لا يمكن التراجع عن هذا الإجراء.'
-          : 'Are you sure you want to delete all local data? This cannot be undone.'
-      )
-    ) {
-      await NuqtaStorageEngine.wipeAll();
-      window.location.reload();
+          ? 'تعذّر مسح كل البيانات، ولم يتم حذف شيء. جرّب مجدداً أو امسح بيانات الموقع من إعدادات المتصفح.'
+          : 'Not everything could be deleted, so nothing was removed. Try again or clear site data from your browser settings.'
+      );
+      return;
     }
+    window.location.reload();
+  };
+
+  const handleLoadSample = () => {
+    if (NuqtaStorageEngine.loadDemoData()) window.location.reload();
   };
 
   return (
@@ -142,7 +117,7 @@ export const SettingsView: React.FC = () => {
               <span className="settings-avatar">{(profile.name || 'ع').charAt(0)}</span>
               <div>
                 <strong>{profile.name || (isAr ? 'علي' : 'User')}</strong>
-                <small>{isAr ? 'بيانات مشفرة محلياً' : 'Stored locally and privately'}</small>
+                <small>{isAr ? 'بيانات محفوظة محلياً وبشكل خاص' : 'Stored locally and privately'}</small>
               </div>
             </div>
 
@@ -303,6 +278,17 @@ export const SettingsView: React.FC = () => {
               <p className="text-xs text-accent font-mono text-center pt-3">{importStatus}</p>
             )}
 
+            {NuqtaStorageEngine.isDemo() && (
+              <p className="small-muted text-center pt-3">
+                {isAr ? 'تعرض الآن بيانات تجريبية. امسح البيانات للبدء من الصفر.' : 'You are viewing sample data. Wipe to start fresh.'}
+              </p>
+            )}
+            {NuqtaStorageEngine.isEmpty() && (
+              <button className="btn w-full justify-center mt-3" onClick={handleLoadSample}>
+                <span>{isAr ? 'تحميل بيانات تجريبية (اختياري)' : 'Load sample data (optional)'}</span>
+              </button>
+            )}
+
             <div className="subtle-line"></div>
 
             <button
@@ -335,7 +321,7 @@ export const SettingsView: React.FC = () => {
             <div className="space-y-2 mt-4 text-[11px] font-mono text-muted">
               <div className="flex items-center gap-2">
                 <span className="text-accent font-bold">✓</span>
-                <span>{isAr ? 'تخزين مشفر محلياً' : 'Client-side Encrypted Store'}</span>
+                <span>{isAr ? 'تخزين خاص على جهازك فقط' : 'Private on-device storage'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-accent font-bold">✓</span>

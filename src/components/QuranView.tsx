@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import {
@@ -53,7 +54,7 @@ export const QuranView: React.FC = () => {
   }, [focusRequest]);
 
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   // Find existing Quran habit or allow creating one seamlessly
   const quranHabit = habits.find((h) => h.specializedType === 'quran');

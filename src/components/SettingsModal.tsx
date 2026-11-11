@@ -1,3 +1,5 @@
+import { downloadBackupFile, restoreBackupFromFile } from '../lib/backupActions';
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import {
@@ -28,32 +30,14 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
 
   const isAr = profile.language === 'ar';
 
-  const handleExportJSON = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(NuqtaStorageEngine.exportFullBackup());
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `nuqta_vault_backup_${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
+  const handleExportJSON = () => downloadBackupFile('nuqta-backup');
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      const success = NuqtaStorageEngine.importBackup(content);
-      if (success) {
-        setImportStatus('Backup restored successfully! Refreshing...');
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        setImportStatus('Invalid JSON backup file.');
-      }
-    };
-    reader.readAsText(file);
+    const result = await restoreBackupFromFile(file, isAr, setImportStatus);
+    if (result && result.ok) setTimeout(() => window.location.reload(), 1000);
   };
 
   const handleSaveName = () => {

@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { Goal, KeyResult, KeyResultDataSource, GoalMilestone, SpecializedHabitType } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
@@ -39,7 +40,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [quickTaskPriority, setQuickTaskPriority] = useState<1 | 2 | 3 | 4>(2);
-  const [quickTaskDate, setQuickTaskDate] = useState(new Date().toISOString().split('T')[0]);
+  const [quickTaskDate, setQuickTaskDate] = useState(localDateKey());
 
   // Quick Habit Creation state
   const [isCreatingHabit, setIsCreatingHabit] = useState(false);

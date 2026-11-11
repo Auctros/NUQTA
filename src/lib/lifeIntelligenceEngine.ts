@@ -1,3 +1,4 @@
+import { localDateKey } from './dateKey';
 import { Task, Habit, Goal, FocusSession, MuscleMovement, ArtMedium } from '../types';
 import { evaluateGoalProgress } from './goalProgressEngine';
 
@@ -133,10 +134,10 @@ export function computeLifeIntelligence(
   isAr: boolean
 ): LifeIntelligenceReport {
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = localDateKey(now);
 
   // Helper to get formatted YYYY-MM-DD
-  const formatYmd = (d: Date) => d.toISOString().split('T')[0];
+  const formatYmd = (d: Date) => localDateKey(d);
 
   // Determine Current & Previous Period Dates
   let currentDates: string[] = [];

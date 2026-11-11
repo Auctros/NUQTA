@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { WorkoutRoutine, ExerciseEntry, ExerciseSet } from '../types';
@@ -25,7 +26,7 @@ export const WorkoutView: React.FC = () => {
   } = useNuqtaStore();
 
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   const workoutHabit = habits.find((h) => h.specializedType === 'workout');
 

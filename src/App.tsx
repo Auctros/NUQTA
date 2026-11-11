@@ -1,3 +1,6 @@
+import { NuqtaStorageEngine } from './lib/storage';
+import { StorageIssueBanner } from './components/StorageIssueBanner';
+import { localDateKey } from './lib/dateKey';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from './store/nuqtaStore';
 import { NuqtaIcon, IconName } from './components/NuqtaIcon';
@@ -52,7 +55,15 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
-    initializeStore();
+    let cancelled = false;
+    NuqtaStorageEngine.recoverFromMirrorIfNeeded()
+      .catch(() => false)
+      .then(() => {
+        if (!cancelled) initializeStore();
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [initializeStore]);
 
   // Sync html and body theme classes reliably
@@ -117,7 +128,7 @@ export default function App() {
   }, [setActiveNavTab]);
 
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
   const todayDueCount = tasks.filter((t) => t.status !== 'completed' && t.scheduledDate === todayStr).length;
 
   const workspaceNav: Array<{ id: typeof activeNavTab; label: string; icon: IconName; count?: number }> = [
@@ -207,6 +218,7 @@ export default function App() {
       dir={isAr ? 'rtl' : 'ltr'}
       className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
     >
+      <StorageIssueBanner isAr={isAr} />
       {/* Global Modals */}
       <RescueModal />
       <SundayRitualModal />

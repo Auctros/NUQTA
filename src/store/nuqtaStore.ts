@@ -1,3 +1,6 @@
+import { defaultProfile } from '../lib/storage';
+import { emptyHealthRecord } from '../lib/healthDefaults';
+import { localDateKey } from '../lib/dateKey';
 import { create } from 'zustand';
 import {
   Task,
@@ -172,19 +175,10 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   savingsGoals: [],
   journalEntries: [],
   historyAuditLogs: [],
-  profile: {
-    name: 'Tariq',
-    theme: 'dark',
-    language: 'en',
-    experiencePoints: 1200,
-    level: 3,
-    biometricLocked: false,
-    encryptionPassphraseSet: false,
-    weeklySundayReviewDue: false
-  },
+  profile: defaultProfile(),
   sundayReviews: [],
 
-  energyScore: 85,
+  energyScore: 50,
   isRescueModeOpen: false,
   isQuickCaptureOpen: false,
   isSundayRitualOpen: false,
@@ -206,17 +200,8 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const sundayReviews = NuqtaStorageEngine.getSundayReviews();
     const historyAuditLogs = NuqtaStorageEngine.getHistoryAuditLogs();
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayHealth = healthMetrics[todayStr] || {
-      date: todayStr,
-      sleepHours: 7.5,
-      sleepQuality: 4,
-      hydrationMl: 1500,
-      targetHydrationMl: 2500,
-      workoutLogged: false,
-      moodRating: 4,
-      weightKg: 73
-    };
+    const todayStr = localDateKey();
+    const todayHealth = healthMetrics[todayStr] ?? null;
 
     const energy = computeDailyEnergyScore(todayHealth, tasks);
 
@@ -250,7 +235,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   // TASK ACTIONS
   addTaskFromNLP: (rawText: string) => {
     const parsed = parseNaturalLanguageTask(rawText);
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
 
     const newTask: Task = {
       id: 't-' + crypto.randomUUID().slice(0, 8),
@@ -272,7 +257,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     NuqtaStorageEngine.saveTasks(updated);
 
     const todayHealth = get().healthMetrics[todayStr];
-    const energy = todayHealth ? computeDailyEnergyScore(todayHealth, updated) : get().energyScore;
+    const energy = computeDailyEnergyScore(todayHealth, updated);
 
     set({ tasks: updated, energyScore: energy });
     get().addXP(15);
@@ -280,7 +265,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   createTask: (draft) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const newTask: Task = {
       id: 't-' + crypto.randomUUID().slice(0, 8),
       title: draft.title || 'Untitled Action',
@@ -327,9 +312,9 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     );
     NuqtaStorageEngine.saveTasks(updated);
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const todayHealth = get().healthMetrics[todayStr];
-    const energy = todayHealth ? computeDailyEnergyScore(todayHealth, updated) : get().energyScore;
+    const energy = computeDailyEnergyScore(todayHealth, updated);
 
     set({ tasks: updated, energyScore: energy });
 
@@ -388,9 +373,9 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     );
     NuqtaStorageEngine.saveTasks(updated);
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const todayHealth = get().healthMetrics[todayStr];
-    const energy = todayHealth ? computeDailyEnergyScore(todayHealth, updated) : get().energyScore;
+    const energy = computeDailyEnergyScore(todayHealth, updated);
 
     set({ tasks: updated, energyScore: energy });
   },
@@ -473,7 +458,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   // HABIT ACTIONS
   toggleHabitToday: (id) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const habit = get().habits.find((h) => h.id === id);
     if (!habit) return;
 
@@ -507,7 +492,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   useStreakFreeze: (id) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const habit = get().habits.find((h) => h.id === id);
     if (!habit || habit.freezesRemaining <= 0) return false;
 
@@ -531,7 +516,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     let drawingData = habitDraft.drawingData;
     let quranData = habitDraft.quranData;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
 
     if (specializedType === 'reading' && !readingData) {
       const book1Id = 'book-' + crypto.randomUUID().slice(0, 6);
@@ -971,7 +956,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   // Dedicated Reading App Actions
   logReadingSession: (habitId, sessionDraft) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const targetHabit = get().habits.find((h) => h.id === habitId);
     const newSession = {
       id: 'rs-' + crypto.randomUUID().slice(0, 8),
@@ -1105,7 +1090,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   addBookQuote: (habitId, quoteDraft) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const newQuote: import('../types').BookQuote = {
       id: 'q-' + crypto.randomUUID().slice(0, 8),
       date: todayStr,
@@ -1158,7 +1143,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   // Dedicated Workout App Actions
   logWorkoutSession: (habitId, sessionDraft) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const targetHabit = get().habits.find((h) => h.id === habitId);
     const sessionReps = sessionDraft.exercises.reduce(
       (acc, ex) => acc + ex.sets.reduce((sAcc, s) => sAcc + (s.completed ? s.reps : 0), 0),
@@ -1287,7 +1272,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   // Dedicated Drawing / Art Studio Actions
   logDrawingSession: (habitId, pieceDraft) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const targetHabit = get().habits.find((h) => h.id === habitId);
     const newPiece = {
       id: 'art-' + crypto.randomUUID().slice(0, 8),
@@ -1435,7 +1420,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   // Dedicated Quran App Actions
   logQuranSession: (habitId, sessionDraft) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const targetHabit = get().habits.find((h) => h.id === habitId);
     const newSession: import('../types').QuranSessionLog = {
       id: 'qs-' + crypto.randomUUID().slice(0, 8),
@@ -1549,7 +1534,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
           ...s,
           status,
           masteryRating: masteryRating || s.masteryRating,
-          lastReviewedDate: new Date().toISOString().split('T')[0]
+          lastReviewedDate: localDateKey()
         };
       });
       const completedSurahs = surahs.filter((s) => s.status === 'completed').length;
@@ -1601,7 +1586,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   // GOAL ACTIONS
   createGoal: (goalDraft) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const newGoal: Goal = {
       id: 'g-' + crypto.randomUUID().slice(0, 8),
       title: goalDraft.title || 'Mastery Objective',
@@ -1691,7 +1676,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   toggleGoalMilestone: (goalId, milestoneId) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const updated = get().goals.map((g) => {
       if (g.id !== goalId) return g;
       const milestones = (g.milestones || []).map((ms) => {
@@ -1723,8 +1708,18 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   linkActivityToGoal: (goalId, type, activityId) => {
+    // Product rule: a task or habit belongs to at most ONE goal. Linking it to a new goal
+    // removes it from every other goal's list so it is never counted twice.
     const updatedGoals = get().goals.map((g) => {
-      if (g.id !== goalId) return g;
+      if (g.id !== goalId) {
+        if (type === 'task' && (g.linkedTaskIds || []).includes(activityId)) {
+          return { ...g, linkedTaskIds: (g.linkedTaskIds || []).filter((id) => id !== activityId), updatedAt: new Date().toISOString() };
+        }
+        if (type === 'habit' && (g.linkedHabitIds || []).includes(activityId)) {
+          return { ...g, linkedHabitIds: (g.linkedHabitIds || []).filter((id) => id !== activityId), updatedAt: new Date().toISOString() };
+        }
+        return g;
+      }
       if (type === 'task') {
         const existing = new Set(g.linkedTaskIds || []);
         existing.add(activityId);
@@ -1799,7 +1794,15 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   deleteGoal: (id) => {
     const updated = get().goals.filter((g) => g.id !== id);
     NuqtaStorageEngine.saveGoals(updated);
-    set({ goals: updated });
+
+    // Do not leave dangling references to a goal that no longer exists.
+    const clear = <T extends { linkedGoalId?: string }>(items: T[]): T[] =>
+      items.map((it) => (it.linkedGoalId === id ? { ...it, linkedGoalId: undefined } : it));
+    const tasks = clear(get().tasks);
+    const habits = clear(get().habits);
+    NuqtaStorageEngine.saveTasks(tasks);
+    NuqtaStorageEngine.saveHabits(habits);
+    set({ goals: updated, tasks, habits });
   },
 
   // FOCUS ACTIONS
@@ -1818,16 +1821,8 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   // HEALTH ACTIONS
   updateTodayHealth: (updates) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const current = get().healthMetrics[todayStr] || {
-      date: todayStr,
-      sleepHours: 7.5,
-      sleepQuality: 4,
-      hydrationMl: 1500,
-      targetHydrationMl: 2500,
-      workoutLogged: false,
-      moodRating: 4
-    };
+    const todayStr = localDateKey();
+    const current = get().healthMetrics[todayStr] ?? emptyHealthRecord(todayStr);
 
     const updatedRecord = { ...current, ...updates };
     const allMetrics = { ...get().healthMetrics, [todayStr]: updatedRecord };
@@ -1838,16 +1833,8 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   addHydration: (amountMl) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const current = get().healthMetrics[todayStr] || {
-      date: todayStr,
-      sleepHours: 7.5,
-      sleepQuality: 4,
-      hydrationMl: 0,
-      targetHydrationMl: 2500,
-      workoutLogged: false,
-      moodRating: 4
-    };
+    const todayStr = localDateKey();
+    const current = get().healthMetrics[todayStr] ?? emptyHealthRecord(todayStr);
 
     const nextHydration = (current.hydrationMl || 0) + amountMl;
     get().updateTodayHealth({ hydrationMl: nextHydration });
@@ -1911,7 +1898,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   executeRescueMode: (chosenAnchorTaskId, deferOthersToTomorrow) => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const tomorrowStr = localDateKey(tomorrow);
 
     const updated = get().tasks.map((task) => {
       if (task.id === chosenAnchorTaskId) {

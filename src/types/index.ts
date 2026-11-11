@@ -408,14 +408,14 @@ export interface SavingsGoal {
 
 export interface HealthMetric {
   date: string; // YYYY-MM-DD
-  sleepHours: number;
-  sleepQuality: 1 | 2 | 3 | 4 | 5;
+  sleepHours: number; // 0 = not logged
+  sleepQuality: 0 | 1 | 2 | 3 | 4 | 5; // 0 = not logged
   hydrationMl: number;
   targetHydrationMl: number;
   workoutLogged: boolean;
   workoutType?: string;
   workoutMinutes?: number;
-  moodRating: 1 | 2 | 3 | 4 | 5;
+  moodRating: 0 | 1 | 2 | 3 | 4 | 5; // 0 = not logged
   weightKg?: number;
   cycleDay?: number;
   energyScore?: number;

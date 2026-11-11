@@ -1,3 +1,4 @@
+import { localDateKey, parseDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
@@ -7,9 +8,9 @@ export const CalendarView: React.FC = () => {
   const isAr = profile.language === 'ar';
 
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(() => new Date());
-  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(() => localDateKey());
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   const shiftMonth = (delta: number) => {
     setCurrentMonthDate((prev) => {
@@ -21,7 +22,7 @@ export const CalendarView: React.FC = () => {
   const jumpToToday = () => {
     const today = new Date();
     setCurrentMonthDate(today);
-    setSelectedDate(today.toISOString().split('T')[0]);
+    setSelectedDate(localDateKey(today));
   };
 
   // Build 42 grid days for current month view
@@ -34,7 +35,7 @@ export const CalendarView: React.FC = () => {
   const cells = Array.from({ length: 42 }).map((_, idx) => {
     const d = new Date(startDate);
     d.setDate(startDate.getDate() + idx);
-    const key = d.toISOString().split('T')[0];
+    const key = localDateKey(d);
     const isCurrentMonth = d.getMonth() === month;
     const isToday = key === todayStr;
     const isSelected = key === selectedDate;
@@ -268,7 +269,7 @@ export const CalendarView: React.FC = () => {
           </div>
 
           <div className="agenda-date">
-            {new Date(selectedDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
+            {(parseDateKey(selectedDate) ?? new Date()).toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
               weekday: 'long',
               year: 'numeric',
               month: 'long',

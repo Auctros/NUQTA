@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { ArtMedium, ArtProject, ProjectStage } from '../types';
@@ -26,7 +27,7 @@ export const DrawingView: React.FC = () => {
   } = useNuqtaStore();
 
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   const drawingHabit = habits.find((h) => h.specializedType === 'drawing');
 

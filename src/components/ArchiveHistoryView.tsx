@@ -1,3 +1,4 @@
+import { localDateKey } from '../lib/dateKey';
 import React, { useState, useMemo } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import {
@@ -79,19 +80,19 @@ export const ArchiveHistoryView: React.FC = () => {
   // Filtered History
   const filteredHistory = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = localDateKey(now);
 
     const weekAgo = new Date();
     weekAgo.setDate(now.getDate() - 7);
-    const weekAgoStr = weekAgo.toISOString().split('T')[0];
+    const weekAgoStr = localDateKey(weekAgo);
 
     const monthAgo = new Date();
     monthAgo.setMonth(now.getMonth() - 1);
-    const monthAgoStr = monthAgo.toISOString().split('T')[0];
+    const monthAgoStr = localDateKey(monthAgo);
 
     const yearAgo = new Date();
     yearAgo.setFullYear(now.getFullYear() - 1);
-    const yearAgoStr = yearAgo.toISOString().split('T')[0];
+    const yearAgoStr = localDateKey(yearAgo);
 
     return allHistory.filter((item) => {
       // Domain filter
@@ -208,10 +209,10 @@ export const ArchiveHistoryView: React.FC = () => {
     const groups: { label: string; date: string; items: UniversalHistoryItem[] }[] = [];
     const map = new Map<string, UniversalHistoryItem[]>();
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateKey();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = localDateKey(yesterday);
 
     filteredHistory.forEach((item) => {
       const dateKey = item.date;
