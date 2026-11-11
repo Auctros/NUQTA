@@ -425,3 +425,4 @@ export const INITIAL_PROFILE: UserProfile = {
   encryptionPassphraseSet: false,
   weeklySundayReviewDue: false
 };
+

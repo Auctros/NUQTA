@@ -1149,3 +1149,4 @@ export const QuranView: React.FC = () => {
     </StudioShell>
   );
 };
+

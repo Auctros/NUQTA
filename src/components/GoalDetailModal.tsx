@@ -1319,3 +1319,4 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
     </div>
   );
 };
+

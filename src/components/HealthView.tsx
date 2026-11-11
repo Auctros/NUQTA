@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
+import { localDateKey } from '../lib/storage';
 
 export const HealthView: React.FC = () => {
   const { healthMetrics, updateTodayHealth, addHydration, profile } = useNuqtaStore();
   const isAr = profile.language === 'ar';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateKey();
 
   const today = healthMetrics[todayStr] || {
     date: todayStr,
@@ -35,7 +36,7 @@ export const HealthView: React.FC = () => {
     addHydration(waterCupsToAdd * 250);
     setHealthLogs((prev) => [
       {
-        id: Math.random().toString(),
+        id: crypto.randomUUID(),
         type: 'water',
         title: isAr ? 'إضافة ماء' : 'Hydration',
         value: `+${waterCupsToAdd} ${isAr ? 'كوب' : 'cups'}`,
@@ -51,7 +52,7 @@ export const HealthView: React.FC = () => {
       updateTodayHealth({ sleepHours: num });
       setHealthLogs((prev) => [
         {
-          id: Math.random().toString(),
+          id: crypto.randomUUID(),
           type: 'sleep',
           title: isAr ? 'ساعات النوم' : 'Sleep Log',
           value: `${num}h`,
@@ -68,7 +69,7 @@ export const HealthView: React.FC = () => {
       updateTodayHealth({ weightKg: num });
       setHealthLogs((prev) => [
         {
-          id: Math.random().toString(),
+          id: crypto.randomUUID(),
           type: 'weight',
           title: isAr ? 'تسجيل الوزن' : 'Weight',
           value: `${num} kg`,

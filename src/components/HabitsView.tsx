@@ -812,3 +812,4 @@ export const HabitsView: React.FC = () => {
     </div>
   );
 };
+

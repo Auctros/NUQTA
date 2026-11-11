@@ -741,3 +741,4 @@ export const WorkoutView: React.FC = () => {
     </StudioShell>
   );
 };
+

@@ -1221,3 +1221,4 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
     </div>
   );
 };
+

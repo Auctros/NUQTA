@@ -705,3 +705,4 @@ export function computeLifeIntelligence(
     heatmapWeeks
   };
 }
+

@@ -207,3 +207,4 @@ export const SundayRitualModal: React.FC = () => {
     </div>
   );
 };
+

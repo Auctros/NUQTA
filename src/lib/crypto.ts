@@ -13,7 +13,7 @@ export async function deriveKey(passphrase: string, salt: Uint8Array): Promise<C
     {
       name: 'PBKDF2',
       salt: salt as BufferSource,
-      iterations: 100000,
+      iterations: 600000,
       hash: 'SHA-256'
     },
     keyMaterial,

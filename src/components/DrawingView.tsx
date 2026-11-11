@@ -721,3 +721,4 @@ export const DrawingView: React.FC = () => {
     </StudioShell>
   );
 };
+

@@ -479,3 +479,4 @@ export const FinanceView: React.FC = () => {
     </div>
   );
 };
+

@@ -224,3 +224,4 @@ export const JournalView: React.FC = () => {
     </div>
   );
 };
+

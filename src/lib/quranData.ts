@@ -258,3 +258,4 @@ export const generateInitialQuranSurahs = (): SurahMemorizationState[] => {
 
   return states;
 };
+

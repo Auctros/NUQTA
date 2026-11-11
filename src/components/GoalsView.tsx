@@ -731,3 +731,4 @@ export const GoalsView: React.FC = () => {
     </div>
   );
 };
+

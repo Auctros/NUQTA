@@ -801,3 +801,4 @@ export function getHistoricalStatsSummary(sources: HistoryDataSources) {
     totalDedicatedHours: Math.round(totalDedicatedMinutes / 60)
   };
 }
+

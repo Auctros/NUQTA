@@ -1240,3 +1240,4 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
     </div>
   );
 };
+

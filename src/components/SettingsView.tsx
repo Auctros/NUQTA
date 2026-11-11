@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
-import { NuqtaStorageEngine } from '../lib/storage';
+import { NuqtaStorageEngine, localDateKey } from '../lib/storage';
 import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 
 export const SettingsView: React.FC = () => {
@@ -22,13 +22,16 @@ export const SettingsView: React.FC = () => {
   const isAr = profile.language === 'ar';
 
   const handleExportJSON = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(NuqtaStorageEngine.exportFullBackup());
+    const json = NuqtaStorageEngine.exportFullBackup();
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `nuqta-backup-${new Date().toISOString().split('T')[0]}.json`);
+    downloadAnchor.setAttribute('href', url);
+    downloadAnchor.setAttribute('download', `nuqta_backup_${localDateKey()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleExportCSV = () => {
@@ -49,13 +52,16 @@ export const SettingsView: React.FC = () => {
         ].join(',')
       );
     });
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(rows.join('\r\n'));
+    const csvContent = '\uFEFF' + rows.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', csvContent);
-    downloadAnchor.setAttribute('download', `nuqta-tasks-${new Date().toISOString().split('T')[0]}.csv`);
+    downloadAnchor.setAttribute('href', url);
+    downloadAnchor.setAttribute('download', `nuqta_tasks_${localDateKey()}.csv`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,12 +71,12 @@ export const SettingsView: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      const success = NuqtaStorageEngine.importBackup(content);
-      if (success) {
+      const result = NuqtaStorageEngine.importBackup(content);
+      if (result.success) {
         setImportStatus(isAr ? 'تمت استعادة البيانات بنجاح! يتم التحديث الآن...' : 'Backup restored successfully! Refreshing...');
         setTimeout(() => window.location.reload(), 1000);
       } else {
-        setImportStatus(isAr ? 'الملف غير صالح كنسخة احتياطية من NUQTA.' : 'That file does not look like a NUQTA backup.');
+        setImportStatus(isAr ? `فشل الاستعادة: ${result.reason}` : `Restore failed: ${result.reason}`);
       }
     };
     reader.readAsText(file);
@@ -84,7 +90,7 @@ export const SettingsView: React.FC = () => {
     }
   };
 
-  const handleWipeData = () => {
+  const handleWipeData = async () => {
     if (
       confirm(
         isAr
@@ -92,7 +98,7 @@ export const SettingsView: React.FC = () => {
           : 'Are you sure you want to delete all local data? This cannot be undone.'
       )
     ) {
-      localStorage.clear();
+      await NuqtaStorageEngine.wipeAll();
       window.location.reload();
     }
   };
