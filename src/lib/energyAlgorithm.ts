@@ -49,7 +49,7 @@ export function computeDailyEnergyScore(health: HealthMetric | null | undefined,
   // 6. Cognitive strain: Completed tasks restore feeling of momentum; urgent pending drain energy
   const todayStr = localDateKey();
   const completedToday = tasks.filter(
-    (t) => t.status === 'completed' && t.completedAt?.startsWith(todayStr)
+    (t) => t.status === 'completed' && t.completedAt && localDateKey(new Date(t.completedAt)) === todayStr
   ).length;
 
   const urgentPending = tasks.filter(

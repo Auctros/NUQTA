@@ -235,31 +235,65 @@ export class NuqtaIndexedDB {
     }
   }
 
+  /**
+   * Delete every NUQTA record from the mirror.
+   *
+   * Returns true ONLY when the mirror is confirmed empty: either the database is
+   * positively known to not exist, or every store was cleared and committed.
+   * A connection or deletion failure returns false, so callers can refuse to clear
+   * localStorage and avoid a mirror that could later "recover" deleted data.
+   */
   static async wipeAll(): Promise<boolean> {
+    // IndexedDB is not available at all: no mirror can exist, so there is nothing
+    // to wipe and nothing that could later resurrect deleted data.
+    if (!isIndexedDBAvailable()) return true;
+
+    // Distinguish "the database does not exist" from "we cannot tell".
+    const exists = await databaseExists();
+    if (exists === false) return true; // confirmed absent: nothing to delete
+
+    let db: IDBDatabase;
     try {
-      const db = await openNuqtaDB();
-      const results = await Promise.all(
-        Object.values(STORES).map(
-          (name) =>
-            new Promise<boolean>((resolve) => {
-              try {
-                const tx = db.transaction(name, 'readwrite');
-                tx.objectStore(name).clear();
-                tx.oncomplete = () => resolve(true);
-                tx.onerror = () => resolve(false);
-                tx.onabort = () => resolve(false);
-              } catch {
-                resolve(false);
-              }
-            })
-        )
-      );
-      return results.every(Boolean);
+      db = await openNuqtaDB();
     } catch (e) {
-      // The database cannot even be opened (e.g. private mode): there is no mirror to
-      // recover from either, so there is nothing left to wipe.
-      console.warn('NuqtaIndexedDB unavailable during wipe:', e);
-      return true;
+      // The connection failed. Never report this as a successful wipe unless the
+      // database is positively known to be absent (which was handled above).
+      console.warn('NuqtaIndexedDB.wipeAll could not open the database:', e);
+      return false;
     }
+
+    const results = await Promise.all(
+      Object.values(STORES).map(
+        (name) =>
+          new Promise<boolean>((resolve) => {
+            try {
+              const tx = db.transaction(name, 'readwrite');
+              tx.objectStore(name).clear();
+              tx.oncomplete = () => resolve(true);
+              tx.onerror = () => resolve(false);
+              tx.onabort = () => resolve(false);
+            } catch {
+              resolve(false);
+            }
+          })
+      )
+    );
+    return results.every(Boolean);
+  }
+}
+
+/**
+ * Whether the NUQTA database exists:
+ *   true  -> it is present
+ *   false -> it is confirmed absent
+ *   null  -> existence could not be determined (e.g. indexedDB.databases is unsupported)
+ */
+async function databaseExists(): Promise<boolean | null> {
+  try {
+    if (typeof indexedDB.databases !== 'function') return null;
+    const databases = await indexedDB.databases();
+    return databases.some((d) => d.name === DB_NAME);
+  } catch {
+    return null;
   }
 }

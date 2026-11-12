@@ -102,14 +102,14 @@ describe('backup validation and atomic restore', () => {
   });
   it('a bad section in an otherwise good file blocks the WHOLE import', () => {
     NuqtaStorageEngine.saveTasks([task('keep')]);
-    const mixed = JSON.stringify({ app: 'nuqta', version: 2, data: { tasks: [task('new')], habits: 'oops' } });
+    const mixed = JSON.stringify({ app: 'nuqta', version: 2, exportedAt: '2026-11-11T00:00:00.000Z', data: { tasks: [task('new')], habits: 'oops' } });
     expect(NuqtaStorageEngine.importBackup(mixed).ok).toBe(false);
     expect(NuqtaStorageEngine.getTasks().map((t) => t.id)).toEqual(['keep']);
   });
   it('rolls every key back if a write fails midway', () => {
     NuqtaStorageEngine.saveTasks([task('keep')]);
     const snapshot = JSON.stringify(Object.entries(localStorage).sort());
-    const file = JSON.stringify({ app: 'nuqta', version: 2, data: { tasks: [task('new')], habits: [], goals: [] } });
+    const file = JSON.stringify({ app: 'nuqta', version: 2, exportedAt: '2026-11-11T00:00:00.000Z', data: { tasks: [task('new')], habits: [], goals: [] } });
     const orig = Storage.prototype.setItem;
     let n = 0;
     Storage.prototype.setItem = function (k: string, v: string) {
@@ -168,5 +168,31 @@ describe('wipe', () => {
     for (const name of Object.values(STORES)) expect(await NuqtaIndexedDB.getAll(name)).toEqual([]);
     expect(await NuqtaStorageEngine.recoverFromMirrorIfNeeded()).toBe(false);
     expect(NuqtaStorageEngine.getTasks()).toEqual([]);
+  });
+
+  it('also removes quarantined corrupt copies, so no user data survives the wipe', async () => {
+    // A corrupt value is preserved under `*__corrupt_<time>`; a wipe must remove it too,
+    // otherwise the user's data would linger in localStorage after "delete everything".
+    localStorage.setItem('nuqta_tasks_v1__corrupt_1700000000000', '[{"id":"leaked"}]');
+    NuqtaStorageEngine.saveTasks([task('a')]);
+    await tick();
+    expect(await NuqtaStorageEngine.wipeAll()).toBe(true);
+    expect(Object.keys(localStorage).filter((k) => k.startsWith('nuqta_'))).toEqual([]);
+  });
+});
+
+describe('a real export round-trips through the strict validator', () => {
+  it('accepts the full sample-data export (cross-entity links and nested records intact)', () => {
+    expect(NuqtaStorageEngine.loadDemoData()).toBe(true);
+    const file = NuqtaStorageEngine.exportFullBackup();
+    const parsed = parseBackup(file);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const reading = parsed.data.habits.find((h) => h.specializedType === 'reading');
+    expect(reading?.readingData?.books?.length).toBeGreaterThan(0);
+    const workout = parsed.data.habits.find((h) => h.specializedType === 'workout');
+    expect(workout?.workoutData?.sessions?.[0]?.exercises?.length).toBeGreaterThan(0);
+    expect(NuqtaStorageEngine.importBackup(file)).toMatchObject({ ok: true });
+    expect(NuqtaStorageEngine.getHabits().length).toBe(parsed.data.habits.length);
   });
 });

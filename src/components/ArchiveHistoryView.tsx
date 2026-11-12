@@ -1,4 +1,4 @@
-import { localDateKey } from '../lib/dateKey';
+import { localDateKey, localDayFrom, localTimeKey } from '../lib/dateKey';
 import React, { useState, useMemo } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import {
@@ -127,7 +127,7 @@ export const ArchiveHistoryView: React.FC = () => {
       if (domainFilter !== 'all' && item.domain !== domainFilter) return false;
 
       if (dateQuery) {
-        const archDate = (item.archivedAt || '').split('T')[0];
+        const archDate = item.archivedAt ? localDayFrom(item.archivedAt) : '';
         if (archDate !== dateQuery) return false;
       }
 
@@ -490,7 +490,7 @@ export const ArchiveHistoryView: React.FC = () => {
                       </span>
 
                       <span className="text-[10px] font-mono text-muted">
-                        {item.archivedAt ? item.archivedAt.split('T')[0] : (item.createdAt || '').split('T')[0]}
+                        {item.archivedAt ? localDayFrom(item.archivedAt) : item.createdAt ? localDayFrom(item.createdAt) : ''}
                       </span>
                     </div>
 
@@ -639,7 +639,7 @@ export const ArchiveHistoryView: React.FC = () => {
                           )}
 
                           <span className="text-[10px] text-muted mt-1">
-                            {item.timestamp ? item.timestamp.split('T')[1]?.slice(0, 5) : ''}
+                            {item.timestamp ? localTimeKey(new Date(item.timestamp)) : ''}
                           </span>
                         </div>
                       </div>
@@ -911,7 +911,7 @@ export const ArchiveHistoryView: React.FC = () => {
                 <div>
                   <span className="text-muted block text-[11px]">{isAr ? 'تاريخ الأرشفة:' : 'Archived At:'}</span>
                   <span className="text-amber-400">
-                    {inspectingItem.archivedItem.archivedAt.split('T')[0]}
+                    {localDayFrom(inspectingItem.archivedItem.archivedAt)}
                   </span>
                 </div>
               )}
