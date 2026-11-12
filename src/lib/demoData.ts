@@ -398,7 +398,7 @@ export const DEMO_GOALS: Goal[] = [
     ],
     linkedTaskIds: ['t-1', 't-2', 't-3'],
     linkedHabitIds: ['h-1'],
-    linkedBookIds: ['b-1'],
+    linkedBookIds: ['book-1'],
     visionNotes: 'Craft is about eliminating everything unnecessary until only the truth remains.',
     visionImages: [],
     createdAt: new Date(Date.now() - 14 * 86400000).toISOString()

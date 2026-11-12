@@ -181,20 +181,38 @@ function writeRaw(key: string, value: string): boolean {
  * mirror silently overwrite a dataset that is still present and recoverable.
  *
  * "Well-formed" means the WHOLE record is validated, not merely that `schemaVersion`
- * is numeric: a record with a numeric schemaVersion but a missing or malformed
- * `createdAt` is incomplete and is therefore rejected as invalid.
+ * is numeric: a record with a numeric schemaVersion but a missing, malformed or
+ * impossible `createdAt` (see `isValidCreatedAt`) is rejected as invalid.
  */
 type MetaRead =
   | { status: 'ok'; meta: StorageMeta }
   | { status: 'missing' }
   | { status: 'invalid' };
 
+/**
+ * The exact `createdAt` format the application writes: `Date.prototype.toISOString()`,
+ * a UTC ISO-8601 timestamp with millisecond precision (e.g. `2026-11-12T17:18:30.123Z`).
+ */
+const ISO_UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+/**
+ * A real timestamp, not merely a string that looks like one. The value must match the
+ * app's ISO-8601 UTC format AND survive a parse/re-serialize round-trip, which rejects
+ * syntactically plausible but impossible dates such as `2026-13-01T00:00:00.000Z` or
+ * `2026-02-30T00:00:00.000Z`. `"not-a-date"` fails the format check outright.
+ */
+function isValidCreatedAt(value: unknown): value is string {
+  if (typeof value !== 'string' || !ISO_UTC_TIMESTAMP.test(value)) return false;
+  const parsed = Date.parse(value);
+  return !Number.isNaN(parsed) && new Date(parsed).toISOString() === value;
+}
+
 /** The complete metadata shape a valid record must satisfy. */
 function isValidMetaShape(m: unknown): m is StorageMeta {
   if (!isPlainObject(m)) return false;
   const version = m.schemaVersion;
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) return false;
-  if (typeof m.createdAt !== 'string' || m.createdAt.length === 0) return false;
+  if (!isValidCreatedAt(m.createdAt)) return false;
   if (m.demo !== undefined && typeof m.demo !== 'boolean') return false;
   return true;
 }
@@ -421,10 +439,16 @@ export class NuqtaStorageEngine {
   static restoreData(data: BackupData, meta?: Partial<StorageMeta>): boolean {
     const profile = data.profile ? normalizeProfile(data.profile) : this.getProfile();
     const previousMeta = readMeta();
+    const requested = meta ?? {};
     const nextMeta: StorageMeta = {
       schemaVersion: SCHEMA_VERSION,
-      createdAt: previousMeta?.createdAt ?? new Date().toISOString(),
-      ...(meta || {})
+      // Never persist a metadata value our own reader would reject. A legacy or corrupt
+      // mirror can carry a non-timestamp `createdAt`; falling back to the previous valid
+      // value (or now) keeps recovery from writing a record it would then call invalid.
+      createdAt: isValidCreatedAt(requested.createdAt)
+        ? requested.createdAt
+        : previousMeta?.createdAt ?? new Date().toISOString(),
+      ...(typeof requested.demo === 'boolean' ? { demo: requested.demo } : {})
     };
 
     const entries: Array<[string, unknown]> = [

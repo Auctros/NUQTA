@@ -363,6 +363,73 @@ describe('cross-entity relationships must resolve inside the backup', () => {
     const file = wrap({ tasks: [{ ...task(), linkedGoalId: 'anything' }] });
     expect(parseBackup(file)).toMatchObject({ ok: true });
   });
+
+  // ---- goal -> linkedBookIds (books live inside a reading habit) ----
+
+  it('accepts a goal whose linkedBookIds all resolve to a book in a reading habit', () => {
+    const file = wrap({ goals: [goalWith({ linkedBookIds: ['b1'] })], habits: [readingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
+  it('rejects a goal linking a book that is not in any reading habit', () => {
+    const file = wrap({ goals: [goalWith({ linkedBookIds: ['missing'] })], habits: [readingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedBookIds' });
+  });
+  it('rejects a goal when only ONE of several linked books is missing', () => {
+    const file = wrap({ goals: [goalWith({ linkedBookIds: ['b1', 'ghost'] })], habits: [readingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedBookIds' });
+  });
+  it('rejects a goal linking a book id that is actually an art project id', () => {
+    const file = wrap({ goals: [goalWith({ linkedBookIds: ['p1'] })], habits: [readingHabit(), drawingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedBookIds' });
+  });
+  it('does not check book links when the file carries no habits section', () => {
+    // With no habits in the file the book set is unknowable, so the link cannot be judged.
+    const file = wrap({ goals: [goalWith({ linkedBookIds: ['anything'] })] });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
+  it('accepts a goal with an empty linkedBookIds list', () => {
+    const file = wrap({ goals: [goalWith({ linkedBookIds: [] })], habits: [readingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
+
+  // ---- goal -> linkedArtProjectIds (projects live inside a drawing habit) ----
+
+  it('accepts a goal whose linkedArtProjectIds all resolve to a project in a drawing habit', () => {
+    const file = wrap({ goals: [goalWith({ linkedArtProjectIds: ['p1'] })], habits: [drawingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
+  it('rejects a goal linking an art project that is not in any drawing habit', () => {
+    const file = wrap({ goals: [goalWith({ linkedArtProjectIds: ['missing'] })], habits: [drawingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedArtProjectIds' });
+  });
+  it('rejects a goal when only ONE of several linked art projects is missing', () => {
+    const file = wrap({ goals: [goalWith({ linkedArtProjectIds: ['p1', 'ghost'] })], habits: [drawingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedArtProjectIds' });
+  });
+  it('rejects a goal linking an art project id that is actually a book id', () => {
+    const file = wrap({ goals: [goalWith({ linkedArtProjectIds: ['b1'] })], habits: [readingHabit(), drawingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedArtProjectIds' });
+  });
+  it('does not check art-project links when the file carries no habits section', () => {
+    const file = wrap({ goals: [goalWith({ linkedArtProjectIds: ['anything'] })] });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
+  it('accepts a goal with an empty linkedArtProjectIds list', () => {
+    const file = wrap({ goals: [goalWith({ linkedArtProjectIds: [] })], habits: [drawingHabit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
+
+  it('resolves book and art-project links across MULTIPLE habits of each kind', () => {
+    const reading2 = { ...readingHabit(), id: 'h-reading-2' };
+    reading2.readingData.books[0] = { ...reading2.readingData.books[0], id: 'b2' };
+    const drawing2 = { ...drawingHabit(), id: 'h-drawing-2' };
+    drawing2.drawingData.projects[0] = { ...drawing2.drawingData.projects[0], id: 'p2' };
+    const file = wrap({
+      goals: [goalWith({ linkedBookIds: ['b2'], linkedArtProjectIds: ['p2'] })],
+      habits: [readingHabit(), reading2, drawingHabit(), drawing2]
+    });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
 });
 
 // ---------------------------------------------------------------------------

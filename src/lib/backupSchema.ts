@@ -724,6 +724,10 @@ function isKnownGoal(value: unknown, goalIds: Set<string>): boolean {
  *   - goal -> linkedTaskIds / linkedHabitIds must resolve to entities present in the
  *     file (skipped when the referenced section is absent from the file, because such a
  *     file only replaces the sections it actually contains);
+ *   - goal -> linkedBookIds must resolve to a book id inside some reading habit's
+ *     `readingData.books` (skipped when the file carries no habits at all);
+ *   - goal -> linkedArtProjectIds must resolve to a project id inside some drawing
+ *     habit's `drawingData.projects` (skipped when the file carries no habits at all);
  *   - any entity carrying `linkedGoalId` must point at a goal in the file (skipped when
  *     the file contains no goals at all).
  * Returns the offending field name, or null when every relationship resolves.
@@ -734,10 +738,22 @@ function findDanglingReference(data: BackupData, present: ReadonlySet<string>): 
   const taskIds = new Set((data.tasks ?? []).map((t) => t.id));
   const habitIds = new Set((data.habits ?? []).map((h) => h.id));
   const hasGoals = present.has('goals');
+  const hasHabits = present.has('habits');
+
+  // Book and art-project ids are nested inside habits, so they are only knowable when
+  // the file actually carries a habits section.
+  const bookIds = new Set<string>();
+  const artProjectIds = new Set<string>();
+  for (const habit of data.habits ?? []) {
+    for (const book of habit.readingData?.books ?? []) bookIds.add(book.id);
+    for (const project of habit.drawingData?.projects ?? []) artProjectIds.add(project.id);
+  }
 
   for (const goal of goals) {
     if (present.has('tasks') && (goal.linkedTaskIds ?? []).some((id) => !taskIds.has(id))) return 'linkedTaskIds';
     if (present.has('habits') && (goal.linkedHabitIds ?? []).some((id) => !habitIds.has(id))) return 'linkedHabitIds';
+    if (hasHabits && (goal.linkedBookIds ?? []).some((id) => !bookIds.has(id))) return 'linkedBookIds';
+    if (hasHabits && (goal.linkedArtProjectIds ?? []).some((id) => !artProjectIds.has(id))) return 'linkedArtProjectIds';
   }
 
   if (hasGoals) {
