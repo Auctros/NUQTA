@@ -28,6 +28,8 @@ const goal = () => ({
   status: 'active',
   keyResults: []
 });
+/** A goal with any field overridden, for relationship tests. */
+const goalWith = (over: Record<string, unknown> = {}) => ({ ...goal(), ...over });
 const focus = () => ({
   id: 'f1',
   durationMinutes: 25,
@@ -161,6 +163,226 @@ describe('a rejected file never changes stored data', () => {
     NuqtaStorageEngine.saveTasks([{ id: 'keep', title: 'Keep', priority: 2, status: 'todo' } as never]);
     const before = JSON.stringify(Object.entries(localStorage).sort());
     const file = wrap(sectionOf(key, entity));
+    expect(NuqtaStorageEngine.importBackup(file).ok).toBe(false);
+    expect(JSON.stringify(Object.entries(localStorage).sort())).toBe(before);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Nested specialised-habit records (reading / workout / drawing / quran)
+// ---------------------------------------------------------------------------
+
+const readingHabit = () => ({
+  ...habit(),
+  id: 'h-reading',
+  specializedType: 'reading',
+  readingData: {
+    annualTargetBooks: 12,
+    totalPagesRead: 100,
+    totalReadingMinutes: 120,
+    activeBookId: 'b1',
+    books: [{ id: 'b1', title: 'Book', author: 'Author', totalPages: 200, currentPage: 10, status: 'reading' }],
+    quotes: [{ id: 'q1', quote: 'A quote', date: '2026-11-11', bookId: 'b1' }],
+    sessions: [
+      { id: 'rs1', date: '2026-11-11', bookId: 'b1', bookTitle: 'Book', pagesRead: 10, durationMinutes: 20, speedPagesPerHour: 30 }
+    ]
+  }
+});
+const workoutHabit = () => ({
+  ...habit(),
+  id: 'h-workout',
+  specializedType: 'workout',
+  workoutData: {
+    weeklyTargetSessions: 3,
+    totalVolumeKg: 0,
+    totalMinutes: 30,
+    totalWorkouts: 1,
+    favoriteRoutine: 'Calisthenics',
+    customRoutines: [
+      {
+        id: 'rt1',
+        name: 'Full Body',
+        nameAr: 'الجسم الكامل',
+        targetLevel: 'beginner',
+        estimatedMinutes: 20,
+        category: 'bodyweight',
+        exercises: [
+          { id: 'ex1', name: 'Push-ups', category: 'chest', sets: [{ setNumber: 1, reps: 10, completed: true }] }
+        ]
+      }
+    ],
+    sessions: [
+      {
+        id: 'ws1',
+        date: '2026-11-11',
+        title: 'Session',
+        workoutType: 'strength',
+        durationMinutes: 30,
+        volumeKg: 0,
+        intensityRating: 3,
+        exercises: [{ id: 'ex1', name: 'Push-ups', category: 'chest', sets: [{ setNumber: 1, reps: 10, completed: true }] }]
+      }
+    ]
+  }
+});
+const drawingHabit = () => ({
+  ...habit(),
+  id: 'h-drawing',
+  specializedType: 'drawing',
+  drawingData: {
+    totalDrawingMinutes: 60,
+    totalSketches: 1,
+    favoriteMedium: 'sketch',
+    projects: [
+      {
+        id: 'p1',
+        title: 'Project',
+        stage: 'sketching',
+        medium: 'sketch',
+        startedDate: '2026-11-11',
+        totalMinutesSpent: 60,
+        sessionsCount: 1
+      }
+    ],
+    pieces: [{ id: 'art1', title: 'Piece', medium: 'sketch', durationMinutes: 60, completedDate: '2026-11-11', projectId: 'p1' }]
+  }
+});
+const quranHabit = () => ({
+  ...habit(),
+  id: 'h-quran',
+  specializedType: 'quran',
+  quranData: {
+    surahs: [
+      { surahNumber: 1, status: 'completed', memorizedAyahsRanges: [{ start: 1, end: 7 }], memorizedAyahsCount: 7, masteryRating: 5 }
+    ],
+    sessions: [
+      {
+        id: 'qs1',
+        date: '2026-11-11',
+        type: 'new_memorization',
+        surahNumber: 2,
+        surahName: 'Al-Baqarah',
+        ayahStart: 1,
+        ayahEnd: 25,
+        ayahCount: 25,
+        durationMinutes: 30,
+        quality: 'excellent'
+      }
+    ],
+    revisionSchedule: { revisionCycleDays: 7, currentReviewSurahs: [1, 2], targetDailyAyahs: 10, weeklyTargetRevisionMinutes: 120 },
+    totalAyahsMemorized: 7,
+    totalSurahsCompleted: 1,
+    totalMemorizationMinutes: 30,
+    totalRevisionMinutes: 0,
+    dailyTargetAyahs: 10,
+    activeSurahNumber: 2
+  }
+});
+
+describe('nested specialised-habit records are validated in full', () => {
+  it.each([
+    ['reading', readingHabit()],
+    ['workout', workoutHabit()],
+    ['drawing', drawingHabit()],
+    ['quran', quranHabit()]
+  ])('%s accepts a well-formed nested record', (_name, entity) => {
+    expect(parseBackup(wrap({ habits: [entity] }))).toMatchObject({ ok: true });
+  });
+
+  it.each([
+    ['book with an unknown status', 'reading', { ...readingHabit(), readingData: { ...readingHabit().readingData, books: [{ id: 'b1', title: 'B', author: 'A', totalPages: 1, currentPage: 0, status: 'nope' }] } }],
+    ['reading session missing speed', 'reading', { ...readingHabit(), readingData: { ...readingHabit().readingData, sessions: [{ id: 'rs1', date: 'd', bookId: 'b1', bookTitle: 'B', pagesRead: 1, durationMinutes: 1 }] } }],
+    ['quote without a quote string', 'reading', { ...readingHabit(), readingData: { ...readingHabit().readingData, quotes: [{ id: 'q1', date: 'd' }] } }],
+    ['exercise set missing completed', 'workout', { ...workoutHabit(), workoutData: { ...workoutHabit().workoutData, sessions: [{ id: 'ws1', date: 'd', title: 't', workoutType: 'strength', durationMinutes: 1, volumeKg: 0, intensityRating: 3, exercises: [{ id: 'ex1', name: 'x', category: 'chest', sets: [{ setNumber: 1, reps: 1 }] }] }] } }],
+    ['unknown workout type', 'workout', { ...workoutHabit(), workoutData: { ...workoutHabit().workoutData, sessions: [{ id: 'ws1', date: 'd', title: 't', workoutType: 'yoga', durationMinutes: 1, volumeKg: 0, intensityRating: 3, exercises: [] }] } }],
+    ['unknown exercise category', 'workout', { ...workoutHabit(), workoutData: { ...workoutHabit().workoutData, customRoutines: [{ id: 'rt1', name: 'n', nameAr: 'n', targetLevel: 'beginner', estimatedMinutes: 1, category: 'bodyweight', exercises: [{ id: 'e', name: 'x', category: 'nope', sets: [] }] }] } }],
+    ['artwork piece with an unknown medium', 'drawing', { ...drawingHabit(), drawingData: { ...drawingHabit().drawingData, pieces: [{ id: 'art1', title: 'P', medium: 'crayon', durationMinutes: 1, completedDate: 'd' }] } }],
+    ['art project with an unknown stage', 'drawing', { ...drawingHabit(), drawingData: { ...drawingHabit().drawingData, projects: [{ id: 'p1', title: 'P', stage: 'nope', medium: 'sketch', startedDate: 'd', totalMinutesSpent: 1, sessionsCount: 1 }] } }],
+    ['quran session with an unknown type', 'quran', { ...quranHabit(), quranData: { ...quranHabit().quranData, sessions: [{ id: 'qs1', date: 'd', type: 'nope', surahNumber: 1, surahName: 's', ayahStart: 1, ayahEnd: 1, ayahCount: 1, durationMinutes: 1, quality: 'excellent' }] } }],
+    ['quran session with an out-of-range surah', 'quran', { ...quranHabit(), quranData: { ...quranHabit().quranData, sessions: [{ id: 'qs1', date: 'd', type: 'revision', surahNumber: 200, surahName: 's', ayahStart: 1, ayahEnd: 1, ayahCount: 1, durationMinutes: 1, quality: 'good' }] } }],
+    ['surah state with an unknown status', 'quran', { ...quranHabit(), quranData: { ...quranHabit().quranData, surahs: [{ surahNumber: 1, status: 'nope', memorizedAyahsRanges: [], memorizedAyahsCount: 0 }] } }],
+    ['surah state with a malformed range', 'quran', { ...quranHabit(), quranData: { ...quranHabit().quranData, surahs: [{ surahNumber: 1, status: 'completed', memorizedAyahsRanges: [{ start: 'x' }], memorizedAyahsCount: 0 }] } }],
+    ['revision schedule with a malformed surah list', 'quran', { ...quranHabit(), quranData: { ...quranHabit().quranData, revisionSchedule: { revisionCycleDays: 7, currentReviewSurahs: ['x'], targetDailyAyahs: 1, weeklyTargetRevisionMinutes: 1 } } }]
+  ])('%s is rejected', (_name, _type, entity) => {
+    const r = parseBackup(wrap({ habits: [entity] }));
+    expect(r).toMatchObject({ ok: false, error: 'invalid_section', section: 'habits' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Envelope metadata and cross-entity relationships
+// ---------------------------------------------------------------------------
+
+describe('the envelope is validated in full', () => {
+  it('requires the exportedAt metadata field', () => {
+    const raw = JSON.stringify({ app: 'nuqta', version: 2, data: {} });
+    expect(parseBackup(raw)).toMatchObject({ ok: false, error: 'invalid_section', section: 'exportedAt' });
+  });
+  it('rejects an empty-string exportedAt', () => {
+    const raw = JSON.stringify({ app: 'nuqta', version: 2, exportedAt: '', data: {} });
+    expect(parseBackup(raw)).toMatchObject({ ok: false, error: 'invalid_section', section: 'exportedAt' });
+  });
+  it('accepts a legacy v1 flat file without an envelope', () => {
+    const legacy = JSON.stringify({ tasks: [task()], habits: [], goals: [] });
+    expect(parseBackup(legacy)).toMatchObject({ ok: true, legacy: true, version: 1 });
+  });
+});
+
+describe('cross-entity relationships must resolve inside the backup', () => {
+
+  it('accepts a goal whose linkedTaskIds all resolve', () => {
+    const file = wrap({ goals: [goalWith({ linkedTaskIds: ['t1'] })], tasks: [task()] });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
+  it('rejects a goal linking a task that is not in the file', () => {
+    const file = wrap({ goals: [goalWith({ linkedTaskIds: ['missing'] })], tasks: [task()] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedTaskIds' });
+  });
+  it('rejects a goal linking a habit that is not in the file', () => {
+    const file = wrap({ goals: [goalWith({ linkedHabitIds: ['missing'] })], habits: [habit()] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedHabitIds' });
+  });
+  it('rejects a task pointing at a goal that is not in the file', () => {
+    const file = wrap({ goals: [goal()], tasks: [{ ...task(), linkedGoalId: 'missing' }] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedGoalId' });
+  });
+  it('rejects a nested reading book pointing at a goal that is not in the file', () => {
+    const reading = readingHabit();
+    (reading.readingData.books[0] as { linkedGoalId?: string }).linkedGoalId = 'missing';
+    const file = wrap({ goals: [goal()], habits: [reading] });
+    expect(parseBackup(file)).toMatchObject({ ok: false, error: 'invalid_section', section: 'linkedGoalId' });
+  });
+  it('accepts a nested reading book pointing at a goal that IS in the file', () => {
+    const reading = readingHabit();
+    (reading.readingData.books[0] as { linkedGoalId?: string }).linkedGoalId = 'g1';
+    const file = wrap({ goals: [goalWith({ id: 'g1' })], habits: [reading] });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
+  it('does not check goal links when the file carries no goals section', () => {
+    // A partial file that only replaces tasks: its goal links cannot be judged here.
+    const file = wrap({ tasks: [{ ...task(), linkedGoalId: 'anything' }] });
+    expect(parseBackup(file)).toMatchObject({ ok: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Safety backup / rollback behaviour on a rejected file
+// ---------------------------------------------------------------------------
+
+describe('rollback: a rejected file is never partially applied', () => {
+  it('rejects a file whose nested record is invalid and writes nothing', () => {
+    NuqtaStorageEngine.saveTasks([{ id: 'keep', title: 'Keep', priority: 2, status: 'todo' } as never]);
+    const before = JSON.stringify(Object.entries(localStorage).sort());
+    const bad = workoutHabit();
+    bad.workoutData.sessions[0].exercises[0].sets[0].completed = 'yes' as never;
+    const file = wrap({ habits: [bad] });
+    expect(NuqtaStorageEngine.importBackup(file).ok).toBe(false);
+    expect(JSON.stringify(Object.entries(localStorage).sort())).toBe(before);
+  });
+  it('rejects a file with a dangling relationship and writes nothing', () => {
+    NuqtaStorageEngine.saveTasks([{ id: 'keep', title: 'Keep', priority: 2, status: 'todo' } as never]);
+    const before = JSON.stringify(Object.entries(localStorage).sort());
+    const file = wrap({ goals: [{ ...goal(), linkedTaskIds: ['ghost'] }], tasks: [task()] });
     expect(NuqtaStorageEngine.importBackup(file).ok).toBe(false);
     expect(JSON.stringify(Object.entries(localStorage).sort())).toBe(before);
   });

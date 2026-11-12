@@ -12,5 +12,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - run: npm ci
+      # Fast gate: type-check, unit/integration tests, build, invariants.
       - run: npm run verify
+      # Mandatory browser-level acceptance gate: installs the app offline from a
+      # first visit and reloads it offline. Fails the build if the shell is not cached.
+      - run: pip install playwright && python -m playwright install --with-deps chromium
+      - run: npm run test:e2e

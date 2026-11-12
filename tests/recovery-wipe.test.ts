@@ -159,3 +159,53 @@ describe('full wipe flow keeps localStorage when the mirror cannot be cleared', 
     expect(await NuqtaStorageEngine.recoverFromMirrorIfNeeded()).toBe(false);
   });
 });
+
+describe('metadata is validated in full, not merely for a numeric schemaVersion', () => {
+  /**
+   * Every case below has a NUMERIC schemaVersion, so a naive check ("is schemaVersion a
+   * number?") would treat it as valid. Each is nonetheless incomplete or malformed and
+   * must be treated as invalid, which means the recoverable localStorage data is
+   * preserved rather than silently overwritten by the mirror.
+   */
+  const incompleteMetadata: Array<[string, string]> = [
+    ['numeric schemaVersion with no createdAt', JSON.stringify({ schemaVersion: 1 })],
+    ['numeric schemaVersion with a non-string createdAt', JSON.stringify({ schemaVersion: 1, createdAt: 42 })],
+    ['numeric schemaVersion with an empty createdAt', JSON.stringify({ schemaVersion: 1, createdAt: '' })],
+    ['numeric schemaVersion with a non-integer version', JSON.stringify({ schemaVersion: 1.5, createdAt: 'x' })],
+    ['numeric schemaVersion with a non-boolean demo flag', JSON.stringify({ schemaVersion: 1, createdAt: 'x', demo: 'yes' })],
+    ['numeric schemaVersion with a string version', JSON.stringify({ schemaVersion: '1', createdAt: 'x' })]
+  ];
+
+  it.each(incompleteMetadata)('does NOT overwrite localStorage when the record has a %s', async (_name, meta) => {
+    clearStorageIssues();
+    NuqtaStorageEngine.saveTasks([task('a'), task('b')]);
+    await tick();
+    localStorage.setItem(META_KEY, meta);
+
+    expect(await NuqtaStorageEngine.recoverFromMirrorIfNeeded()).toBe(false);
+    expect(NuqtaStorageEngine.getTasks().map((t) => t.id)).toEqual(['a', 'b']);
+    expect(getStorageIssues().some((i) => i.kind === 'corrupt' && i.key === META_KEY)).toBe(true);
+  });
+
+  it('accepts a COMPLETE metadata record (valid version, createdAt, optional demo)', async () => {
+    NuqtaStorageEngine.saveTasks([task('a')]);
+    await tick();
+    localStorage.setItem(META_KEY, JSON.stringify({ schemaVersion: 1, createdAt: '2026-01-01T00:00:00.000Z' }));
+    // Valid metadata => localStorage is intact => never recover.
+    expect(await NuqtaStorageEngine.recoverFromMirrorIfNeeded()).toBe(false);
+    expect(NuqtaStorageEngine.getTasks().map((t) => t.id)).toEqual(['a']);
+  });
+
+  it('still recovers when the metadata is incomplete AND localStorage is genuinely empty', async () => {
+    NuqtaStorageEngine.saveTasks([task('a')]);
+    await tick();
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('nuqta_') && !k.includes('__corrupt_'))
+      .forEach((k) => localStorage.removeItem(k));
+    // Numeric schemaVersion but no createdAt: incomplete, so recovery is allowed to run.
+    localStorage.setItem(META_KEY, JSON.stringify({ schemaVersion: 1 }));
+
+    expect(await NuqtaStorageEngine.recoverFromMirrorIfNeeded()).toBe(true);
+    expect(NuqtaStorageEngine.getTasks().map((t) => t.id)).toEqual(['a']);
+  });
+});

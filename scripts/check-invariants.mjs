@@ -90,9 +90,40 @@ const grep = (re, { except = [] } = {}) =>
     if (!existsSync(join(root, f))) fail('Build output is missing an offline-shell file', f);
   }
 }
+// 11. The offline acceptance test is part of the mandatory gate / CI.
+{
+  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  if (!pkg.scripts || !pkg.scripts['test:e2e']) {
+    fail('The browser-level offline test is not wired into the gate', 'package.json has no "test:e2e" script');
+  }
+  const workflowPath = join(root, '.github/workflows/verify.yml');
+  if (!existsSync(workflowPath)) {
+    fail('No CI workflow runs the acceptance gate', '.github/workflows/verify.yml is missing');
+  } else {
+    const workflow = readFileSync(workflowPath, 'utf8');
+    if (!/test:e2e|run-offline|offline\.py/.test(workflow)) {
+      fail('CI does not run the browser-level offline test', 'verify.yml never invokes test:e2e / offline.py');
+    }
+  }
+}
+// 12. The service worker only deletes its own caches and never caches dynamic requests.
+{
+  const sw = readFileSync(join(root, 'public/sw.js'), 'utf8');
+  if (!/CACHE_VERSION/.test(sw) || !/nuqta-shell-/.test(sw)) {
+    fail('The service worker cache is not versioned under a NUQTA-owned name', 'expected a nuqta-shell- prefix and a CACHE_VERSION');
+  }
+  // Deleting caches must be guarded by the NUQTA prefix, never by "delete everything".
+  const deleteLines = sw.split('\n').filter((l) => /caches\.delete\(/.test(l));
+  if (deleteLines.length === 0) {
+    fail('Service worker never prunes obsolete caches', 'expected a guarded caches.delete() call');
+  }
+  if (!deleteLines.every((l) => /startsWith\(|CACHE\b/.test(l))) {
+    fail('Service worker may delete caches that are not NUQTA-owned', deleteLines.join('\n    '));
+  }
+}
 
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (10 rules).');
+console.log('Invariant check passed (12 rules).');

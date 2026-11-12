@@ -172,18 +172,32 @@ function writeRaw(key: string, value: string): boolean {
 
 /**
  * Read the localStorage metadata record, distinguishing three states:
- *   - { status: 'ok', meta }        a well-formed record
+ *   - { status: 'ok', meta }        a COMPLETE, well-formed record
  *   - { status: 'missing' }         no record at all (a genuinely fresh start)
  *   - { status: 'invalid' }         a record exists but is unreadable or wrongly shaped
  *
  * The distinction is safety-critical for recovery: an INVALID record must never be
  * read as "localStorage has no data", because that would let an older IndexedDB
  * mirror silently overwrite a dataset that is still present and recoverable.
+ *
+ * "Well-formed" means the WHOLE record is validated, not merely that `schemaVersion`
+ * is numeric: a record with a numeric schemaVersion but a missing or malformed
+ * `createdAt` is incomplete and is therefore rejected as invalid.
  */
 type MetaRead =
   | { status: 'ok'; meta: StorageMeta }
   | { status: 'missing' }
   | { status: 'invalid' };
+
+/** The complete metadata shape a valid record must satisfy. */
+function isValidMetaShape(m: unknown): m is StorageMeta {
+  if (!isPlainObject(m)) return false;
+  const version = m.schemaVersion;
+  if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) return false;
+  if (typeof m.createdAt !== 'string' || m.createdAt.length === 0) return false;
+  if (m.demo !== undefined && typeof m.demo !== 'boolean') return false;
+  return true;
+}
 
 function readMetaState(): MetaRead {
   let raw: string | null = null;
@@ -196,9 +210,7 @@ function readMetaState(): MetaRead {
   if (raw === null) return { status: 'missing' };
   try {
     const m = JSON.parse(raw);
-    if (isPlainObject(m) && typeof m.schemaVersion === 'number') {
-      return { status: 'ok', meta: m as unknown as StorageMeta };
-    }
+    if (isValidMetaShape(m)) return { status: 'ok', meta: m };
   } catch {
     /* fall through to invalid */
   }
