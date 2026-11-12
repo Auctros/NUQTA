@@ -182,7 +182,7 @@ export function computeLifeIntelligence(
     // All time (all recorded activity dates)
     const allKnownDates = new Set<string>();
     tasks.forEach((t) => {
-      if (t.completedAt) allKnownDates.add(t.completedAt.split('T')[0]);
+      if (t.completedAt) allKnownDates.add(localDateKey(new Date(t.completedAt)));
       if (t.scheduledDate) allKnownDates.add(t.scheduledDate);
     });
     habits.forEach((h) => {
@@ -192,7 +192,7 @@ export function computeLifeIntelligence(
       h.drawingData?.pieces?.forEach((p) => allKnownDates.add(p.completedDate));
     });
     focusSessions.forEach((f) => {
-      if (f.completedAt) allKnownDates.add(f.completedAt.split('T')[0]);
+      if (f.completedAt) allKnownDates.add(localDateKey(new Date(f.completedAt)));
     });
     allKnownDates.add(todayStr);
 
@@ -235,7 +235,7 @@ export function computeLifeIntelligence(
 
   // 1. PRODUCTIVITY AGGREGATION
   const isTaskInPeriod = (t: Task, dateSet: Set<string>) => {
-    const compDate = t.completedAt ? t.completedAt.split('T')[0] : t.scheduledDate;
+    const compDate = t.completedAt ? localDateKey(new Date(t.completedAt)) : t.scheduledDate;
     return compDate ? dateSet.has(compDate) : false;
   };
 
@@ -361,7 +361,7 @@ export function computeLifeIntelligence(
 
   // 6. DEEP FOCUS SESSIONS AGGREGATION
   const isFocusInPeriod = (f: FocusSession, dateSet: Set<string>) => {
-    const dt = f.completedAt ? f.completedAt.split('T')[0] : '';
+    const dt = f.completedAt ? localDateKey(new Date(f.completedAt)) : '';
     return dateSet.has(dt);
   };
   const focusSessionsCurrent = focusSessions.filter((f) => isFocusInPeriod(f, currentDatesSet));

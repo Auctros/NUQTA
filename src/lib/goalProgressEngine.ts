@@ -472,17 +472,21 @@ export function evaluateGoalProgress(
   let daysRemaining: number | null = null;
   let isOverdue = false;
 
-  const startDateStr = goal.startDate || goal.createdAt.split('T')[0];
+  const startDateStr = goal.startDate || localDateKey(new Date(goal.createdAt));
   if (goal.deadline) {
     const startMs = (parseDateKey(startDateStr) ?? new Date(startDateStr)).getTime();
-    const deadlineMs = new Date(goal.deadline).getTime();
+    // The deadline is a calendar day; anchor it to LOCAL midnight so "today" counts as
+    // 0 days remaining for the whole local day instead of drifting by the UTC offset.
+    const deadlineMs = (parseDateKey(goal.deadline) ?? new Date(goal.deadline)).getTime();
     const nowMs = now.getTime();
 
     const totalDurationMs = Math.max(1, deadlineMs - startMs);
     const elapsedMs = nowMs - startMs;
 
     timeElapsedPercent = Math.min(100, Math.max(0, Math.round((elapsedMs / totalDurationMs) * 100)));
-    const diffDays = Math.ceil((deadlineMs - nowMs) / (1000 * 60 * 60 * 24));
+    // Count whole local days between today and the deadline, ignoring time of day.
+    const todayMs = (parseDateKey(localDateKey(now)) ?? now).getTime();
+    const diffDays = Math.round((deadlineMs - todayMs) / (1000 * 60 * 60 * 24));
     daysRemaining = diffDays;
     isOverdue = diffDays < 0 && overallProgressPercent < 100;
   }
@@ -497,7 +501,7 @@ export function evaluateGoalProgress(
         id: 'c-task-' + t.id,
         type: 'task',
         title: t.title,
-        date: t.completedAt.split('T')[0],
+        date: localDateKey(new Date(t.completedAt)),
         contributionNote: 'إنجاز مهمة تنفيذية مرتبطة بالهدف',
         icon: '✓'
       });

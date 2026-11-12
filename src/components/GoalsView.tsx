@@ -1,4 +1,4 @@
-import { localDateKey } from '../lib/dateKey';
+import { localDateKey, localDayFrom } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Goal, GoalPriority, KeyResult, KeyResultDataSource } from '../types';
@@ -71,7 +71,7 @@ export const GoalsView: React.FC = () => {
     setFormCategory(g.category);
     setFormPriority(g.priority || 'medium');
     setFormTimeframe(g.timeframe);
-    setFormStartDate(g.startDate || g.createdAt.split('T')[0]);
+    setFormStartDate(g.startDate || localDayFrom(g.createdAt));
     setFormDeadline(g.deadline || '');
     setIsFormModalOpen(true);
   };

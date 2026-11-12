@@ -42,6 +42,19 @@ export function parseDateKey(key: string): Date | null {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
 }
 
+/**
+ * Local calendar day for a stored value that may be either form:
+ *   - an ISO instant ("2026-11-11T20:00:00.000Z") -> its LOCAL day
+ *   - an existing day key ("2026-11-11")            -> returned unchanged
+ *
+ * Never use `.split('T')[0]` on an instant: that yields the UTC day, which is
+ * off by one for part of every local day. Never run `new Date(dayKey)` either,
+ * since a bare "YYYY-MM-DD" is parsed as UTC midnight and can shift the day back.
+ */
+export function localDayFrom(value: string): string {
+  return isDateKey(value) ? value : localDateKey(new Date(value));
+}
+
 /** Shift a "YYYY-MM-DD" key by whole calendar days (DST-safe). */
 export function addDaysToKey(key: string, days: number): string {
   const base = parseDateKey(key) ?? new Date();

@@ -170,14 +170,66 @@ function writeRaw(key: string, value: string): boolean {
   }
 }
 
-function readMeta(): StorageMeta | null {
+/**
+ * Read the localStorage metadata record, distinguishing three states:
+ *   - { status: 'ok', meta }        a well-formed record
+ *   - { status: 'missing' }         no record at all (a genuinely fresh start)
+ *   - { status: 'invalid' }         a record exists but is unreadable or wrongly shaped
+ *
+ * The distinction is safety-critical for recovery: an INVALID record must never be
+ * read as "localStorage has no data", because that would let an older IndexedDB
+ * mirror silently overwrite a dataset that is still present and recoverable.
+ */
+type MetaRead =
+  | { status: 'ok'; meta: StorageMeta }
+  | { status: 'missing' }
+  | { status: 'invalid' };
+
+function readMetaState(): MetaRead {
+  let raw: string | null = null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.META);
-    if (!raw) return null;
-    const m = JSON.parse(raw);
-    return isPlainObject(m) && typeof m.schemaVersion === 'number' ? (m as unknown as StorageMeta) : null;
+    raw = localStorage.getItem(STORAGE_KEYS.META);
   } catch {
-    return null;
+    // localStorage itself is unreadable; treat as unknown rather than "missing".
+    return { status: 'invalid' };
+  }
+  if (raw === null) return { status: 'missing' };
+  try {
+    const m = JSON.parse(raw);
+    if (isPlainObject(m) && typeof m.schemaVersion === 'number') {
+      return { status: 'ok', meta: m as unknown as StorageMeta };
+    }
+  } catch {
+    /* fall through to invalid */
+  }
+  return { status: 'invalid' };
+}
+
+function readMeta(): StorageMeta | null {
+  const state = readMetaState();
+  return state.status === 'ok' ? state.meta : null;
+}
+
+/**
+ * True when localStorage still holds any live NUQTA *dataset* key (tasks, habits,
+ * goals, profile...), excluding the metadata record itself and quarantined copies.
+ *
+ * The metadata record is deliberately excluded: a corrupt metadata record is exactly
+ * the case under investigation, and its mere presence must not be mistaken for
+ * "localStorage still has data". Quarantined copies (`*__corrupt_*`) are evidence of a
+ * preserved unreadable value, not the live dataset, so they must not block recovery.
+ * Returns true on any read failure, so an unknown state is treated conservatively.
+ */
+function hasAnyNuqtaData(): boolean {
+  try {
+    return Object.keys(localStorage).some(
+      (k) =>
+        k.startsWith(KEY_PREFIX) &&
+        k !== STORAGE_KEYS.META &&
+        !k.includes('__corrupt_')
+    );
+  } catch {
+    return true;
   }
 }
 
@@ -429,9 +481,32 @@ export class NuqtaStorageEngine {
    * If localStorage has lost NUQTA's data but the IndexedDB mirror still has it,
    * restore from the mirror. A deliberate wipe clears BOTH, so it is never undone.
    * Call once at startup, before the store initialises. Resolves true if restored.
+   *
+   * Safety rules (an unreadable or ambiguous state must never cost the user data):
+   *  - A well-formed metadata record means localStorage is intact: never recover.
+   *  - A corrupt or absent metadata record is NOT proof that the dataset is gone.
+   *    If any NUQTA dataset key still exists, the state is ambiguous and localStorage
+   *    is preserved untouched (a stale mirror must never overwrite it).
+   *  - The mirror is only restored when localStorage genuinely holds no NUQTA data
+   *    and the mirror actually has something to offer.
    */
   static async recoverFromMirrorIfNeeded(): Promise<boolean> {
-    if (readMeta()) return false;
+    const metaState = readMetaState();
+    if (metaState.status === 'ok') return false;
+
+    // A corrupt/missing metadata record alone is NOT proof that localStorage lost its
+    // data. Only recover when localStorage is genuinely empty of NUQTA dataset keys.
+    if (hasAnyNuqtaData()) {
+      if (metaState.status === 'invalid') {
+        report({
+          kind: 'corrupt',
+          key: STORAGE_KEYS.META,
+          detail: 'unreadable metadata with localStorage data still present; recovery skipped to preserve it'
+        });
+      }
+      return false;
+    }
+
     const metaRows = await NuqtaIndexedDB.getAll<StorageMeta & { id: string }>(STORES.META);
     if (metaRows.length === 0) return false;
 
@@ -449,6 +524,20 @@ export class NuqtaStorageEngine {
         NuqtaIndexedDB.getAll<SundayRitualReview>(STORES.SUNDAY_REVIEWS),
         NuqtaIndexedDB.getAll<HistoryAuditLogEntry>(STORES.HISTORY_AUDIT)
       ]);
+
+    const mirrorHasData =
+      tasks.length > 0 ||
+      habits.length > 0 ||
+      goals.length > 0 ||
+      focusSessions.length > 0 ||
+      health.length > 0 ||
+      expenses.length > 0 ||
+      savingsGoals.length > 0 ||
+      journalEntries.length > 0 ||
+      profiles.length > 0 ||
+      sundayReviews.length > 0 ||
+      historyAuditLogs.length > 0;
+    if (!mirrorHasData) return false;
 
     const healthMetrics: Record<string, HealthMetric> = {};
     health.forEach((h) => {

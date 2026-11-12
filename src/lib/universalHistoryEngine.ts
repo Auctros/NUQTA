@@ -1,4 +1,4 @@
-import { localDateKey } from './dateKey';
+import { localDateKey, localDayFrom } from './dateKey';
 import {
   Task,
   Habit,
@@ -52,7 +52,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
       events.push({
         id: `evt-task-create-${t.id}`,
         timestamp: t.createdAt,
-        date: t.createdAt.split('T')[0],
+        date: localDayFrom(t.createdAt),
         domain: 'tasks',
         eventType: 'created',
         title: `إنشاء مهمة: ${t.title}`,
@@ -75,7 +75,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
       events.push({
         id: `evt-task-complete-${t.id}`,
         timestamp: t.completedAt,
-        date: t.completedAt.split('T')[0],
+        date: localDayFrom(t.completedAt),
         domain: 'tasks',
         eventType: 'completed',
         title: `إنجاز مهمة: ${t.title}`,
@@ -97,7 +97,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
       events.push({
         id: `evt-task-archive-${t.id}`,
         timestamp: t.archivedAt,
-        date: t.archivedAt.split('T')[0],
+        date: localDayFrom(t.archivedAt),
         domain: 'tasks',
         eventType: 'archived',
         title: `أرشفة مهمة: ${t.title}`,
@@ -121,7 +121,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
       events.push({
         id: `evt-habit-create-${h.id}`,
         timestamp: h.createdAt,
-        date: h.createdAt.split('T')[0],
+        date: localDayFrom(h.createdAt),
         domain: 'habits',
         eventType: 'created',
         title: `تأسيس عادة: ${h.name}`,
@@ -144,7 +144,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
       events.push({
         id: `evt-habit-archive-${h.id}`,
         timestamp: h.archivedAt,
-        date: h.archivedAt.split('T')[0],
+        date: localDayFrom(h.archivedAt),
         domain: 'habits',
         eventType: 'archived',
         title: `أرشفة عادة: ${h.name}`,
@@ -262,7 +262,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
           events.push({
             id: `evt-book-archive-${b.id}`,
             timestamp: `${b.archivedAt || todayStr}T18:00:00.000Z`,
-            date: (b.archivedAt || todayStr).split('T')[0],
+            date: localDayFrom(b.archivedAt || todayStr),
             domain: 'reading',
             eventType: 'archived',
             title: `أرشفة كتاب: ${b.title}`,
@@ -309,7 +309,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
           events.push({
             id: `evt-workout-routine-archive-${r.id}`,
             timestamp: `${r.archivedAt || todayStr}T10:00:00.000Z`,
-            date: (r.archivedAt || todayStr).split('T')[0],
+            date: localDayFrom(r.archivedAt || todayStr),
             domain: 'workout',
             eventType: 'archived',
             title: `أرشفة روتين: ${r.nameAr || r.name}`,
@@ -376,7 +376,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
           events.push({
             id: `evt-art-project-archive-${proj.id}`,
             timestamp: `${proj.archivedAt || todayStr}T17:00:00.000Z`,
-            date: (proj.archivedAt || todayStr).split('T')[0],
+            date: localDayFrom(proj.archivedAt || todayStr),
             domain: 'drawing',
             eventType: 'archived',
             title: `أرشفة مشروع فني: ${proj.title}`,
@@ -403,7 +403,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
       events.push({
         id: `evt-goal-create-${g.id}`,
         timestamp: g.createdAt,
-        date: g.createdAt.split('T')[0],
+        date: localDayFrom(g.createdAt),
         domain: 'goals',
         eventType: 'created',
         title: `إطلاق هدف استراتيجي: ${g.title}`,
@@ -426,7 +426,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
       events.push({
         id: `evt-goal-complete-${g.id}`,
         timestamp: g.updatedAt || `${todayStr}T12:00:00.000Z`,
-        date: (g.updatedAt || todayStr).split('T')[0],
+        date: localDayFrom(g.updatedAt || todayStr),
         domain: 'goals',
         eventType: 'completed',
         title: `تحقيق هدف استراتيجي: ${g.title}`,
@@ -448,7 +448,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
       events.push({
         id: `evt-goal-archive-${g.id}`,
         timestamp: g.archivedAt || g.updatedAt || `${todayStr}T12:00:00.000Z`,
-        date: (g.archivedAt || g.updatedAt || todayStr).split('T')[0],
+        date: localDayFrom(g.archivedAt || g.updatedAt || todayStr),
         domain: 'goals',
         eventType: 'archived',
         title: `أرشفة هدف: ${g.title}`,
@@ -494,7 +494,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
     events.push({
       id: `evt-focus-${fs.id}`,
       timestamp: fs.completedAt,
-      date: fs.completedAt.split('T')[0],
+      date: localDayFrom(fs.completedAt),
       domain: 'focus',
       eventType: 'session',
       title: fs.taskTitle ? `جلسة تركيز: ${fs.taskTitle}` : 'جلسة عمل عميق',
@@ -554,7 +554,7 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
     events.push({
       id: `evt-audit-${log.id}`,
       timestamp: log.timestamp,
-      date: log.timestamp.split('T')[0],
+      date: localDayFrom(log.timestamp),
       domain: log.domain,
       eventType: log.action,
       title: log.title,
