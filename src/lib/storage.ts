@@ -170,15 +170,32 @@ function writeRaw(key: string, value: string): boolean {
   }
 }
 
-function readMeta(): StorageMeta | null {
+/**
+ * Distinguish a missing metadata record from a corrupt/unreadable one.
+ * Corrupt metadata must never be treated as proof that localStorage lost its data.
+ */
+type MetaState =
+  | { kind: 'missing' }
+  | { kind: 'corrupt'; raw: string | null }
+  | { kind: 'ok'; meta: StorageMeta };
+
+function readMetaState(): MetaState {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.META);
-    if (!raw) return null;
+    if (raw === null) return { kind: 'missing' };
     const m = JSON.parse(raw);
-    return isPlainObject(m) && typeof m.schemaVersion === 'number' ? (m as unknown as StorageMeta) : null;
+    if (isPlainObject(m) && typeof m.schemaVersion === 'number') {
+      return { kind: 'ok', meta: m as unknown as StorageMeta };
+    }
+    return { kind: 'corrupt', raw };
   } catch {
-    return null;
+    return { kind: 'corrupt', raw: null };
   }
+}
+
+function readMeta(): StorageMeta | null {
+  const s = readMetaState();
+  return s.kind === 'ok' ? s.meta : null;
 }
 
 function writeMeta(meta: StorageMeta): boolean {
@@ -431,7 +448,21 @@ export class NuqtaStorageEngine {
    * Call once at startup, before the store initialises. Resolves true if restored.
    */
   static async recoverFromMirrorIfNeeded(): Promise<boolean> {
-    if (readMeta()) return false;
+    const metaState = readMetaState();
+
+    // Valid metadata present: localStorage state is established, nothing to recover.
+    if (metaState.kind === 'ok') return false;
+
+    // Corrupt (unreadable) metadata: localStorage still holds data, we just can't
+    // read its metadata record. Never interpret corrupt metadata alone as proof that
+    // localStorage lost its data — do not overwrite it with an older IndexedDB mirror.
+    if (metaState.kind === 'corrupt') return false;
+
+    // Metadata genuinely missing: only recover if localStorage has no NUQTA data at all.
+    // If any NUQTA key exists, localStorage still has data and must not be overwritten.
+    const hasLocalData = Object.keys(localStorage).some((k) => k.startsWith(KEY_PREFIX));
+    if (hasLocalData) return false;
+
     const metaRows = await NuqtaIndexedDB.getAll<StorageMeta & { id: string }>(STORES.META);
     if (metaRows.length === 0) return false;
 

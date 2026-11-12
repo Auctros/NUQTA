@@ -6,7 +6,17 @@ import { emptyHealthRecord } from '../src/lib/healthDefaults';
 import { computeDailyEnergyScore } from '../src/lib/energyAlgorithm';
 import type { Task } from '../src/types';
 
-const task = (id: string, title = id) => ({ id, title, status: 'todo', priority: 'P2' }) as unknown as Task;
+const task = (id: string, title = id) => ({
+  id,
+  title,
+  status: 'todo',
+  priority: 2,
+  isTopThree: false,
+  tags: [],
+  subtasks: [],
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z'
+} as unknown as Task);
 const tick = () => new Promise((r) => setTimeout(r, 50));
 
 describe('first run is genuinely empty (no demo data, no invented values)', () => {

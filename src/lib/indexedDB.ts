@@ -236,6 +236,28 @@ export class NuqtaIndexedDB {
   }
 
   static async wipeAll(): Promise<boolean> {
+    if (!isIndexedDBAvailable()) {
+      console.warn('NuqtaIndexedDB unavailable during wipe: IndexedDB not supported');
+      return false;
+    }
+
+    // Confirm whether the NUQTA database actually exists before attempting to open it.
+    // Opening a non-existent database would create it, so we check first to distinguish
+    // a confirmed absence (nothing to wipe) from a genuine connection/deletion failure.
+    let dbExists = false;
+    try {
+      const databases = await indexedDB.databases();
+      dbExists = databases.some((d) => d.name === DB_NAME);
+    } catch {
+      // databases() not supported in this environment: fall through and try to open.
+      dbExists = true;
+    }
+
+    if (!dbExists) {
+      // Confirmed absence: no database, no mirror, nothing to recover. Wipe succeeded.
+      return true;
+    }
+
     try {
       const db = await openNuqtaDB();
       const results = await Promise.all(
@@ -256,10 +278,9 @@ export class NuqtaIndexedDB {
       );
       return results.every(Boolean);
     } catch (e) {
-      // The database cannot even be opened (e.g. private mode): there is no mirror to
-      // recover from either, so there is nothing left to wipe.
-      console.warn('NuqtaIndexedDB unavailable during wipe:', e);
-      return true;
+      // The database exists but cannot be opened or cleared: a real failure.
+      console.warn('NuqtaIndexedDB wipe failed:', e);
+      return false;
     }
   }
 }

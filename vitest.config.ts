@@ -1,5 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import zlib from 'node:zlib';
+
+if (!('createZstdDecompress' in zlib) || !(zlib as any).createZstdDecompress) {
+  (zlib as any).createZstdDecompress = function () {};
+}
 
 // Run every test in a UTC+ zone: this is where UTC-vs-local date bugs show up.
 process.env.TZ = 'Africa/Cairo';

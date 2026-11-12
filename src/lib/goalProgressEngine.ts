@@ -472,7 +472,7 @@ export function evaluateGoalProgress(
   let daysRemaining: number | null = null;
   let isOverdue = false;
 
-  const startDateStr = goal.startDate || goal.createdAt.split('T')[0];
+  const startDateStr = goal.startDate || localDateKey(new Date(goal.createdAt));
   if (goal.deadline) {
     const startMs = (parseDateKey(startDateStr) ?? new Date(startDateStr)).getTime();
     const deadlineMs = new Date(goal.deadline).getTime();
@@ -497,7 +497,7 @@ export function evaluateGoalProgress(
         id: 'c-task-' + t.id,
         type: 'task',
         title: t.title,
-        date: t.completedAt.split('T')[0],
+        date: localDateKey(new Date(t.completedAt)),
         contributionNote: 'إنجاز مهمة تنفيذية مرتبطة بالهدف',
         icon: '✓'
       });
