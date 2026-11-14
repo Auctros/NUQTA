@@ -122,8 +122,24 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 13. The app must survive a render crash instead of white-screening.
+{
+  const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
+  if (!/ErrorBoundary/.test(main)) {
+    fail('App is not wrapped in an ErrorBoundary', 'a render error would leave a blank page with no way to export data');
+  }
+  if (!existsSync(join(root, 'src/components/ErrorBoundary.tsx'))) {
+    fail('ErrorBoundary component is missing', 'expected src/components/ErrorBoundary.tsx');
+  }
+}
+// 14. Nothing may be sent off-device: no network primitives, no telemetry endpoints.
+{
+  const hits = grep(/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon|new\s+WebSocket|new\s+EventSource|navigator\.geolocation/);
+  if (hits.length) fail('Local-first promise: no network/telemetry primitives in src', hits.slice(0, 5).join('\n    '));
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (12 rules).');
+console.log('Invariant check passed (14 rules).');
