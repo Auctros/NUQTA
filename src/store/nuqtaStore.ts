@@ -34,6 +34,89 @@ import {
 import confetti from 'canvas-confetti';
 
 /**
+ * Clear `linkedGoalId` from a goal's *nested* activity records (books, reading
+ * sessions, artwork pieces, art projects and Quran sessions). These carry their own
+ * `linkedGoalId` (copied from their parent habit at creation time), so deleting a goal
+ * must sweep them too — otherwise the deleted id lingers as a dangling reference.
+ */
+const clearNestedGoalLinks = (habits: Habit[], goalId: string): Habit[] =>
+  habits.map((h) => {
+    let next = h;
+    const reading = h.readingData;
+    if (reading) {
+      const books = reading.books.map((b) => (b.linkedGoalId === goalId ? { ...b, linkedGoalId: undefined } : b));
+      const sessions = reading.sessions.map((s) =>
+        s.linkedGoalId === goalId ? { ...s, linkedGoalId: undefined } : s
+      );
+      if (books.some((b, i) => b !== reading.books[i]) || sessions.some((s, i) => s !== reading.sessions[i])) {
+        next = { ...next, readingData: { ...reading, books, sessions } };
+      }
+    }
+    const drawing = next.drawingData;
+    if (drawing) {
+      const projects = (drawing.projects || []).map((p) =>
+        p.linkedGoalId === goalId ? { ...p, linkedGoalId: undefined } : p
+      );
+      const pieces = drawing.pieces.map((p) => (p.linkedGoalId === goalId ? { ...p, linkedGoalId: undefined } : p));
+      const projectsChanged = projects.some((p, i) => p !== (drawing.projects || [])[i]);
+      if (projectsChanged || pieces.some((p, i) => p !== drawing.pieces[i])) {
+        next = { ...next, drawingData: { ...drawing, projects, pieces } };
+      }
+    }
+    const quran = next.quranData;
+    if (quran) {
+      const sessions = quran.sessions.map((s) =>
+        s.linkedGoalId === goalId ? { ...s, linkedGoalId: undefined } : s
+      );
+      if (sessions.some((s, i) => s !== quran.sessions[i])) {
+        next = { ...next, quranData: { ...quran, sessions } };
+      }
+    }
+    const workout = next.workoutData;
+    if (workout) {
+      const sessions = workout.sessions.map((s) =>
+        s.linkedGoalId === goalId ? { ...s, linkedGoalId: undefined } : s
+      );
+      if (sessions.some((s, i) => s !== workout.sessions[i])) {
+        next = { ...next, workoutData: { ...workout, sessions } };
+      }
+    }
+    return next;
+  });
+
+/**
+ * Drop the given ids from a goal's explicit relation lists. `linkedBookIds` and
+ * `linkedArtProjectIds` live on the goal itself, so deleting a book or project must
+ * remove its id here as well, or the goal keeps a link to a record that is gone.
+ */
+const pruneGoalRelationIds = (
+  goals: Goal[],
+  removed: { taskIds?: string[]; habitIds?: string[]; bookIds?: string[]; artProjectIds?: string[] }
+): Goal[] => {
+  const drop = (list: string[] | undefined, ids: string[] | undefined) => {
+    if (!list || !ids || ids.length === 0) return list;
+    const gone = new Set(ids);
+    const next = list.filter((id) => !gone.has(id));
+    return next.length === list.length ? list : next;
+  };
+  return goals.map((g) => {
+    const linkedTaskIds = drop(g.linkedTaskIds, removed.taskIds);
+    const linkedHabitIds = drop(g.linkedHabitIds, removed.habitIds);
+    const linkedBookIds = drop(g.linkedBookIds, removed.bookIds);
+    const linkedArtProjectIds = drop(g.linkedArtProjectIds, removed.artProjectIds);
+    if (
+      linkedTaskIds === g.linkedTaskIds &&
+      linkedHabitIds === g.linkedHabitIds &&
+      linkedBookIds === g.linkedBookIds &&
+      linkedArtProjectIds === g.linkedArtProjectIds
+    ) {
+      return g;
+    }
+    return { ...g, linkedTaskIds, linkedHabitIds, linkedBookIds, linkedArtProjectIds, updatedAt: new Date().toISOString() };
+  });
+};
+
+/**
  * Recompute a Quran studio's denormalised totals from its surah states and its
  * session log, so deleting a session (or surah progress) can never leave a
  * stale aggregate behind.
@@ -434,10 +517,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     NuqtaStorageEngine.saveTasks(updated);
     set({ tasks: updated });
 
-    const updatedGoals = get().goals.map((g) => ({
-      ...g,
-      linkedTaskIds: (g.linkedTaskIds || []).filter((tid) => tid !== id)
-    }));
+    const updatedGoals = pruneGoalRelationIds(get().goals, { taskIds: [id] });
     NuqtaStorageEngine.saveGoals(updatedGoals);
     set({ goals: updatedGoals });
   },
@@ -675,14 +755,16 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   deleteHabit: (id) => {
+    const target = get().habits.find((h) => h.id === id);
     const updated = get().habits.filter((h) => h.id !== id);
     NuqtaStorageEngine.saveHabits(updated);
     set({ habits: updated });
 
-    const updatedGoals = get().goals.map((g) => ({
-      ...g,
-      linkedHabitIds: (g.linkedHabitIds || []).filter((hid) => hid !== id)
-    }));
+    // The habit's own books/art projects disappear with it, so drop them from any
+    // goal that linked them explicitly, along with the habit link itself.
+    const bookIds = (target?.readingData?.books ?? []).map((b) => b.id);
+    const artProjectIds = (target?.drawingData?.projects ?? []).map((p) => p.id);
+    const updatedGoals = pruneGoalRelationIds(get().goals, { habitIds: [id], bookIds, artProjectIds });
     NuqtaStorageEngine.saveGoals(updatedGoals);
     set({ goals: updatedGoals });
   },
@@ -813,6 +895,12 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     });
     NuqtaStorageEngine.saveHabits(updated);
     set({ habits: updated });
+
+    // A goal may explicitly link the deleted book; drop that id so the goal never
+    // points at a record that no longer exists.
+    const updatedGoals = pruneGoalRelationIds(get().goals, { bookIds: [bookId] });
+    NuqtaStorageEngine.saveGoals(updatedGoals);
+    set({ goals: updatedGoals });
   },
 
   setActiveBook: (habitId, bookId) => {
@@ -1148,12 +1236,22 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
         ...h,
         drawingData: {
           ...h.drawingData,
-          projects: (h.drawingData.projects || []).filter((p) => p.id !== projectId)
+          projects: (h.drawingData.projects || []).filter((p) => p.id !== projectId),
+          // Pieces logged against this project must not keep a projectId that no
+          // longer resolves; they become standalone pieces rather than orphans.
+          pieces: h.drawingData.pieces.map((p) =>
+            p.projectId === projectId ? { ...p, projectId: undefined } : p
+          )
         }
       };
     });
     NuqtaStorageEngine.saveHabits(updated);
     set({ habits: updated });
+
+    // Drop the deleted project id from any goal that linked it explicitly.
+    const updatedGoals = pruneGoalRelationIds(get().goals, { artProjectIds: [projectId] });
+    NuqtaStorageEngine.saveGoals(updatedGoals);
+    set({ goals: updatedGoals });
   },
 
   updateDrawingTargets: (habitId, targets) => {
@@ -1559,11 +1657,14 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const updated = get().goals.filter((g) => g.id !== id);
     NuqtaStorageEngine.saveGoals(updated);
 
-    // Do not leave dangling references to a goal that no longer exists.
+    // Do not leave dangling references to a goal that no longer exists. This
+    // covers top-level tasks/habits AND the nested studio records (books, reading
+    // sessions, artwork pieces, art projects, Quran/workout sessions) that copied
+    // the goal id from their parent habit.
     const clear = <T extends { linkedGoalId?: string }>(items: T[]): T[] =>
       items.map((it) => (it.linkedGoalId === id ? { ...it, linkedGoalId: undefined } : it));
     const tasks = clear(get().tasks);
-    const habits = clear(get().habits);
+    const habits = clearNestedGoalLinks(clear(get().habits), id);
     NuqtaStorageEngine.saveTasks(tasks);
     NuqtaStorageEngine.saveHabits(habits);
     set({ goals: updated, tasks, habits });
