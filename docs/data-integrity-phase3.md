@@ -121,7 +121,46 @@ guard.
 
 ---
 
-## 5. What was verified as already sound
+## 6. Part 1 verification pass (independent re-audit)
+
+The Phase 3 fixes were re-verified from scratch — not taken on trust — with a second,
+independent suite, `tests/audit-integrity-verification.test.ts` (16 cases). It drives the
+real store and storage engine, exercises **every** persisted entity that carries a
+`linkedGoalId` (Task, Habit, BookItem, ReadingSessionLog, ArtProject, ArtworkPiece,
+WorkoutSessionLog, QuranSessionLog), and re-derives the reference graph instead of
+asserting individual fields.
+
+Results:
+
+- **D1 confirmed correct.** After `deleteGoal`, all eight carriers that pointed at the goal
+  are swept. The probe asserts a non-empty dangling set *before* the delete, so a green
+  result cannot be a false negative.
+- **D2 confirmed correct.** Relation-list pruning is symmetric for task/habit/book/art
+  project, and unrelated goals/links are left untouched.
+- **D3 confirmed correct.** `deleteArtProject` removes the project, detaches (never deletes)
+  its pieces, and prunes the goal link.
+- **D4/D5 confirmed.** `activeBookId` re-points; create → link → delete → reload → export
+  round-trips with a valid backup and no dangling references.
+- **F4 preserved.** An invalid surah session is still a full no-op (no habit change, no XP).
+
+### New findings (same class, still open after Phase 3)
+
+The re-audit found that the Phase 3 sweep covered goal links but **not three other
+cross-entity references** on the same delete paths. All three are now fixed and locked in:
+
+| ID | Severity | Location | Trigger | Expected | Status |
+|----|----------|----------|---------|----------|--------|
+| D6 | Low | `deleteBook` | Delete a book that a quote was captured from | The quote keeps its text but drops the stale `bookId` | Fixed |
+| D7 | Low | `deleteWorkoutRoutine` | Delete a routine that sessions were logged from | Sessions drop the stale `routineId` | Fixed |
+| D8 | Low | `deleteHabit` | Delete a habit that other habits are stacked on | Children drop the stale `stackParentHabitId` | Fixed |
+
+These are the same defect shape as D1–D3 (delete one side, sweep the other) applied to the
+non-goal references that `dashboardAnalytics.ts` and `goalProgressEngine.ts` also read.
+
+---
+
+## 7. What was verified as already sound
+
 
 - **Mirror recovery** is conservative: it never overwrites live `localStorage` data on a corrupt or
   missing metadata record, and only restores when `localStorage` is genuinely empty of NUQTA keys.

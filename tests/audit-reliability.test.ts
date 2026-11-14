@@ -32,7 +32,7 @@ afterEach(() => vi.useRealTimers());
 const book = (id: string) =>
   ({ id, title: id, author: 'A', category: 'mind', totalPages: 100, currentPage: 0, status: 'reading', coverColor: '#000' } as any);
 const project = (id: string) =>
-  ({ id, title: id, stage: 'in_progress', medium: 'sketch', startedDate: '2026-01-01', totalMinutesSpent: 0, sessionsCount: 0 } as any);
+  ({ id, title: id, stage: 'sketching', medium: 'sketch', startedDate: '2026-01-01', totalMinutesSpent: 0, sessionsCount: 0 } as any);
 
 const emptyStudioHabit = (type: 'reading' | 'workout' | 'drawing' | 'quran'): Habit =>
   ({

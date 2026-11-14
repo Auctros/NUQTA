@@ -756,7 +756,11 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   deleteHabit: (id) => {
     const target = get().habits.find((h) => h.id === id);
-    const updated = get().habits.filter((h) => h.id !== id);
+    // Habits stacked on the deleted habit must not keep a parent id that no
+    // longer resolves; they become standalone habits.
+    const updated = get()
+      .habits.filter((h) => h.id !== id)
+      .map((h) => (h.stackParentHabitId === id ? { ...h, stackParentHabitId: undefined } : h));
     NuqtaStorageEngine.saveHabits(updated);
     set({ habits: updated });
 
@@ -879,6 +883,11 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       // Drop the deleted book's logged sessions and recompute the denormalised
       // totals so the dashboard never reports pages/hours that no longer exist.
       const sessions = h.readingData.sessions.filter((s) => s.bookId !== bookId);
+      // Quotes captured against the deleted book must not keep a bookId that no
+      // longer resolves; the quote text itself is preserved.
+      const quotes = (h.readingData.quotes || []).map((q) =>
+        q.bookId === bookId ? { ...q, bookId: undefined } : q
+      );
       const totalPagesRead = sessions.reduce((sum, s) => sum + (s.pagesRead || 0), 0);
       const totalReadingMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
       return {
@@ -888,6 +897,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
           books: remainingBooks,
           activeBookId: newActiveId,
           sessions,
+          quotes,
           totalPagesRead,
           totalReadingMinutes
         }
@@ -1076,7 +1086,12 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
         ...h,
         workoutData: {
           ...h.workoutData,
-          customRoutines: (h.workoutData.customRoutines || []).filter((r) => r.id !== routineId)
+          customRoutines: (h.workoutData.customRoutines || []).filter((r) => r.id !== routineId),
+          // Sessions logged from this routine must not keep a routineId that no
+          // longer resolves; the session itself is preserved.
+          sessions: h.workoutData.sessions.map((s) =>
+            s.routineId === routineId ? { ...s, routineId: undefined } : s
+          )
         }
       };
     });
