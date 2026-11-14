@@ -22,6 +22,7 @@ import {
 import { NuqtaStorageEngine } from '../lib/storage';
 import { parseNaturalLanguageTask } from '../lib/nlpParser';
 import { computeDailyEnergyScore } from '../lib/energyAlgorithm';
+import { runLiquidThemeTransition } from '../lib/themeTransition';
 import {
   generateInitialQuranSurahs,
   mergeAyahRanges,
@@ -1960,9 +1961,12 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   setTheme: (theme) => {
-    const updated = { ...get().profile, theme };
-    NuqtaStorageEngine.saveProfile(updated);
-    set({ profile: updated });
+    const currentTheme = get().profile.theme;
+    runLiquidThemeTransition(currentTheme, theme, () => {
+      const updated = { ...get().profile, theme };
+      NuqtaStorageEngine.saveProfile(updated);
+      set({ profile: updated });
+    });
   },
 
   updateProfileName: (name) => {

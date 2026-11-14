@@ -1,15 +1,34 @@
-import { localDateKey } from '../lib/dateKey';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import confetti from 'canvas-confetti';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, Goal, Task } from '../types';
+import { localDateKey, localDayFrom, localTimeKey } from '../lib/dateKey';
+import {
+  buildActivityAllocation,
+  buildConsistencyBreakdown,
+  buildDomainAnalytics,
+  buildGoalsOverview,
+  buildLifeConnections,
+  buildMilestoneTimeline,
+  buildPerformanceTrend,
+  buildSecondaryAnalytics,
+  computeDashboardKPIs,
+  TrendMetricId,
+  TrendRangeId
+} from '../lib/dashboardAnalytics';
+import { NuqtaNotificationEngine } from '../lib/notifications';
 import { NuqtaIcon } from './NuqtaIcon';
 import { QuickCaptureBar } from './QuickCaptureBar';
 import { ReadingAppModal } from './ReadingAppModal';
 import { WorkoutAppModal } from './WorkoutAppModal';
 import { GoalDetailModal } from './GoalDetailModal';
-import { evaluateGoalProgress } from '../lib/goalProgressEngine';
-import confetti from 'canvas-confetti';
-import { NuqtaNotificationEngine } from '../lib/notifications';
+import { KpiTerminalStrip } from './dashboard/KpiTerminalStrip';
+import { LifePerformanceChart } from './dashboard/LifePerformanceChart';
+import { ActivityAllocationPanel } from './dashboard/ActivityAllocationPanel';
+import { SecondaryAnalyticsSection } from './dashboard/SecondaryAnalyticsSection';
+import { LifeDomainsGrid } from './dashboard/LifeDomainsGrid';
+import { GoalsMilestonesSection } from './dashboard/GoalsMilestonesSection';
+import { LifeConnectionsSection } from './dashboard/LifeConnectionsSection';
 
 export const DashboardView: React.FC = () => {
   const {
@@ -17,17 +36,24 @@ export const DashboardView: React.FC = () => {
     habits,
     goals,
     focusSessions,
+    healthMetrics,
+    expenses,
+    savingsGoals,
+    journalEntries,
     energyScore,
+    profile,
     toggleTaskStatus,
     toggleTopThree,
     updateTask,
     toggleHabitToday,
     logFocusSession,
-    profile,
     setRescueModeOpen,
-    setActiveNavTab,
-    createHabit
+    setActiveNavTab
   } = useNuqtaStore();
+
+  // Analytics controls
+  const [trendMetric, setTrendMetric] = useState<TrendMetricId>('activeMinutes');
+  const [trendRange, setTrendRange] = useState<TrendRangeId>('30d');
 
   // Modals for Specialized Habit Studios & Goals
   const [activeReadingModalHabit, setActiveReadingModalHabit] = useState<Habit | null>(null);
@@ -45,7 +71,7 @@ export const DashboardView: React.FC = () => {
   const [focusRunning, setFocusRunning] = useState<boolean>(false);
   const [focusDistractions, setFocusDistractions] = useState<number>(0);
 
-  // Agenda Filter State
+  // Daily Command Center Agenda Filter
   const [agendaTab, setAgendaTab] = useState<'all' | 'overdue' | 'upcoming' | 'completed'>('all');
 
   const isAr = profile.language === 'ar';
@@ -54,95 +80,188 @@ export const DashboardView: React.FC = () => {
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = localDateKey(tomorrow);
+  const currentTimeHHMM = localTimeKey(now);
 
   const currentHour = now.getHours();
-  const currentMinutes = now.getMinutes();
-  const currentTimeHHMM = `${currentHour.toString().padStart(2, '0')}:${currentMinutes.toString().padStart(2, '0')}`;
-
   const greeting =
     currentHour < 12
-      ? isAr ? 'صباح الخير' : 'Good morning'
+      ? isAr
+        ? 'صباح الخير'
+        : 'Good morning'
       : currentHour < 18
-      ? isAr ? 'يومك سعيد' : 'Good afternoon'
-      : isAr ? 'مساء الخير' : 'Good evening';
+      ? isAr
+        ? 'طاب يومك'
+        : 'Good afternoon'
+      : isAr
+      ? 'مساء الخير'
+      : 'Good evening';
 
-  const userFirstName = (profile.name || '').trim().split(/\s+/)[0] || (isAr ? 'صديقي' : 'friend');
-  const greetingLine = isAr ? `${greeting}، ${userFirstName}` : `${greeting}, ${userFirstName}`;
+  const trimmedFirstName = (profile.name || '').trim().split(/\s+/)[0] || '';
+  const greetingLine = trimmedFirstName
+    ? isAr
+      ? `${greeting}، ${trimmedFirstName}`
+      : `${greeting}, ${trimmedFirstName}`
+    : greeting;
+
+  const formattedDate = new Intl.DateTimeFormat(isAr ? 'ar-EG' : 'en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(now);
 
   // =========================================================================
-  // 1. Daily Progress & Genuine Metrics (No Arbitrary Scores)
+  // 1. V2 Analytics Computations (Strictly Stored Records)
   // =========================================================================
-  const topThree = tasks.filter((t) => t.isTopThree && !t.isArchived && t.status !== 'archived');
-
-  const todayTasks = tasks.filter(
-    (t) => !t.isArchived && t.status !== 'archived' && (t.scheduledDate === todayStr || (t.completedAt && t.completedAt.startsWith(todayStr)))
+  const analyticsInput = useMemo(
+    () => ({
+      tasks,
+      habits,
+      goals,
+      focusSessions,
+      healthMetrics,
+      expenses,
+      savingsGoals,
+      journalEntries,
+      energyScore
+    }),
+    [tasks, habits, goals, focusSessions, healthMetrics, expenses, savingsGoals, journalEntries, energyScore]
   );
-  const doneTodayTasks = todayTasks.filter((t) => t.status === 'completed');
+
+  const kpis = useMemo(() => computeDashboardKPIs(analyticsInput, todayStr), [analyticsInput, todayStr]);
+  const trendData = useMemo(
+    () => buildPerformanceTrend(analyticsInput, trendMetric, trendRange, isAr, todayStr),
+    [analyticsInput, trendMetric, trendRange, isAr, todayStr]
+  );
+  const allocationData = useMemo(
+    () => buildActivityAllocation(analyticsInput, todayStr),
+    [analyticsInput, todayStr]
+  );
+  const secondaryData = useMemo(
+    () => buildSecondaryAnalytics(analyticsInput, todayStr),
+    [analyticsInput, todayStr]
+  );
+  const consistencyBreakdown = useMemo(
+    () => buildConsistencyBreakdown(analyticsInput, todayStr),
+    [analyticsInput, todayStr]
+  );
+  const domainAnalytics = useMemo(
+    () => buildDomainAnalytics(analyticsInput, isAr, todayStr),
+    [analyticsInput, isAr, todayStr]
+  );
+  const goalsOverview = useMemo(() => buildGoalsOverview(analyticsInput), [analyticsInput]);
+  const milestoneTimeline = useMemo(
+    () => buildMilestoneTimeline(analyticsInput, todayStr),
+    [analyticsInput, todayStr]
+  );
+  const lifeConnections = useMemo(() => buildLifeConnections(analyticsInput), [analyticsInput]);
+
+  // =========================================================================
+  // 2. Daily Command Center Data
+  // =========================================================================
+  const activeTasks = tasks.filter((t) => !t.isArchived && t.status !== 'archived' && t.status !== 'cancelled');
+  const topThree = activeTasks.filter((t) => t.isTopThree);
+  const activeHabits = habits.filter((h) => !h.isArchived && h.status !== 'archived' && h.status !== 'paused');
+
+  const todayTasks = activeTasks.filter(
+    (t) => t.scheduledDate === todayStr || (t.completedAt && localDayFrom(t.completedAt) === todayStr)
+  );
   const pendingTodayTasks = todayTasks.filter((t) => t.status !== 'completed');
+  const doneTodayTasks = todayTasks.filter((t) => t.status === 'completed');
 
-  const todayHabitDone = habits.filter((h) => !h.isArchived && h.status !== 'archived' && h.completedDates.includes(todayStr)).length;
-
-  const todayFocusSessions = focusSessions.filter((s) => s.completedAt?.startsWith(todayStr));
-  const todayFocusMinutes = todayFocusSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
-
-  // Real reading session metrics today
-  const readingHabit = habits.find((h) => h.specializedType === 'reading');
-  const todayReadingSessions = (readingHabit?.readingData?.sessions || []).filter((s) => s.date === todayStr);
-  const todayPagesRead = todayReadingSessions.reduce((sum, s) => sum + (s.pagesRead || 0), 0);
-
-  // Real workout session metrics today
-  const workoutHabit = habits.find((h) => h.specializedType === 'workout');
-  const todayWorkoutSessions = (workoutHabit?.workoutData?.sessions || []).filter((s) => s.date === todayStr);
-  const todayWorkoutReps = todayWorkoutSessions.reduce((sum, s) => sum + (s.totalReps || 0), 0);
-
-  // =========================================================================
-  // 2. Adaptive Agenda (Overdue, Upcoming, Completed)
-  // =========================================================================
-  // Overdue: incomplete tasks scheduled before today OR scheduled today with past time
-  const overdueTasks = tasks.filter((t) => {
+  const overdueTasks = activeTasks.filter((t) => {
     if (t.status === 'completed') return false;
     if (t.scheduledDate && t.scheduledDate < todayStr) return true;
     if (t.scheduledDate === todayStr && t.scheduledTime && t.scheduledTime < currentTimeHHMM) return true;
     return false;
   });
 
-  // Upcoming: incomplete tasks scheduled today with future time or without specific time
-  const upcomingTasks = tasks.filter((t) => {
-    if (t.status === 'completed') return false;
-    if (t.scheduledDate === todayStr) {
-      if (!t.scheduledTime) return true;
-      return t.scheduledTime >= currentTimeHHMM;
-    }
-    return false;
-  }).sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
+  const upcomingTasks = activeTasks
+    .filter((t) => {
+      if (t.status === 'completed') return false;
+      if (t.scheduledDate === todayStr) {
+        if (!t.scheduledTime) return true;
+        return t.scheduledTime >= currentTimeHHMM;
+      }
+      return false;
+    })
+    .sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
 
-  // Completed items today: completed tasks + focus sessions
+  const todayFocusSessions = focusSessions.filter(
+    (s) => s.completedAt && localDayFrom(s.completedAt) === todayStr
+  );
+
   const completedTodayItems = [
     ...doneTodayTasks.map((t) => ({
       id: `task-${t.id}`,
       type: 'task' as const,
       title: t.title,
-      time: t.completedAt ? new Date(t.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (isAr ? 'اليوم' : 'Today'),
-      item: t
+      time: t.completedAt
+        ? new Date(t.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : isAr
+        ? 'اليوم'
+        : 'Today'
     })),
     ...todayFocusSessions.map((s) => ({
       id: `focus-${s.id}`,
       type: 'focus' as const,
-      title: s.taskTitle ? `${isAr ? 'جلسة تركيز:' : 'Focus Session:'} ${s.taskTitle}` : (isAr ? 'جلسة تركيز عميق' : 'Deep Work Session'),
-      time: s.completedAt ? new Date(s.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (isAr ? 'اليوم' : 'Today'),
-      duration: s.durationMinutes,
-      item: s
+      title: s.taskTitle
+        ? `${isAr ? 'جلسة تركيز:' : 'Focus:'} ${s.taskTitle}`
+        : isAr
+        ? 'جلسة تركيز عميق'
+        : 'Deep Work Session',
+      time: s.completedAt
+        ? new Date(s.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : isAr
+        ? 'اليوم'
+        : 'Today'
     }))
   ];
 
-  // Overwhelm threshold for Rescue Mode banner
   const isOverwhelmed = overdueTasks.length >= 2 || pendingTodayTasks.length >= 5;
 
   // =========================================================================
   // 3. Focus Launcher Timer Effect
   // =========================================================================
+  const handleFinishFocusSession = (markTaskDone: boolean = false) => {
+    const elapsedSeconds = focusPreset * 60 - focusRemaining;
+    const minutesSpent = Math.max(1, Math.round(elapsedSeconds / 60));
+
+    logFocusSession({
+      taskId: focusingTask?.id,
+      taskTitle: focusingTask?.title || (isAr ? 'جلسة تركيز حر' : 'Free Focus Session'),
+      durationMinutes: minutesSpent,
+      targetMinutes: focusPreset,
+      interruptionCount: focusDistractions,
+      preMood: 4,
+      postMood: 5,
+      productivityScore: focusDistractions === 0 ? 5 : focusDistractions <= 2 ? 4 : 3
+    });
+
+    if (markTaskDone && focusingTask && focusingTask.status !== 'completed') {
+      toggleTaskStatus(focusingTask.id);
+    }
+
+    NuqtaNotificationEngine.notify({
+      title: isAr ? 'اكتملت جلسة التركيز' : 'Focus Session Logged',
+      body: isAr
+        ? `أنجزت ${minutesSpent} دقيقة من العمل المركز.`
+        : `Completed ${minutesSpent} minutes of focused work.`,
+      tag: 'focus-finish',
+      chime: 'focus-complete'
+    });
+
+    try {
+      confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
+    } catch {}
+
+    setFocusRunning(false);
+    setIsFocusModalOpen(false);
+    setFocusingTask(null);
+  };
+
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
+    let timer: ReturnType<typeof setInterval> | null = null;
     if (focusRunning && focusRemaining > 0) {
       timer = setInterval(() => {
         setFocusRemaining((prev) => prev - 1);
@@ -165,1199 +284,660 @@ export const DashboardView: React.FC = () => {
     setIsFocusModalOpen(true);
   };
 
-  const handleFinishFocusSession = (markTaskDone: boolean = false) => {
-    const elapsedSeconds = focusPreset * 60 - focusRemaining;
-    const minutesSpent = Math.max(1, Math.round(elapsedSeconds / 60));
-
-    logFocusSession({
-      taskId: focusingTask?.id,
-      taskTitle: focusingTask?.title || (isAr ? 'جلسة تركيز حر' : 'Free Focus Session'),
-      durationMinutes: minutesSpent,
-      targetMinutes: focusPreset,
-      interruptionCount: focusDistractions,
-      preMood: 4,
-      postMood: 5,
-      productivityScore: focusDistractions === 0 ? 5 : focusDistractions <= 2 ? 4 : 3
-    });
-
-    if (markTaskDone && focusingTask && focusingTask.status !== 'completed') {
-      toggleTaskStatus(focusingTask.id);
+  const focusQuickCapture = () => {
+    const el = document.getElementById('quick-capture-input') as HTMLInputElement | null;
+    if (el) {
+      el.focus();
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      setActiveNavTab('tasks');
     }
-
-    NuqtaNotificationEngine.notify({
-      title: isAr ? '🎉 اكتملت جلسة التركيز!' : '🎉 Focus Session Logged!',
-      body: isAr
-        ? `أنجزت ${minutesSpent} دقيقة من العمل المركز بنجاح.`
-        : `Completed ${minutesSpent} minutes of high-clarity focus.`,
-      tag: 'focus-finish',
-      chime: 'focus-complete'
-    });
-
-    try {
-      confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
-    } catch {}
-
-    setFocusRunning(false);
-    setIsFocusModalOpen(false);
-    setFocusingTask(null);
   };
 
-  // Week days strip
-  const weekStart = new Date(now);
-  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const weekDays = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + i);
-    const key = localDateKey(d);
-    const dayNames = isAr ? ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const count = tasks.filter((t) => t.scheduledDate === key && t.status !== 'completed').length;
-    return {
-      key,
-      dayNum: d.getDate(),
-      dayLabel: dayNames[d.getDay()],
-      isToday: key === todayStr,
-      hasItems: count > 0
-    };
-  });
+  const handleOpenMetricWorkspace = (metric: TrendMetricId) => {
+    switch (metric) {
+      case 'tasksCompleted':
+        setActiveNavTab('tasks');
+        break;
+      case 'habitConsistency':
+        setActiveNavTab('habits');
+        break;
+      case 'readingPages':
+        setActiveNavTab('reading');
+        break;
+      case 'workoutReps':
+        setActiveNavTab('workout');
+        break;
+      case 'quranAyahs':
+        setActiveNavTab('quran');
+        break;
+      case 'focusMinutes':
+      case 'activeMinutes':
+      default:
+        setActiveNavTab('focus');
+        break;
+    }
+  };
+
+  const openHabitStudioOrToggle = (habit: Habit) => {
+    if (habit.specializedType === 'reading') {
+      setActiveReadingModalHabit(habit);
+    } else if (habit.specializedType === 'workout') {
+      setActiveWorkoutModalHabit(habit);
+    } else if (habit.specializedType === 'quran') {
+      setActiveNavTab('quran');
+    } else if (habit.specializedType === 'drawing') {
+      setActiveNavTab('drawing');
+    } else {
+      toggleHabitToday(habit.id);
+    }
+  };
 
   return (
-    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-      {/* 1. Header with Command Center Identity & Quick Access */}
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow flex items-center gap-2">
-            <span className="line"></span>
-            <span className="font-mono text-accent">{isAr ? 'مركز قيادة اليوم · DAILY COMMAND CENTER' : 'DAILY COMMAND CENTER'}</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">{greetingLine}</h1>
-          <p className="text-sm text-muted">
-            {isAr
-              ? 'مساحتك الموحدة لإدارة الأولويات، والجدول الزمني، والعادات، والأهداف في مكان واحد هادئ.'
-              : 'Your unified command container for priorities, agenda, active habits, and strategic focus.'}
-          </p>
-        </div>
-        <div className="heading-actions flex items-center gap-2">
-          <button
-            className="btn subtle text-xs border border-accent/40 text-accent hover:bg-accent/10 flex items-center gap-1.5"
-            onClick={() => openFocusLauncher()}
-          >
-            <span>◷</span>
-            <span>{isAr ? 'بدء تركيز حر' : 'Free Focus'}</span>
-          </button>
-          <button className="btn primary text-xs" onClick={() => setActiveNavTab('tasks')}>
-            <span className="btn-icon">+</span>
-            <span>{isAr ? 'مهمة جديدة' : 'New Task'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Daily Progress Strip (Factual & Honest Accomplishments) */}
-      <div className="panel p-4 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-raised)] shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-[var(--border-subtle)]">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-accent"></span>
-            <span className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">
-              {isAr ? 'إنجاز اليوم الفعلي (Daily Accomplishments)' : 'Today\'s Grounded Accomplishments'}
+    <div className="space-y-4" dir={isAr ? 'rtl' : 'ltr'}>
+      {/* ===================================================================
+          1. COMPACT COMMAND BAR — Greeting, Inline Quick Capture & Actions
+         =================================================================== */}
+      <header className="dash-glass px-4 py-3 sm:px-5 sm:py-3.5">
+        <div className="flex flex-col xl:flex-row xl:items-center gap-3">
+          <div className="flex items-baseline gap-2.5 shrink-0 min-w-0">
+            <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-[var(--text-primary)] m-0 truncate">
+              {greetingLine}
+            </h1>
+            <span className="text-[var(--text-tertiary)] hidden sm:inline">·</span>
+            <span className="text-xs font-mono text-[var(--text-secondary)] whitespace-nowrap hidden sm:inline">
+              {formattedDate}
             </span>
           </div>
-          <span className="text-[11px] text-muted font-mono">
-            {new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { weekday: 'long', day: 'numeric', month: 'short' })}
-          </span>
+
+          <div className="flex-1 min-w-0">
+            <QuickCaptureBar />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('nuqta:open-search'))}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-[var(--border-default)] bg-[var(--surface-inset)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--brand-soft-border)] transition-colors whitespace-nowrap shrink-0"
+              title={isAr ? 'بحث شامل (Ctrl+Shift+F)' : 'Global Search (Ctrl+Shift+F)'}
+            >
+              <NuqtaIcon name="search" className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{isAr ? 'بحث' : 'Search'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('nuqta:open-palette'))}
+              className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-[11px] font-mono border border-[var(--border-default)] bg-[var(--surface-inset)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors whitespace-nowrap shrink-0"
+              title={isAr ? 'لوحة الأوامر' : 'Command Palette'}
+            >
+              ⌘K
+            </button>
+
+            {isOverwhelmed && (
+              <button
+                type="button"
+                onClick={() => setRescueModeOpen(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-[var(--state-warning)] bg-[var(--state-warning-wash-from)] text-[var(--state-warning-strong)] whitespace-nowrap shrink-0"
+              >
+                <span>{isAr ? 'وضع الإنقاذ' : 'Rescue'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => openFocusLauncher()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border-default)] bg-[var(--surface-inset)] text-[var(--text-primary)] hover:border-[var(--brand-soft-border)] transition-colors whitespace-nowrap shrink-0"
+            >
+              <NuqtaIcon name="timer" className="w-3.5 h-3.5 text-[var(--brand-strong)]" />
+              <span>{isAr ? 'بدء تركيز' : 'Focus'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={focusQuickCapture}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--brand)] text-[var(--text-on-accent)] hover:opacity-95 transition-opacity whitespace-nowrap shrink-0"
+            >
+              <NuqtaIcon name="plus" className="w-3.5 h-3.5" />
+              <span>{isAr ? 'مهمة' : 'Task'}</span>
+            </button>
+          </div>
         </div>
+      </header>
 
-        <div className="dashboard-kpis-primary grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Tasks Output */}
-          <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted flex items-center gap-1.5">
-                <span className="text-[var(--state-success)]">✓</span>
-                <span>{isAr ? 'مهام أُنجزت' : 'Tasks Done'}</span>
-              </span>
-              <span className="font-mono font-bold text-[var(--text-primary)]">
-                {doneTodayTasks.length}/{Math.max(todayTasks.length, doneTodayTasks.length)}
-              </span>
-            </div>
-            <div className="w-full bg-[var(--surface-track)] h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-accent h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${todayTasks.length > 0 ? Math.round((doneTodayTasks.length / todayTasks.length) * 100) : 0}%`
-                }}
-              />
-            </div>
-            <div className="text-[10px] text-muted flex justify-between">
-              <span>{isAr ? 'المتبقي لليوم' : 'Pending today'}</span>
-              <span className="font-mono text-[var(--text-primary)]">{pendingTodayTasks.length}</span>
-            </div>
-          </div>
+      {/* ===================================================================
+          2. UNIFIED 4-METRIC KPI TERMINAL STRIP
+         =================================================================== */}
+      <KpiTerminalStrip kpis={kpis} isAr={isAr} />
 
-          {/* Habits Output */}
-          <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted flex items-center gap-1.5">
-                <span className="text-[var(--state-info)]">↻</span>
-                <span>{isAr ? 'عادات طُبقت' : 'Habits Kept'}</span>
-              </span>
-              <span className="font-mono font-bold text-[var(--text-primary)]">
-                {todayHabitDone}/{habits.length}
-              </span>
-            </div>
-            <div className="w-full bg-[var(--surface-track)] h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-teal-400 h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${habits.length > 0 ? Math.round((todayHabitDone / habits.length) * 100) : 0}%`
-                }}
-              />
-            </div>
-            <div className="text-[10px] text-muted flex justify-between">
-              <span>{isAr ? 'نسبة الالتزام' : 'Compliance'}</span>
-              <span className="font-mono text-[var(--text-primary)]">
-                {habits.length > 0 ? Math.round((todayHabitDone / habits.length) * 100) : 0}%
-              </span>
-            </div>
-          </div>
-
-          {/* Deep Work Focus Time */}
-          <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted flex items-center gap-1.5">
-                <span className="text-[var(--state-warning)]">◷</span>
-                <span>{isAr ? 'تركيز وعمل عميق' : 'Focus Time'}</span>
-              </span>
-              <span className="font-mono font-bold text-[var(--state-warning-strong)]">
-                {Math.floor(todayFocusMinutes / 60)}h {todayFocusMinutes % 60}m
-              </span>
-            </div>
-            <div className="w-full bg-[var(--surface-track)] h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-amber-400 h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${Math.min(100, Math.round((todayFocusMinutes / 120) * 100))}%`
-                }}
-              />
-            </div>
-            <div className="text-[10px] text-muted flex justify-between">
-              <span>{isAr ? 'جلسات اليوم' : 'Sessions today'}</span>
-              <span className="font-mono text-[var(--text-primary)]">{todayFocusSessions.length} {isAr ? 'جلسات' : 'sessions'}</span>
-            </div>
-          </div>
-
+      {/* ===================================================================
+          3. OPENING ANALYTICS CANVAS (Above the Fold 8/4 Split)
+             Left: Life Performance Trend (with MA & Event Annotations)
+             Right: Activity Allocation Donut, Today vs 7D Avg & Recovery
+         =================================================================== */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
+        <div className="xl:col-span-8 min-w-0">
+          <LifePerformanceChart
+            trend={trendData}
+            metric={trendMetric}
+            range={trendRange}
+            onMetricChange={setTrendMetric}
+            onRangeChange={setTrendRange}
+            isAr={isAr}
+            onOpenRelevantView={handleOpenMetricWorkspace}
+          />
         </div>
-
-        {/* Secondary KPIs — reading & workout stay reachable but quieter */}
-        <div className="dashboard-kpis-secondary mt-3 flex flex-wrap items-center gap-2 rounded-[var(--r-sm)] border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-2 py-1.5">
-          {/* Real Reading Pages */}
-          <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted flex items-center gap-1.5">
-                <span className="text-[var(--state-warning-strong)]">📖</span>
-                <span>{isAr ? 'صفحات قراءة' : 'Pages Read'}</span>
-              </span>
-              <span className="font-mono font-bold text-[var(--text-primary)]">
-                {todayPagesRead} {isAr ? 'ص' : 'p'}
-              </span>
-            </div>
-            <div className="w-full bg-[var(--surface-track)] h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-amber-400 h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${Math.min(100, Math.round((todayPagesRead / (readingHabit?.readingData?.dailyTargetPages || 20)) * 100))}%`
-                }}
-              />
-            </div>
-            <div className="text-[10px] text-muted flex justify-between">
-              <span>{isAr ? 'الهدف اليومي' : 'Target'}</span>
-              <span className="font-mono text-[var(--text-primary)]">
-                {readingHabit?.readingData?.dailyTargetPages || 20} {isAr ? 'ص' : 'p'}
-              </span>
-            </div>
-          </div>
-
-          {/* Real Workout Volume */}
-          <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] space-y-2 col-span-2 sm:col-span-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted flex items-center gap-1.5">
-                <span className="text-[var(--state-success)]">⚡</span>
-                <span>{isAr ? 'تكرارات تدريب' : 'Workout Reps'}</span>
-              </span>
-              <span className="font-mono font-bold text-[var(--state-success)]">
-                {todayWorkoutReps.toLocaleString()}
-              </span>
-            </div>
-            <div className="w-full bg-[var(--surface-track)] h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-emerald-400 h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${Math.min(100, todayWorkoutReps > 0 ? 100 : 0)}%`
-                }}
-              />
-            </div>
-            <div className="text-[10px] text-muted flex justify-between">
-              <span>{isAr ? 'حصص اليوم' : 'Sessions'}</span>
-              <span className="font-mono text-[var(--text-primary)]">
-                {todayWorkoutSessions.length} {isAr ? 'حصة' : 'logs'}
-              </span>
-            </div>
-          </div>
+        <div className="xl:col-span-4 min-w-0">
+          <ActivityAllocationPanel
+            data={allocationData}
+            isAr={isAr}
+            onOpenFocus={() => setActiveNavTab('focus')}
+            onOpenHealth={() => setActiveNavTab('health')}
+          />
         </div>
       </div>
 
-      {/* 4. Quick Capture Input */}
-      <QuickCaptureBar />
+      {/* ===================================================================
+          4. SECONDARY ANALYTICS — 14W Heatmap + Weekday Rhythm + Scatter
+         =================================================================== */}
+      <SecondaryAnalyticsSection
+        data={secondaryData}
+        breakdown={consistencyBreakdown}
+        isAr={isAr}
+        onOpenInsights={() => setActiveNavTab('insights')}
+      />
 
-      {/* 5. Main Command Center Grid */}
-      <div className="dashboard-grid">
-        {/* Left Primary Column: Daily Focus (Top 3), Today's Agenda Timeline, Active Goals, Habit Studios */}
-        <section className="dashboard-left space-y-6">
-          {/* Daily Focus: Strictly 3 Anchor Tasks with Focus Launcher & Task Switcher */}
-          <section className="panel focus-card border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl p-5 shadow-sm">
-            <div className="panel-heading flex flex-wrap items-center justify-between gap-2 mb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-accent"></span>
-                  <h2 className="text-base font-bold text-[var(--text-primary)]">
-                    {isAr ? 'بوصلة اليوم (Daily Focus)' : 'Daily Focus: Top 3 Anchors'}
-                  </h2>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-strong)]">
-                    {topThree.filter((t) => t.status === 'completed').length}/3 {isAr ? 'منجز' : 'done'}
-                  </span>
-                </div>
-                <p className="text-xs text-muted mt-1">
-                  {isAr
-                    ? 'ثلاث أولويات فقط تحمي انتباهك من التشظي. يمكنك تغييرها أو بدء التركيز الفوري عليها.'
-                    : 'Strictly three priorities to anchor your cognitive capacity. Focus or swap freely.'}
-                </p>
+      {/* ===================================================================
+          5. LIFE DOMAINS — Domain-Authentic Multi-Chart Grid
+         =================================================================== */}
+      <LifeDomainsGrid
+        analytics={domainAnalytics}
+        isAr={isAr}
+        onNavigate={(tab) => setActiveNavTab(tab)}
+      />
+
+      {/* ===================================================================
+          6. GOALS & MILESTONES — Bullet Matrix + Milestone Horizon Timeline
+         =================================================================== */}
+      <GoalsMilestonesSection
+        items={goalsOverview}
+        milestones={milestoneTimeline}
+        isAr={isAr}
+        onInspectGoal={(g) => setInspectingGoal(g)}
+        onOpenGoalsPage={() => setActiveNavTab('goals')}
+      />
+
+      {/* ===================================================================
+          7. LIFE CONNECTIONS — Interactive Sankey Flow + Habit Stacks
+         =================================================================== */}
+      <LifeConnectionsSection
+        connections={lifeConnections}
+        isAr={isAr}
+        onInspectGoal={(g) => setInspectingGoal(g)}
+        onOpenGoals={() => setActiveNavTab('goals')}
+      />
+
+      {/* ===================================================================
+          8. OPERATIONAL DAILY COMMAND CENTER — Priorities, Habits & Agenda
+         =================================================================== */}
+      <section aria-label={isAr ? 'مركز قيادة اليوم' : 'Daily Command Center'} className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+              {isAr ? 'التنفيذ اليومي' : 'OPERATIONAL COMMAND CENTER'}
+            </div>
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mt-0.5 m-0">
+              {isAr ? 'أولويات اليوم والعادات والجدول الزمني' : "Today's Priorities, Habits & Agenda"}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveNavTab('tasks')}
+              className="font-medium text-[var(--brand-strong)] hover:underline"
+            >
+              {isAr ? 'كل المهام' : 'All Tasks'}
+            </button>
+            <span className="text-[var(--text-tertiary)]">·</span>
+            <button
+              type="button"
+              onClick={() => setActiveNavTab('calendar')}
+              className="font-medium text-[var(--brand-strong)] hover:underline"
+            >
+              {isAr ? 'التقويم' : 'Calendar'}
+            </button>
+          </div>
+        </div>
+
+        {isOverwhelmed && (
+          <div className="v2-solid-surface p-3.5 border border-[var(--state-warning)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-bold text-[var(--state-warning-strong)]">
+                {isAr ? 'ضغط مهام مرتفع اليوم' : 'Heavy Daily Load Detected'}
               </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsTaskPickerOpen(true)}
-                  className="btn subtle small text-xs border border-[var(--border-strong)] text-[var(--text-primary)] hover:border-accent flex items-center gap-1"
-                >
-                  <span>+</span>
-                  <span>{isAr ? 'إدارة / اختيار المهام' : 'Choose Priorities'}</span>
-                </button>
-                <button
-                  onClick={() => setActiveNavTab('tasks')}
-                  className="text-link text-xs"
-                >
-                  <span>{isAr ? 'كل المهام' : 'All tasks'}</span>
-                  <span>→</span>
-                </button>
+              <div className="text-xs text-[var(--text-secondary)] mt-0.5">
+                {isAr
+                  ? `لديك ${overdueTasks.length} مهام متأخرة و ${pendingTodayTasks.length} مهام متبقية لليوم.`
+                  : `${overdueTasks.length} overdue and ${pendingTodayTasks.length} pending tasks today.`}
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setRescueModeOpen(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--state-warning)] text-[#1a1204] whitespace-nowrap shrink-0"
+            >
+              {isAr ? 'وضع الإنقاذ' : 'Activate Rescue Mode'}
+            </button>
+          </div>
+        )}
 
-            {/* 3 Priority Cards / Slots */}
-            <div className="space-y-2.5">
-              {[0, 1, 2].map((slotIndex) => {
-                const task = topThree[slotIndex];
-                if (!task) {
-                  return (
-                    <div
-                      key={`empty-slot-${slotIndex}`}
-                      onClick={() => setIsTaskPickerOpen(true)}
-                      className="p-3.5 rounded-xl border border-dashed border-[var(--ring-color)] bg-[var(--surface-inset)]/50 hover:bg-[var(--surface-inset)] hover:border-accent/50 transition-all cursor-pointer flex items-center justify-between text-muted group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-full border border-dashed border-[var(--border-strong)] text-xs flex items-center justify-center font-mono text-muted group-hover:text-accent group-hover:border-accent">
-                          {slotIndex + 1}
-                        </span>
-                        <div>
-                          <span className="text-xs font-medium text-[var(--text-primary)] group-hover:text-accent">
-                            {isAr ? `أولوية شاغرة #${slotIndex + 1} — اضغط لاختيار مهمة` : `Priority Slot #${slotIndex + 1} — Click to assign`}
-                          </span>
-                          <span className="block text-[11px] text-muted">
-                            {isAr ? 'ثبّت مهمة محورية لليوم' : 'Anchor an essential commitment'}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs text-accent font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-                        + {isAr ? 'تعيين' : 'Assign'}
-                      </span>
-                    </div>
-                  );
-                }
-
-                const isDone = task.status === 'completed';
-
-                return (
-                  <div
-                    key={task.id}
-                    className={`p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                      isDone
-                        ? 'border-[var(--border-subtle)] bg-[var(--surface-inset)] opacity-75'
-                        : 'border-[var(--border-strong)] bg-[var(--surface-inset)] hover:border-accent/40 shadow-sm'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <button
-                        className={`check-circle ${isDone ? 'checked' : ''} shrink-0`}
-                        onClick={() => toggleTaskStatus(task.id)}
-                        aria-label="Toggle completed"
-                      />
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-sm font-semibold truncate ${
-                              isDone ? 'line-through text-muted' : 'text-[var(--text-primary)]'
-                            }`}
-                          >
-                            {task.title}
-                          </span>
-                          <span
-                            className={`priority-dot ${
-                              task.priority === 1 ? 'high' : task.priority === 2 ? 'medium' : 'low'
-                            }`}
-                            title={`Priority ${task.priority}`}
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-muted">
-                          {task.scheduledTime ? (
-                            <span className="font-mono text-accent/80 flex items-center gap-1">
-                              <span>◷</span>
-                              <span>{task.scheduledTime}</span>
-                            </span>
-                          ) : (
-                            <span>{isAr ? 'دون وقت محدد' : 'Anytime today'}</span>
-                          )}
-
-                          {task.estimatedMinutes ? (
-                            <span>· {task.estimatedMinutes}m</span>
-                          ) : null}
-
-                          {task.tags && task.tags[0] && (
-                            <span className="px-1.5 py-0.2 rounded bg-[var(--surface-chip)] text-muted text-[10px]">
-                              {task.tags[0]}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions: Start Focus Launcher & Unpin */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {!isDone && (
-                        <button
-                          onClick={() => openFocusLauncher(task)}
-                          className="btn subtle small text-xs border border-accent/30 text-accent hover:bg-accent/15 px-2.5 py-1 flex items-center gap-1"
-                          title={isAr ? 'بدء جلسة تركيز لهذه المهمة' : 'Launch focus session'}
-                        >
-                          <span>◷</span>
-                          <span>{isAr ? 'ركّز' : 'Focus'}</span>
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => toggleTopThree(task.id)}
-                        className="mini-icon text-muted hover:text-[var(--state-danger)] p-1"
-                        title={isAr ? 'إلغاء التثبيت من البوصلة' : 'Unpin from Top 3'}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Contextual Overload Banner — after the anchors, before the agenda */}
-          {isOverwhelmed && (
-            <div className="p-4 rounded-xl border border-amber-500/30 bg-gradient-to-r from-[var(--state-warning-wash-from)] via-[var(--surface-inset)] to-[var(--state-warning-wash-to)] flex flex-wrap items-center justify-between gap-3 shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-[var(--state-warning)] flex items-center justify-center font-bold text-lg border border-amber-500/30 shrink-0">
-                  ✳
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Column A: Top 3 Priorities & Today Habits */}
+          <div className="lg:col-span-5 v2-solid-surface p-4 sm:p-5 space-y-5">
+            {/* Top 3 Priorities */}
+            <div>
+              <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-[var(--border-subtle)]">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <strong className="text-sm font-bold text-[var(--state-warning-strong)]">
-                      {isAr ? 'هل تشعر بالتشتت أو تزاحم اليوم؟' : 'Feeling overwhelmed with daily open loops?'}
-                    </strong>
-                    <span className="text-[10px] bg-amber-500/20 text-[var(--state-warning-strong)] px-2 py-0.5 rounded-full font-mono">
-                      {overdueTasks.length} {isAr ? 'متأخرة' : 'overdue'} · {pendingTodayTasks.length} {isAr ? 'معلقة' : 'pending'}
-                    </span>
+                  <h3 className="text-sm font-bold text-[var(--text-primary)] m-0">
+                    {isAr ? 'أولويات اليوم (Top 3)' : "Today's Top 3"}
+                  </h3>
+                  <div className="text-[11px] text-[var(--text-secondary)]">
+                    {isAr ? 'المهام المثبتة ذات الأثر الأعلى' : 'Pinned high-leverage tasks'}
                   </div>
-                  <p className="text-xs text-[var(--state-warning-strong)]/80 mt-0.5">
-                    {isAr
-                      ? 'يمكنك تفعيل وضع الإنقاذ (Rescue Mode) لترحيل ما لا يلزم فوراً والتركيز على مهمة مرساة واحدة دون إجهاد ذهني.'
-                      : 'Activate Rescue Mode to defer secondary tasks and lock into a single high-impact anchor.'}
-                  </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
                 <button
-                  onClick={() => setRescueModeOpen(true)}
-                  className="btn small bg-amber-500 text-black font-semibold hover:bg-amber-400 border-none shadow-md text-xs"
+                  type="button"
+                  onClick={() => setIsTaskPickerOpen(true)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold border border-[var(--border-default)] bg-[var(--surface-inset)] text-[var(--text-primary)] hover:border-[var(--brand-soft-border)] whitespace-nowrap"
                 >
-                  <span>{isAr ? 'تفعيل وضع الإنقاذ الآن ✳' : 'Launch Rescue Mode ✳'}</span>
+                  {isAr ? 'اختيار / تعديل' : 'Select / Edit'}
                 </button>
-              </div>
-            </div>
-          )}
-
-          {/* Today's Adaptive Agenda (Overdue, Upcoming Flow, Completed) */}
-          <section className="panel p-5 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-raised)] shadow-sm">
-            <div className="panel-heading flex flex-wrap items-center justify-between gap-2 mb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
-                  <h2 className="text-base font-bold text-[var(--text-primary)]">
-                    {isAr ? 'جدول وإيقاع اليوم (Today\'s Agenda)' : 'Today\'s Agenda & Flow'}
-                  </h2>
-                </div>
-                <p className="text-xs text-muted mt-1">
-                  {isAr
-                    ? 'تسلسل زمني يجمع مواعيدك، المهام المستحقة، وجلسات العمل المنجزة متكيفة مع مسار اليوم.'
-                    : 'Adaptive chronology uniting scheduled tasks, overdue loops, and completed focus sessions.'}
-                </p>
               </div>
 
-              {/* Agenda Filters */}
-              <div className="flex items-center gap-1 bg-[var(--surface-inset)] p-1 rounded-xl border border-[var(--border-subtle)] text-xs">
-                <button
-                  onClick={() => setAgendaTab('all')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    agendaTab === 'all' ? 'bg-accent text-black font-semibold' : 'text-muted hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {isAr ? 'الكل' : 'All'} ({overdueTasks.length + upcomingTasks.length + completedTodayItems.length})
-                </button>
-                <button
-                  onClick={() => setAgendaTab('overdue')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    agendaTab === 'overdue' ? 'bg-rose-500 text-[var(--text-on-state)] font-semibold' : 'text-muted hover:text-[var(--state-danger-strong)]'
-                  }`}
-                >
-                  {isAr ? 'متأخرة' : 'Overdue'} ({overdueTasks.length})
-                </button>
-                <button
-                  onClick={() => setAgendaTab('upcoming')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    agendaTab === 'upcoming' ? 'bg-teal-500 text-black font-semibold' : 'text-muted hover:text-[var(--state-info-strong)]'
-                  }`}
-                >
-                  {isAr ? 'القادمة' : 'Upcoming'} ({upcomingTasks.length})
-                </button>
-                <button
-                  onClick={() => setAgendaTab('completed')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    agendaTab === 'completed' ? 'bg-emerald-600 text-[var(--text-on-state)] font-semibold' : 'text-muted hover:text-[var(--state-success-strong)]'
-                  }`}
-                >
-                  {isAr ? 'المنجز' : 'Completed'} ({completedTodayItems.length})
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {/* Section 1: Overdue Alerts (if showing all or overdue) */}
-              {(agendaTab === 'all' || agendaTab === 'overdue') && overdueTasks.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-[var(--state-danger)] px-1">
-                    <span className="flex items-center gap-1.5">
-                      <span>⚠️</span>
-                      <span>{isAr ? 'مهام متأخرة تحتاج معالجة' : 'Overdue Tasks Requiring Action'}</span>
-                    </span>
-                    <span className="font-mono text-[11px] bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
-                      {overdueTasks.length} {isAr ? 'مهام' : 'tasks'}
-                    </span>
+              {topThree.length === 0 ? (
+                <div className="py-4 text-center border border-dashed border-[var(--border-subtle)] rounded-lg">
+                  <div className="text-xs text-[var(--text-secondary)]">
+                    {isAr ? 'لم يتم تثبيت أولويات لليوم بعد' : 'No Top 3 priorities pinned yet'}
                   </div>
-
-                  <div className="space-y-2">
-                    {overdueTasks.map((task) => (
+                  <button
+                    type="button"
+                    onClick={() => setIsTaskPickerOpen(true)}
+                    className="mt-2 px-3 py-1 rounded-lg text-xs font-semibold bg-[var(--brand)] text-[var(--text-on-accent)]"
+                  >
+                    {isAr ? 'اختيار من المهام' : 'Choose Tasks'}
+                  </button>
+                </div>
+              ) : (
+                <div className="divide-y divide-[var(--border-subtle)]">
+                  {topThree.map((task) => {
+                    const isDone = task.status === 'completed';
+                    return (
                       <div
                         key={task.id}
-                        className="p-3 rounded-xl border border-rose-500/30 bg-[var(--state-danger-soft)] hover:border-rose-500/50 transition-all flex items-center justify-between gap-3"
+                        className={`py-2.5 flex items-center justify-between gap-2.5 ${
+                          isDone ? 'opacity-60' : ''
+                        }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <button
-                            className="check-circle shrink-0"
+                            type="button"
                             onClick={() => toggleTaskStatus(task.id)}
-                            aria-label="Toggle completed"
-                          />
+                            aria-label={isAr ? 'إتمام المهمة' : 'Toggle task completion'}
+                            className={`w-4 h-4 rounded-[5px] border grid place-items-center text-[11px] font-bold shrink-0 transition-colors ${
+                              isDone
+                                ? 'bg-[var(--brand)] border-[var(--brand)] text-[var(--text-on-accent)]'
+                                : 'border-[var(--border-strong)] bg-transparent text-transparent hover:border-[var(--brand-strong)]'
+                            }`}
+                          >
+                            ✓
+                          </button>
                           <div className="min-w-0 flex-1">
-                            <span className="text-sm font-medium text-[var(--text-primary)] truncate block">
+                            <div
+                              className={`text-xs font-semibold truncate ${
+                                isDone ? 'line-through text-[var(--text-secondary)]' : 'text-[var(--text-primary)]'
+                              }`}
+                            >
                               {task.title}
-                            </span>
-                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[var(--state-danger-strong)]/80 font-mono">
-                              <span>
-                                {task.scheduledDate && task.scheduledDate < todayStr
-                                  ? `${isAr ? 'مستحقة منذ' : 'Due since'} ${task.scheduledDate}`
-                                  : `${isAr ? 'فات موعدها اليوم' : 'Past time'} (${task.scheduledTime || ''})`}
-                              </span>
-                              {task.estimatedMinutes && <span>· {task.estimatedMinutes}m</span>}
+                            </div>
+                            {(task.scheduledTime || task.estimatedMinutes) && (
+                              <div className="text-[10.5px] font-mono text-[var(--text-tertiary)]">
+                                {task.scheduledTime ? task.scheduledTime : ''}
+                                {task.scheduledTime && task.estimatedMinutes ? ' · ' : ''}
+                                {task.estimatedMinutes ? `${task.estimatedMinutes}m` : ''}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {!isDone && (
+                          <button
+                            type="button"
+                            onClick={() => openFocusLauncher(task)}
+                            className="px-2 py-0.5 rounded-md text-[11px] font-medium border border-[var(--border-subtle)] text-[var(--brand-strong)] hover:border-[var(--brand-soft-border)] whitespace-nowrap shrink-0"
+                          >
+                            {isAr ? 'تركيز' : 'Focus'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Today's Habits */}
+            <div className="pt-3 border-t border-[var(--border-subtle)]">
+              <div className="flex items-center justify-between gap-2 pb-2.5 mb-2 border-b border-[var(--border-subtle)]">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--text-primary)] m-0">
+                    {isAr ? 'عادات اليوم' : "Today's Habits"}
+                  </h3>
+                  <div className="text-[11px] font-mono tabular-nums text-[var(--text-secondary)]">
+                    {isAr
+                      ? `${kpis.consistency.todayDone} منجز اليوم`
+                      : `${kpis.consistency.todayDone} completed today`}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveNavTab('habits')}
+                  className="text-xs font-medium text-[var(--brand-strong)] hover:underline"
+                >
+                  {isAr ? 'إدارة' : 'Manage'}
+                </button>
+              </div>
+
+              {activeHabits.length === 0 ? (
+                <div className="py-3 text-center text-xs text-[var(--text-secondary)]">
+                  {isAr ? 'لا توجد عادات نشطة حالياً.' : 'No active habits configured yet.'}
+                </div>
+              ) : (
+                <div className="divide-y divide-[var(--border-subtle)] max-h-[240px] overflow-y-auto pe-1">
+                  {activeHabits.slice(0, 8).map((habit) => {
+                    const done = (habit.completedDates || []).includes(todayStr);
+                    const isStudio =
+                      habit.specializedType === 'reading' ||
+                      habit.specializedType === 'workout' ||
+                      habit.specializedType === 'quran' ||
+                      habit.specializedType === 'drawing';
+                    return (
+                      <div key={habit.id} className="py-2 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleHabitToday(habit.id)}
+                            aria-label={`${habit.name}`}
+                            className={`w-4 h-4 rounded-[5px] border grid place-items-center text-[11px] font-bold shrink-0 ${
+                              done
+                                ? 'bg-[var(--brand)] border-[var(--brand)] text-[var(--text-on-accent)]'
+                                : 'border-[var(--border-strong)] bg-transparent text-transparent hover:border-[var(--brand-strong)]'
+                            }`}
+                          >
+                            ✓
+                          </button>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
+                              {habit.name}
+                            </div>
+                            <div className="text-[10.5px] font-mono text-[var(--text-tertiary)]">
+                              {habit.currentStreak > 0
+                                ? isAr
+                                  ? `سلسلة ${habit.currentStreak}ي`
+                                  : `${habit.currentStreak}d streak`
+                                : habit.anchor || habit.category}
+                            </div>
+                          </div>
+                        </div>
+
+                        {isStudio && (
+                          <button
+                            type="button"
+                            onClick={() => openHabitStudioOrToggle(habit)}
+                            className="px-2 py-0.5 rounded-md text-[10.5px] font-semibold border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] whitespace-nowrap shrink-0"
+                          >
+                            {isAr ? 'استوديو' : 'Studio'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Column B: Adaptive Daily Agenda */}
+          <div className="lg:col-span-7 v2-solid-surface p-4 sm:p-5 flex flex-col justify-between">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-[var(--border-subtle)]">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--text-primary)] m-0">
+                    {isAr ? 'الأجندة التكيفية لليوم' : 'Adaptive Daily Agenda'}
+                  </h3>
+                  <div className="text-[11px] text-[var(--text-secondary)] font-mono tabular-nums">
+                    {isAr
+                      ? `${upcomingTasks.length} قادمة · ${overdueTasks.length} متأخرة · ${completedTodayItems.length} مكتملة`
+                      : `${upcomingTasks.length} upcoming · ${overdueTasks.length} overdue · ${completedTodayItems.length} done`}
+                  </div>
+                </div>
+
+                <div className="inline-flex items-center p-0.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-deep)]">
+                  {(
+                    [
+                      { id: 'all', ar: 'الكل', en: 'All' },
+                      { id: 'overdue', ar: `متأخرة (${overdueTasks.length})`, en: `Overdue (${overdueTasks.length})` },
+                      { id: 'upcoming', ar: `قادمة (${upcomingTasks.length})`, en: `Upcoming (${upcomingTasks.length})` },
+                      { id: 'completed', ar: `منجزة (${completedTodayItems.length})`, en: `Done (${completedTodayItems.length})` }
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setAgendaTab(tab.id)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap shrink-0 ${
+                        agendaTab === tab.id
+                          ? 'bg-[var(--surface-active)] text-[var(--brand)] font-semibold'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {isAr ? tab.ar : tab.en}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3 max-h-[410px] overflow-y-auto pe-1">
+                {(agendaTab === 'all' || agendaTab === 'overdue') && overdueTasks.length > 0 && (
+                  <div className="divide-y divide-[var(--border-subtle)]">
+                    <div className="text-[10.5px] font-mono uppercase tracking-wider text-[var(--state-danger-strong)] pb-1">
+                      {isAr ? 'مهام متأخرة تتطلب حسم' : 'Overdue'}
+                    </div>
+                    {overdueTasks.map((task) => (
+                      <div key={task.id} className="py-2.5 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleTaskStatus(task.id)}
+                            className="w-4 h-4 rounded-[5px] border border-[var(--state-danger)] bg-transparent hover:bg-[var(--brand-soft)] shrink-0"
+                            aria-label={isAr ? 'إتمام المهمة' : 'Complete task'}
+                          />
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
+                              {task.title}
+                            </div>
+                            <div className="text-[10.5px] font-mono text-[var(--state-danger-strong)]">
+                              {task.scheduledDate} {task.scheduledTime ? `· ${task.scheduledTime}` : ''}
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
-                            onClick={() => openFocusLauncher(task)}
-                            className="btn subtle small text-xs border border-rose-500/30 text-[var(--state-danger-strong)] hover:bg-rose-500/20 px-2 py-1"
-                            title={isAr ? 'إنجازها الآن بتركيز' : 'Focus now'}
+                            type="button"
+                            onClick={() => updateTask(task.id, { scheduledDate: tomorrowStr })}
+                            className="px-2 py-0.5 rounded-md text-[10.5px] font-medium border border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] whitespace-nowrap"
                           >
-                            <span>◷ {isAr ? 'إنجاز الآن' : 'Focus'}</span>
+                            {isAr ? 'تأجيل للغد' : 'Defer'}
                           </button>
                           <button
-                            onClick={() => updateTask(task.id, { scheduledDate: tomorrowStr })}
-                            className="btn subtle small text-xs text-muted hover:text-[var(--text-primary)] px-2 py-1"
-                            title={isAr ? 'ترحيل إلى الغد' : 'Defer to tomorrow'}
+                            type="button"
+                            onClick={() => openFocusLauncher(task)}
+                            className="px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-[var(--brand-soft)] text-[var(--brand-strong)] whitespace-nowrap"
                           >
-                            <span>↷ {isAr ? 'للغد' : 'Tomorrow'}</span>
+                            {isAr ? 'ابدأ' : 'Focus'}
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Section 2: Upcoming in Flow (if showing all or upcoming) */}
-              {(agendaTab === 'all' || agendaTab === 'upcoming') && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-[var(--state-info-strong)] px-1">
-                    <span className="flex items-center gap-1.5">
-                      <span>⏳</span>
-                      <span>{isAr ? 'القادم في مسار اليوم' : 'Upcoming in Today\'s Flow'}</span>
-                    </span>
-                    <span className="font-mono text-[11px] bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/20">
-                      {upcomingTasks.length} {isAr ? 'مهام' : 'items'}
-                    </span>
-                  </div>
-
-                  {upcomingTasks.length === 0 ? (
-                    <div className="p-4 text-center rounded-xl border border-dashed border-[var(--border-default)] text-xs text-muted">
-                      {isAr ? 'لا توجد مهام قادمة مجدولة لباقي اليوم. وقتك مفتوح وهادئ.' : 'No more scheduled tasks for today. Your day is open.'}
+                {(agendaTab === 'all' || agendaTab === 'upcoming') && upcomingTasks.length > 0 && (
+                  <div className="divide-y divide-[var(--border-subtle)]">
+                    <div className="text-[10.5px] font-mono uppercase tracking-wider text-[var(--text-tertiary)] pb-1">
+                      {isAr ? 'مجدول لبقية اليوم' : 'Scheduled Today'}
                     </div>
-                  ) : (
-                    <div className="timeline space-y-2">
-                      {upcomingTasks.map((task, i) => (
-                        <div
-                          key={task.id}
-                          className="p-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-inset)] hover:border-accent/40 transition-all flex items-center justify-between gap-3"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <button
-                              className="check-circle shrink-0"
-                              onClick={() => toggleTaskStatus(task.id)}
-                              aria-label="Toggle completed"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <span className="text-sm font-medium text-[var(--text-primary)] truncate block">
-                                {task.title}
-                              </span>
-                              <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted">
-                                <span className="font-mono text-[var(--state-info)]">
-                                  {task.scheduledTime || (isAr ? 'اليوم' : 'Today')}
-                                </span>
-                                {task.estimatedMinutes && <span>· {task.estimatedMinutes}m</span>}
-                                {task.tags && task.tags[0] && (
-                                  <span className="px-1.5 py-0.2 rounded bg-[var(--surface-chip)] text-[10px]">
-                                    {task.tags[0]}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              onClick={() => openFocusLauncher(task)}
-                              className="btn subtle small text-xs border border-teal-500/30 text-[var(--state-info-strong)] hover:bg-teal-500/20 px-2.5 py-1"
-                            >
-                              <span>◷ {isAr ? 'تركيز' : 'Focus'}</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Section 3: Completed Today (if showing all or completed) */}
-              {(agendaTab === 'all' || agendaTab === 'completed') && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-[var(--state-success)] px-1">
-                    <span className="flex items-center gap-1.5">
-                      <span>✓</span>
-                      <span>{isAr ? 'ما أُنجز اليوم (مهام وجلسات تركيز)' : 'Accomplished Today'}</span>
-                    </span>
-                    <span className="font-mono text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                      {completedTodayItems.length} {isAr ? 'إنجاز' : 'items'}
-                    </span>
-                  </div>
-
-                  {completedTodayItems.length === 0 ? (
-                    <div className="p-4 text-center rounded-xl border border-dashed border-[var(--border-default)] text-xs text-muted">
-                      {isAr ? 'لم تسجل إنجازات بعد اليوم. ابدأ بمهمة واحدة سهلة لصنع الزخم.' : 'No completed items yet today. Start with 1 small win.'}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {completedTodayItems.map((c) => (
-                        <div
-                          key={c.id}
-                          className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] flex items-center justify-between gap-3 text-xs"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-[var(--state-success)] flex items-center justify-center font-bold text-[10px] shrink-0">
-                              {c.type === 'task' ? '✓' : '◷'}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <span className="font-medium text-[var(--text-primary)] line-through truncate block">
-                                {c.title}
-                              </span>
-                              <span className="text-[10px] text-muted font-mono">
-                                {c.time} {c.type === 'focus' ? `· ${c.duration} ${isAr ? 'دقيقة تركيز' : 'min'}` : ''}
-                              </span>
-                            </div>
-                          </div>
-
-                          {c.type === 'task' && (
-                            <button
-                              onClick={() => toggleTaskStatus((c.item as Task).id)}
-                              className="text-[10px] text-muted hover:text-[var(--text-primary)] font-mono underline"
-                            >
-                              {isAr ? 'تراجع' : 'Undo'}
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Today's Habits & Direct Specialized Studio Launchers */}
-          <section className="panel p-5 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-raised)] shadow-sm">
-            <div className="panel-heading flex flex-wrap items-center justify-between gap-2 mb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-accent-strong"></span>
-                  <h2 className="text-base font-bold text-[var(--text-primary)]">
-                    {isAr ? 'عادات اليوم واستوديوهات الإتقان' : 'Today\'s Habits & Specialized Studios'}
-                  </h2>
-                </div>
-                <p className="text-xs text-muted mt-1">
-                  {isAr
-                    ? 'عاداتك المستحقة اليوم مع بوابات فورية لاستوديوهات القراءة واللياقة والمرسم.'
-                    : 'Habits due today with direct jump-in to autonomous reading, fitness, and art systems.'}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setActiveNavTab('habits')}
-                className="text-link text-xs"
-              >
-                <span>{isAr ? 'كل العادات' : 'All habits'}</span>
-                <span>→</span>
-              </button>
-            </div>
-
-            {/* 4 Specialized Habit Studios Strip */}
-            {(() => {
-              const quranHabit = habits.find((h) => h.specializedType === 'quran');
-              const readingHabit = habits.find((h) => h.specializedType === 'reading');
-              const workoutHabit = habits.find((h) => h.specializedType === 'workout');
-              const drawingHabit = habits.find((h) => h.specializedType === 'drawing');
-
-              return (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
-                  <button
-                    onClick={() => setActiveNavTab('quran')}
-                    className="p-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-start transition-all group"
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-base">📜</span>
-                      <span className="text-[10px] font-mono text-[var(--state-success)]">↗</span>
-                    </div>
-                    <strong className="text-xs text-[var(--text-primary)] block">{isAr ? 'استوديو حفظ القرآن' : 'Quran Studio'}</strong>
-                    <span className="text-[10px] text-muted block mt-0.5">
-                      {quranHabit?.quranData?.totalAyahsMemorized
-                        ? `${quranHabit.quranData.totalAyahsMemorized} ${isAr ? 'آية مثبتة' : 'ayahs'}`
-                        : (isAr ? 'خريطة السور والتسميع' : 'Surah map & test')}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveNavTab('reading')}
-                    className="p-3 rounded-xl border border-amber-500/25 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/40 text-start transition-all group"
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-base">📖</span>
-                      <span className="text-[10px] font-mono text-[var(--state-warning)]">↗</span>
-                    </div>
-                    <strong className="text-xs text-[var(--text-primary)] block">{isAr ? 'استوديو القراءة' : 'Reading Studio'}</strong>
-                    <span className="text-[10px] text-muted block mt-0.5">
-                      {readingHabit?.readingData?.totalPagesRead
-                        ? `${readingHabit.readingData.totalPagesRead} ${isAr ? 'صفحة مقروءة' : 'pages read'}`
-                        : (isAr ? 'خزانة الكتب والملاحظات' : 'Library & quotes')}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveNavTab('workout')}
-                    className="p-3 rounded-xl border border-teal-500/25 bg-teal-500/5 hover:bg-teal-500/10 hover:border-teal-500/40 text-start transition-all group"
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-base">⚡</span>
-                      <span className="text-[10px] font-mono text-[var(--state-info)]">↗</span>
-                    </div>
-                    <strong className="text-xs text-[var(--text-primary)] block">{isAr ? 'استوديو التمارين' : 'Workout Studio'}</strong>
-                    <span className="text-[10px] text-muted block mt-0.5">
-                      {workoutHabit?.workoutData?.totalWorkouts
-                        ? `${workoutHabit.workoutData.totalWorkouts} ${isAr ? 'حصص تدريبية' : 'workouts'}`
-                        : (isAr ? 'تمارين وزن الجسم والرشاقة' : 'Bodyweight circuits')}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveNavTab('drawing')}
-                    className="p-3 rounded-xl border border-purple-500/25 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/40 text-start transition-all group"
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-base">🎨</span>
-                      <span className="text-[10px] font-mono text-[var(--state-purple)]">↗</span>
-                    </div>
-                    <strong className="text-xs text-[var(--text-primary)] block">{isAr ? 'مرسم الإبداع' : 'Art Studio'}</strong>
-                    <span className="text-[10px] text-muted block mt-0.5">
-                      {drawingHabit?.drawingData?.totalSketches
-                        ? `${drawingHabit.drawingData.totalSketches} ${isAr ? 'أعمال فنية' : 'sketches'}`
-                        : (isAr ? 'المشاريع ومعرض الرسوم' : 'Projects & gallery')}
-                    </span>
-                  </button>
-                </div>
-              );
-            })()}
-
-            {/* Habit Items Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {habits.filter((h) => !h.isArchived && h.status !== 'archived').map((habit) => {
-                const isDone = habit.completedDates.includes(todayStr);
-
-                return (
-                  <div
-                    key={habit.id}
-                    className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
-                      isDone
-                        ? 'border-emerald-500/30 bg-[var(--surface-inset)]'
-                        : 'border-[var(--ring-color)] bg-[var(--surface-inset)] hover:border-accent/40'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                    {upcomingTasks.map((task) => (
+                      <div key={task.id} className="py-2.5 flex items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <button
-                            className={`check-circle ${isDone ? 'checked' : ''} shrink-0`}
-                            onClick={() => toggleHabitToday(habit.id)}
-                            aria-label="Toggle habit today"
+                            type="button"
+                            onClick={() => toggleTaskStatus(task.id)}
+                            className="w-4 h-4 rounded-[5px] border border-[var(--border-strong)] bg-transparent hover:border-[var(--brand-strong)] shrink-0"
+                            aria-label={isAr ? 'إتمام المهمة' : 'Complete task'}
                           />
                           <div className="min-w-0">
-                            <h3
-                              className={`text-xs font-bold truncate ${
-                                isDone ? 'line-through text-[var(--text-primary)]' : 'text-[var(--text-primary)]'
-                              }`}
-                            >
-                              {habit.name}
-                            </h3>
-                            {habit.anchor && (
-                              <p className="text-[10px] text-muted truncate max-w-[200px]">
-                                {habit.anchor}
-                              </p>
-                            )}
+                            <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
+                              {task.title}
+                            </div>
+                            <div className="text-[10.5px] font-mono text-[var(--text-tertiary)]">
+                              {task.scheduledTime || (isAr ? 'مرن اليوم' : 'Anytime today')}
+                              {task.estimatedMinutes ? ` · ${task.estimatedMinutes}m` : ''}
+                              {task.priority ? ` · P${task.priority}` : ''}
+                            </div>
                           </div>
                         </div>
 
-                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-strong)] shrink-0">
-                          {habit.currentStreak || 0} {isAr ? 'يوم' : 'd'} ♨
+                        <button
+                          type="button"
+                          onClick={() => openFocusLauncher(task)}
+                          className="px-2.5 py-0.5 rounded-md text-[11px] font-medium border border-[var(--border-subtle)] text-[var(--brand-strong)] hover:border-[var(--brand-soft-border)] whitespace-nowrap shrink-0"
+                        >
+                          {isAr ? 'تركيز' : 'Focus'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(agendaTab === 'all' || agendaTab === 'completed') && completedTodayItems.length > 0 && (
+                  <div className="divide-y divide-[var(--border-subtle)]">
+                    <div className="text-[10.5px] font-mono uppercase tracking-wider text-[var(--state-success-strong)] pb-1">
+                      {isAr ? 'منجز اليوم' : 'Completed Today'}
+                    </div>
+                    {completedTodayItems.map((item) => (
+                      <div key={item.id} className="py-2 flex items-center justify-between gap-2 opacity-75">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-4 h-4 rounded bg-[var(--brand-soft)] text-[var(--brand-strong)] grid place-items-center text-[10px] font-bold shrink-0">
+                            ✓
+                          </span>
+                          <span className="text-xs text-[var(--text-primary)] truncate">{item.title}</span>
+                        </div>
+                        <span className="text-[10.5px] font-mono text-[var(--text-tertiary)] shrink-0">
+                          {item.time}
                         </span>
                       </div>
+                    ))}
+                  </div>
+                )}
+
+                {((agendaTab === 'all' &&
+                  overdueTasks.length === 0 &&
+                  upcomingTasks.length === 0 &&
+                  completedTodayItems.length === 0) ||
+                  (agendaTab === 'overdue' && overdueTasks.length === 0) ||
+                  (agendaTab === 'upcoming' && upcomingTasks.length === 0) ||
+                  (agendaTab === 'completed' && completedTodayItems.length === 0)) && (
+                  <div className="py-8 text-center">
+                    <div className="text-xs font-semibold text-[var(--text-primary)]">
+                      {isAr ? 'لا توجد عناصر في هذا التبويب حالياً' : 'Nothing scheduled in this filter'}
                     </div>
-
-                    {/* Specialized Studio Quick Access Footer */}
-                    <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px]">
-                      {habit.specializedType === 'quran' && (
-                        <button
-                          onClick={() => setActiveNavTab('quran')}
-                          className="text-[var(--state-success)] hover:text-[var(--state-success-strong)] font-medium flex items-center gap-1 text-xs"
-                        >
-                          <span>📜</span>
-                          <span>{isAr ? 'استوديو حفظ القرآن ↗' : 'Quran Studio ↗'}</span>
-                        </button>
-                      )}
-
-                      {habit.specializedType === 'reading' && (
-                        <button
-                          onClick={() => setActiveNavTab('reading')}
-                          className="text-[var(--state-warning)] hover:text-[var(--state-warning-strong)] font-medium flex items-center gap-1 text-xs"
-                        >
-                          <span>📖</span>
-                          <span>{isAr ? 'استوديو ومكتبة القراءة ↗' : 'Reading Studio ↗'}</span>
-                        </button>
-                      )}
-
-                      {habit.specializedType === 'workout' && (
-                        <button
-                          onClick={() => setActiveNavTab('workout')}
-                          className="text-[var(--state-info)] hover:text-[var(--state-info-strong)] font-medium flex items-center gap-1 text-xs"
-                        >
-                          <span>⚡</span>
-                          <span>{isAr ? 'استوديو التمارين المنزلية ↗' : 'Home Fitness ↗'}</span>
-                        </button>
-                      )}
-
-                      {habit.specializedType === 'drawing' && (
-                        <button
-                          onClick={() => setActiveNavTab('drawing')}
-                          className="text-[var(--state-purple)] hover:text-[var(--state-purple)] font-medium flex items-center gap-1 text-xs"
-                        >
-                          <span>🎨</span>
-                          <span>{isAr ? 'مرسم الإبداع والفن ↗' : 'Art Studio ↗'}</span>
-                        </button>
-                      )}
-
-                      {!habit.specializedType && (
-                        <span className="text-muted text-[10px]">
-                          {habit.category === 'mind' ? '🧠 ذهن' : habit.category === 'health' ? '🌱 صحة' : '✦ نمط حياة'}
-                        </span>
-                      )}
-
-                      <button
-                        onClick={() => toggleHabitToday(habit.id)}
-                        className={`text-[11px] font-medium px-2 py-0.5 rounded transition-all ${
-                          isDone
-                            ? 'text-muted hover:text-[var(--text-primary)]'
-                            : 'bg-accent/15 text-accent hover:bg-accent/25'
-                        }`}
-                      >
-                        {isDone ? (isAr ? 'إلغاء' : 'Undo') : (isAr ? 'تأكيد الإنجاز ✓' : 'Check ✓')}
-                      </button>
+                    <div className="text-[11px] text-[var(--text-secondary)] mt-1">
+                      {isAr
+                        ? 'استخدم شريط الالتقاط السريع بالأعلى لإضافة مهمة لليوم فوراً.'
+                        : 'Use Quick Capture above to schedule something for today.'}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Active Goals & Progress Intelligence Hub */}
-          <section className="panel p-5 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-raised)] shadow-sm">
-            <div className="panel-heading flex flex-wrap items-center justify-between gap-2 mb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse"></span>
-                  <h2 className="text-base font-bold text-[var(--text-primary)]">
-                    {isAr ? 'الأهداف الاستراتيجية النشطة' : 'Active Strategic Goals & Momentum'}
-                  </h2>
-                </div>
-                <p className="text-xs text-muted mt-1">
-                  {isAr
-                    ? 'تقدم حي مستمد مباشرة من سجلات المهام والعادات والكتب والتمارين.'
-                    : 'Live progress dynamically calculated from actual completed tasks, habits, and sessions.'}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setActiveNavTab('goals')}
-                className="text-link text-xs"
-              >
-                <span>{isAr ? 'خارطة الأهداف' : 'All goals'}</span>
-                <span>→</span>
-              </button>
-            </div>
-
-            {(() => {
-              const activeGoals = goals.filter((g) => g.status === 'active');
-              if (activeGoals.length === 0) {
-                return (
-                  <div className="p-4 text-center border border-dashed border-[var(--border-default)] rounded-xl text-xs text-muted space-y-2">
-                    <span className="text-xl block">🎯</span>
-                    <strong className="text-[var(--text-primary)] block">{isAr ? 'لا توجد أهداف نشطة حالياً' : 'No active goals right now'}</strong>
-                    <button
-                      onClick={() => setActiveNavTab('goals')}
-                      className="btn primary small text-xs"
-                    >
-                      + {isAr ? 'تحديد هدف استراتيجي' : 'Define Goal'}
-                    </button>
-                  </div>
-                );
-              }
-
-              return (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {activeGoals.slice(0, 2).map((g) => {
-                    const intel = evaluateGoalProgress(g, tasks, habits);
-                    return (
-                      <div
-                        key={g.id}
-                        onClick={() => setInspectingGoal(g)}
-                        className="p-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-inset)] hover:border-accent/40 transition-all cursor-pointer space-y-3 flex flex-col justify-between"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span
-                              className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${
-                                intel.pacingStatus === 'ahead'
-                                  ? 'bg-emerald-500/15 text-[var(--state-success-strong)] border-emerald-500/30'
-                                  : intel.pacingStatus === 'dormant'
-                                  ? 'bg-amber-500/15 text-[var(--state-warning-strong)] border-amber-500/30 animate-pulse'
-                                  : intel.pacingStatus === 'behind'
-                                  ? 'bg-rose-500/15 text-[var(--state-danger-strong)] border-rose-500/30'
-                                  : 'bg-teal-500/15 text-[var(--state-info-strong)] border-teal-500/30'
-                              }`}
-                            >
-                              {isAr ? intel.pacingLabelAr : intel.pacingLabelEn}
-                            </span>
-                            <div className="flex items-center gap-1.5 font-mono text-xs">
-                              <span className="text-[var(--state-success)] font-bold" title={isAr ? 'النتيجة المحققة' : 'Outcome'}>
-                                {intel.outcomeProgressPercent}%
-                              </span>
-                              <span className="text-muted text-[10px]">/</span>
-                              <span className="text-accent font-bold" title={isAr ? 'التقدم التنفيذي' : 'Execution'}>
-                                {intel.executionProgressPercent}%
-                              </span>
-                            </div>
-                          </div>
-
-                          <h3 className="text-sm font-bold text-[var(--text-primary)] truncate leading-snug">
-                            {g.title}
-                          </h3>
-
-                          {/* Dual Progress Lines: Outcome (emerald) & Execution (teal/accent) */}
-                          <div className="space-y-1">
-                            <div className="w-full bg-[var(--surface-chip)] rounded-full h-1.5 overflow-hidden border border-[var(--ring-color)]">
-                              <div
-                                className="bg-emerald-400 h-full rounded-full transition-all duration-300"
-                                style={{ width: `${intel.outcomeProgressPercent}%` }}
-                                title={isAr ? `النتيجة المحققة: ${intel.outcomeProgressPercent}%` : `Outcome: ${intel.outcomeProgressPercent}%`}
-                              />
-                            </div>
-                            <div className="w-full bg-[var(--surface-chip)] rounded-full h-1 overflow-hidden border border-[var(--ring-color)]/60">
-                              <div
-                                className="bg-accent h-full rounded-full transition-all duration-300"
-                                style={{ width: `${intel.executionProgressPercent}%` }}
-                                title={isAr ? `التقدم التنفيذي: ${intel.executionProgressPercent}%` : `Execution: ${intel.executionProgressPercent}%`}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Primary Key Result headline */}
-                          {intel.evaluatedKrs[0] && (
-                            <div className="text-[11px] text-muted flex items-center justify-between">
-                              <span className="truncate max-w-[170px]">{intel.evaluatedKrs[0].title}</span>
-                              <span className="font-mono text-[var(--text-primary)] shrink-0 font-medium">
-                                {intel.evaluatedKrs[0].evaluatedCurrentValue}/{intel.evaluatedKrs[0].targetValue} {intel.evaluatedKrs[0].unit}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] text-muted">
-                          <span className="truncate max-w-[200px]">
-                            {intel.linkedTasksCount} {isAr ? 'مهام' : 'tasks'} · {intel.linkedHabitsCount} {isAr ? 'عادات' : 'habits'}
-                            {intel.contributions.length > 0 && ` · ${intel.contributions.length} ${isAr ? 'نشاط' : 'acts'}`}
-                          </span>
-                          <span className="text-accent hover:underline font-medium shrink-0">
-                            {isAr ? 'فحص المؤشرات ↗' : 'Inspect ↗'}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </section>
-        </section>
-
-        {/* Right Aside Column: Energy Gauge, Week Ahead, Quick Shortcuts */}
-        <aside className="dashboard-right space-y-6">
-          {/* Energy Gauge & Rhythm */}
-          <section className="panel focus-card border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl p-5 shadow-sm">
-            <div className="panel-heading flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-base font-bold text-[var(--text-primary)]">{isAr ? 'طاقتك وإيقاع اليوم' : 'Daily Energy Gauge'}</h2>
-                <p className="text-xs text-muted">{isAr ? 'تقدير هادئ مبني على النوم والمزاج وما أنجزته.' : 'Gentle estimate from recovery and progress.'}</p>
-              </div>
-              <span className="tag green">{energyScore}%</span>
-            </div>
-
-            <div className="energy-layout flex items-center gap-4">
-              <div
-                className="energy-ring shrink-0"
-                style={{
-                  background: `conic-gradient(var(--accent-strong) ${energyScore}%, var(--ring-color) 0)`
-                }}
-              >
-                <div className="energy-number font-mono">
-                  {energyScore}
-                  <small>%</small>
-                </div>
-              </div>
-
-              <div className="energy-info text-xs space-y-1">
-                <strong className="text-[var(--text-primary)] block font-semibold">
-                  {energyScore < 45
-                    ? (isAr ? 'احمِ طاقتك اليوم' : 'Protect your energy')
-                    : energyScore < 75
-                    ? (isAr ? 'إيقاع ثابت يكفي' : 'Steady pacing is enough')
-                    : (isAr ? 'لديك مساحة لدفعة أعمق' : 'Room for a deeper push')}
-                </strong>
-                <p className="text-muted text-[11px] leading-relaxed">
-                  {isAr
-                    ? 'التركيز في ٣ أولويات يحميك من الإنهاك. عندما تشعر بالإجهاد، فعّل وضع الإنقاذ.'
-                    : 'Focusing on 3 anchors prevents cognitive fatigue. Use Rescue Mode when overloaded.'}
-                </p>
+                )}
               </div>
             </div>
 
-            <div className="energy-inputs flex items-center justify-between gap-1 mt-4 pt-3 border-t border-[var(--border-subtle)]">
-              {[1, 2, 3, 4, 5].map((n) => (
+            <div className="pt-3 mt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
+              <span>{isAr ? 'أدوات سريعة' : 'Quick Launch'}</span>
+              <div className="flex items-center gap-3">
                 <button
-                  key={n}
                   type="button"
-                  className={`energy-chip flex-1 text-center py-1.5 rounded-lg text-xs font-mono border transition-all ${
-                    Math.round(energyScore / 20) === n
-                      ? 'bg-accent/20 border-accent text-accent font-bold'
-                      : 'border-[var(--border-subtle)] text-muted hover:text-[var(--text-primary)]'
-                  }`}
-                  onClick={() => setActiveNavTab('health')}
-                  title={isAr ? 'تحديث قياسات الصحة والطاقة' : 'Update health metrics'}
+                  onClick={() => openFocusLauncher()}
+                  className="text-[var(--brand-strong)] hover:underline font-medium"
                 >
-                  {n === 1 ? '☁ 1' : n === 2 ? '◔ 2' : n === 3 ? '◑ 3' : n === 4 ? '◕ 4' : '✦ 5'}
+                  {isAr ? 'مؤقت التركيز' : 'Focus Timer'}
                 </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Week Ahead Overview */}
-          <section className="panel p-5 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-raised)] shadow-sm">
-            <div className="panel-heading flex items-center justify-between mb-3">
-              <div>
-                <h2 className="text-sm font-bold text-[var(--text-primary)]">{isAr ? 'أسبوعك' : 'Your Week'}</h2>
-                <p className="text-xs text-muted">{isAr ? 'توزيع الأيام ونقاط الزخم' : 'Week distribution'}</p>
-              </div>
-              <button
-                onClick={() => setActiveNavTab('calendar')}
-                className="text-link text-xs"
-              >
-                <span>{isAr ? 'التقويم' : 'Calendar'}</span>
-                <span>→</span>
-              </button>
-            </div>
-
-            <div className="week-strip grid grid-cols-7 gap-1">
-              {weekDays.map((wd) => (
                 <button
-                  key={wd.key}
                   type="button"
-                  onClick={() => setActiveNavTab('calendar')}
-                  className={`week-day p-2 rounded-xl text-center flex flex-col items-center justify-center transition-all ${
-                    wd.isToday
-                      ? 'bg-accent text-black font-bold shadow-md'
-                      : wd.hasItems
-                      ? 'bg-[var(--surface-inset)] text-[var(--text-primary)] border border-[var(--border-subtle)]'
-                      : 'bg-[var(--surface-sunken)] text-muted hover:text-[var(--text-primary)]'
-                  }`}
+                  onClick={() => setActiveNavTab('journal')}
+                  className="text-[var(--brand-strong)] hover:underline font-medium"
                 >
-                  <span className="text-[10px] block opacity-80">{wd.dayLabel}</span>
-                  <strong className="text-sm font-mono block mt-0.5">{wd.dayNum}</strong>
-                  {wd.hasItems && !wd.isToday && <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1" />}
+                  {isAr ? 'تدوين تأمل اليوم' : 'Daily Journal'}
                 </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Quick Shortcuts Panel */}
-          <section className="panel p-5 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-raised)] shadow-sm">
-            <div className="panel-heading flex items-center justify-between mb-3">
-              <div>
-                <h2 className="text-sm font-bold text-[var(--text-primary)]">{isAr ? 'إجراءات سريعة' : 'Quick Actions'}</h2>
-                <p className="text-xs text-muted">{isAr ? 'خطوات فورية لصنع الزخم' : 'Immediate momentum steps'}</p>
               </div>
-              <span className="text-accent text-sm">✳</span>
             </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="space-y-2">
-              <button
-                className="task-row w-full text-start p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] hover:border-accent/40 transition-all flex items-center justify-between text-xs"
-                onClick={() => openFocusLauncher()}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="metric-icon orange text-sm">◷</span>
-                  <div>
-                    <span className="font-semibold text-[var(--text-primary)] block">{isAr ? 'بدء مؤقت التركيز' : 'Launch Focus Timer'}</span>
-                    <span className="text-[11px] text-muted">{isAr ? 'بومودورو أو عمل عميق' : 'Pomodoro or deep work'}</span>
-                  </div>
-                </div>
-                <NuqtaIcon name="arrow" className="w-3.5 h-3.5 text-muted" />
-              </button>
+      {/* ===================================================================
+          MODALS & OVERLAYS (Preserved Functionality)
+         =================================================================== */}
 
-              <button
-                className="task-row w-full text-start p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] hover:border-accent/40 transition-all flex items-center justify-between text-xs"
-                onClick={() => setActiveNavTab('journal')}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="metric-icon blue text-sm">✎</span>
-                  <div>
-                    <span className="font-semibold text-[var(--text-primary)] block">{isAr ? 'تدوين تأمل اليوم' : 'Daily Journal Entry'}</span>
-                    <span className="text-[11px] text-muted">{isAr ? 'تفريغ الذهن ومراجعة اليوم' : '3 min mental reset'}</span>
-                  </div>
-                </div>
-                <NuqtaIcon name="arrow" className="w-3.5 h-3.5 text-muted" />
-              </button>
-
-            </div>
-          </section>
-        </aside>
-      </div>
-
-      {/* =========================================================================
-          MODALS & OVERLAYS
-         ========================================================================= */}
-
-      {/* A. Task Picker Modal for Daily Focus (Top 3 Priorities) */}
+      {/* A. Task Picker Modal for Top 3 Priorities */}
       {isTaskPickerOpen && (
         <div
           className="modal-backdrop fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={() => setIsTaskPickerOpen(false)}
         >
           <div
-            className="modal w-full max-w-lg bg-[var(--surface-raised)] border border-[var(--border-strong)] rounded-2xl p-6 shadow-2xl space-y-4"
+            className="modal glass-surface w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
             onClick={(e) => e.stopPropagation()}
             dir={isAr ? 'rtl' : 'ltr'}
           >
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
               <div>
-                <h2 className="text-base font-bold text-[var(--text-primary)]">
-                  {isAr ? 'اختيار أولويات بوصلة اليوم (Top 3)' : 'Select Top 3 Priorities'}
+                <h2 className="text-base font-bold text-[var(--text-primary)] m-0">
+                  {isAr ? 'اختيار أولويات اليوم (Top 3)' : 'Select Top 3 Priorities'}
                 </h2>
-                <p className="text-xs text-muted">
+                <div className="text-xs text-[var(--text-secondary)] mt-0.5">
                   {isAr
-                    ? 'اختر حتى ٣ مهام أساسية لتثبيتها في بوصلة اليوم. يمكنك تبديلها في أي وقت.'
-                    : 'Select up to 3 essential tasks to anchor today. Swap anytime.'}
-                </p>
+                    ? 'اختر حتى 3 مهام أساسية لتثبيتها في لوحة اليوم.'
+                    : 'Select up to 3 core tasks to anchor today.'}
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsTaskPickerOpen(false)}
-                className="text-muted hover:text-[var(--text-primary)] text-lg p-1"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg p-1"
               >
                 ×
               </button>
             </div>
 
-            <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
-              {tasks.filter((t) => t.status !== 'completed').length === 0 ? (
-                <div className="p-6 text-center text-xs text-muted">
-                  {isAr ? 'لا توجد مهام معلقة لاختيارها! أضف مهمة أولاً.' : 'No pending tasks available to choose.'}
+            <div className="max-h-[60vh] overflow-y-auto space-y-2 pe-1">
+              {activeTasks.filter((t) => t.status !== 'completed').length === 0 ? (
+                <div className="p-6 text-center text-xs text-[var(--text-secondary)]">
+                  {isAr ? 'لا توجد مهام معلقة للاختيار.' : 'No pending tasks available.'}
                 </div>
               ) : (
-                tasks
+                activeTasks
                   .filter((t) => t.status !== 'completed')
                   .map((task) => {
                     const isPinned = task.isTopThree;
@@ -1367,40 +947,33 @@ export const DashboardView: React.FC = () => {
                         onClick={() => toggleTopThree(task.id)}
                         className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                           isPinned
-                            ? 'border-accent bg-accent/10'
-                            : 'border-[var(--border-strong)] bg-[var(--surface-inset)] hover:border-accent/40'
+                            ? 'border-[var(--brand-soft-border)] bg-[var(--brand-soft)]'
+                            : 'border-[var(--border-default)] bg-[var(--surface-inset)] hover:border-[var(--brand-soft-border)]'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <span
                             className={`w-5 h-5 rounded-md border flex items-center justify-center font-bold text-xs ${
                               isPinned
-                                ? 'bg-accent border-accent text-black'
+                                ? 'bg-[var(--brand)] border-[var(--brand)] text-[var(--text-on-accent)]'
                                 : 'border-[var(--border-strong)] text-transparent'
                             }`}
                           >
                             ✓
                           </span>
                           <div className="min-w-0">
-                            <span className="text-xs font-semibold text-[var(--text-primary)] truncate block">
+                            <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
                               {task.title}
-                            </span>
-                            <div className="flex items-center gap-2 text-[10px] text-muted mt-0.5">
-                              {task.scheduledTime && <span>◷ {task.scheduledTime}</span>}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] font-mono text-[var(--text-secondary)] mt-0.5">
+                              {task.scheduledTime && <span>{task.scheduledTime}</span>}
                               {task.estimatedMinutes && <span>· {task.estimatedMinutes}m</span>}
-                              {task.tags && task.tags[0] && <span>· {task.tags[0]}</span>}
                             </div>
                           </div>
                         </div>
 
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded font-mono ${
-                            isPinned
-                              ? 'bg-accent text-black font-bold'
-                              : 'text-muted hover:text-accent'
-                          }`}
-                        >
-                          {isPinned ? (isAr ? 'مثبتة ✓' : 'Pinned ✓') : (isAr ? '+ تثبيت' : '+ Pin')}
+                        <span className="text-xs font-mono text-[var(--brand-strong)]">
+                          {isPinned ? (isAr ? 'مثبتة' : 'Pinned') : (isAr ? '+ تثبيت' : '+ Pin')}
                         </span>
                       </div>
                     );
@@ -1409,10 +982,11 @@ export const DashboardView: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-[var(--border-subtle)]">
-              <span className="text-xs text-muted font-mono">
+              <span className="text-xs text-[var(--text-secondary)] font-mono">
                 {topThree.length}/3 {isAr ? 'مهام مثبتة' : 'tasks pinned'}
               </span>
               <button
+                type="button"
                 onClick={() => setIsTaskPickerOpen(false)}
                 className="btn primary small text-xs"
               >
@@ -1423,7 +997,7 @@ export const DashboardView: React.FC = () => {
         </div>
       )}
 
-      {/* B. Focus Launcher Modal (Interactive Session Runner) */}
+      {/* B. Focus Launcher Modal */}
       {isFocusModalOpen && (
         <div
           className="modal-backdrop fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 backdrop-blur-md"
@@ -1432,50 +1006,47 @@ export const DashboardView: React.FC = () => {
           }}
         >
           <div
-            className="modal w-full max-w-md bg-[var(--surface-sunken)] border border-[var(--border-strong)] rounded-2xl p-6 shadow-2xl text-center space-y-5"
+            className="modal glass-surface w-full max-w-md rounded-2xl p-6 shadow-2xl text-center space-y-5"
             onClick={(e) => e.stopPropagation()}
             dir={isAr ? 'rtl' : 'ltr'}
           >
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
-                <span className="text-xs font-bold font-mono uppercase tracking-wider text-accent">
-                  {isAr ? 'جلسة تركيز مباشر (Focus Launcher)' : 'Focus Session Launcher'}
-                </span>
-              </div>
+              <span className="text-xs font-bold font-mono uppercase tracking-wider text-[var(--brand-strong)]">
+                {isAr ? 'جلسة تركيز مباشر' : 'Focus Session Launcher'}
+              </span>
               <button
+                type="button"
                 onClick={() => setIsFocusModalOpen(false)}
-                className="text-muted hover:text-[var(--text-primary)] text-lg p-1"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg p-1"
                 disabled={focusRunning}
               >
                 ×
               </button>
             </div>
 
-            {/* Task Banner */}
-            <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] text-start">
-              <span className="text-[10px] text-accent block font-mono">
-                {focusingTask ? (isAr ? 'المهمة المستهدفة بالتركيز:' : 'Anchor Task:') : (isAr ? 'تركيز حر:' : 'Free Focus:')}
+            <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-default)] text-start">
+              <span className="text-[10px] text-[var(--brand-strong)] block font-mono">
+                {focusingTask ? (isAr ? 'المهمة المستهدفة:' : 'Anchor Task:') : isAr ? 'تركيز حر:' : 'Free Focus:'}
               </span>
-              <strong className="text-sm text-[var(--text-primary)] block mt-0.5 truncate">
-                {focusingTask?.title || (isAr ? 'جلسة عمل عميق حرة بدون مهمة محددة' : 'Unbound Deep Work Session')}
-              </strong>
+              <div className="text-sm font-bold text-[var(--text-primary)] mt-0.5 truncate">
+                {focusingTask?.title || (isAr ? 'جلسة عمل عميق حرة' : 'Unbound Deep Work Session')}
+              </div>
             </div>
 
-            {/* Presets if not running */}
             {!focusRunning && (
               <div className="flex items-center justify-center gap-2">
                 {[15, 25, 45, 60].map((mins) => (
                   <button
                     key={mins}
+                    type="button"
                     onClick={() => {
                       setFocusPreset(mins);
                       setFocusRemaining(mins * 60);
                     }}
                     className={`px-3 py-1 rounded-lg text-xs font-mono border transition-all ${
                       focusPreset === mins
-                        ? 'bg-accent text-black font-bold border-accent shadow-sm'
-                        : 'border-[var(--border-strong)] text-muted hover:text-[var(--text-primary)]'
+                        ? 'bg-[var(--brand)] text-[var(--text-on-accent)] font-bold border-[var(--brand)]'
+                        : 'border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     {mins}m
@@ -1484,64 +1055,70 @@ export const DashboardView: React.FC = () => {
               </div>
             )}
 
-            {/* Circular Countdown Display */}
-            <div className="py-4">
-              <div className="text-5xl md:text-6xl font-mono font-bold tracking-tight text-[var(--text-primary)] mb-2">
+            <div className="py-3">
+              <div className="text-5xl sm:text-6xl font-mono font-bold tabular-nums tracking-tight text-[var(--text-primary)] mb-2">
                 {`${Math.floor(focusRemaining / 60)
                   .toString()
                   .padStart(2, '0')}:${(focusRemaining % 60).toString().padStart(2, '0')}`}
               </div>
-              <p className="text-xs text-muted">
+              <div className="text-xs text-[var(--text-secondary)]">
                 {focusRunning
-                  ? (isAr ? 'حالة التدفق نشطة · تجنب الإشعارات' : 'Flow state active · zero distractions')
-                  : (isAr ? 'جاهز للبدء؟ اختر المدة واضغط انطلاق' : 'Ready? Select preset and start')}
-              </p>
+                  ? isAr
+                    ? 'حالة التدفق نشطة · تجنب التشتت'
+                    : 'Flow state active · minimize distractions'
+                  : isAr
+                  ? 'اختر المدة واضغط بدء التركيز'
+                  : 'Select duration and start'}
+              </div>
             </div>
 
-            {/* Controls */}
             <div className="flex items-center justify-center gap-3">
               {!focusRunning ? (
                 <button
+                  type="button"
                   onClick={() => setFocusRunning(true)}
-                  className="btn primary px-6 py-2.5 text-sm font-bold shadow-lg"
+                  className="btn primary px-6 py-2.5 text-sm font-bold"
                 >
-                  <span>▶</span>
                   <span>{isAr ? 'بدء التركيز' : 'Start Focus'}</span>
                 </button>
               ) : (
                 <>
                   <button
+                    type="button"
                     onClick={() => setFocusRunning(false)}
-                    className="btn subtle text-xs border border-amber-500/40 text-[var(--state-warning-strong)] px-4 py-2"
+                    className="btn subtle text-xs px-4 py-2"
                   >
-                    <span>⏸ {isAr ? 'إيقاف مؤقت' : 'Pause'}</span>
+                    <span>{isAr ? 'إيقاف مؤقت' : 'Pause'}</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleFinishFocusSession(true)}
                     className="btn primary text-xs px-4 py-2 font-bold"
                   >
-                    <span>✓ {isAr ? 'إتمام وحفظ الإنجاز' : 'Finish & Log'}</span>
+                    <span>{isAr ? 'إتمام وحفظ الإنجاز' : 'Finish & Log'}</span>
                   </button>
                 </>
               )}
             </div>
 
-            <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs text-muted">
+            <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs">
               <button
+                type="button"
                 onClick={() => {
                   setIsFocusModalOpen(false);
                   setActiveNavTab('focus');
                 }}
-                className="text-accent hover:underline text-[11px]"
+                className="text-[var(--brand-strong)] hover:underline text-[11px]"
               >
-                {isAr ? 'فتح لوحة التركيز الكاملة ↗' : 'Open Full Focus Mode ↗'}
+                {isAr ? 'فتح لوحة التركيز الكاملة' : 'Open Full Focus Mode'}
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setFocusRunning(false);
                   setIsFocusModalOpen(false);
                 }}
-                className="text-muted hover:text-[var(--text-primary)] text-[11px]"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-[11px]"
               >
                 {isAr ? 'إلغاء' : 'Cancel'}
               </button>
@@ -1579,4 +1156,3 @@ export const DashboardView: React.FC = () => {
     </div>
   );
 };
-

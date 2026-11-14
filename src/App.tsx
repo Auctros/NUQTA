@@ -4,6 +4,8 @@ import { localDateKey } from './lib/dateKey';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from './store/nuqtaStore';
 import { NuqtaIcon, IconName } from './components/NuqtaIcon';
+import { AmbientBackdrop } from './components/AmbientBackdrop';
+import { applyThemeClass } from './lib/themeTransition';
 
 // Modals
 import { RescueModal } from './components/RescueModal';
@@ -53,6 +55,16 @@ export default function App() {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [sidebarTooltip, setSidebarTooltip] = useState<{
+    id: string;
+    label: string;
+    badge?: string;
+    top: number;
+    left?: number;
+    right?: number;
+  } | null>(null);
+  const sidebarRef = React.useRef<HTMLElement | null>(null);
+  const topbarToggleRef = React.useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,16 +78,9 @@ export default function App() {
     };
   }, [initializeStore]);
 
-  // Sync html and body theme classes reliably
+  // Sync html and body theme classes reliably on load and theme changes
   useEffect(() => {
-    const isLight = profile.theme === 'light';
-    if (isLight) {
-      document.documentElement.classList.add('light-mode');
-      document.body.classList.add('light-mode');
-    } else {
-      document.documentElement.classList.remove('light-mode');
-      document.body.classList.remove('light-mode');
-    }
+    applyThemeClass(profile.theme);
   }, [profile.theme]);
 
   // Global hotkeys (Q for new task, Escape to close sidebar)
@@ -123,15 +128,92 @@ export default function App() {
         window.setTimeout(focusInput, 80);
       }
     };
+    const handleOpenSearch = () => setIsSearchOpen(true);
+    const handleOpenPalette = () => setIsPaletteOpen(true);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('nuqta:open-search', handleOpenSearch);
+    window.addEventListener('nuqta:open-palette', handleOpenPalette);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('nuqta:open-search', handleOpenSearch);
+      window.removeEventListener('nuqta:open-palette', handleOpenPalette);
+    };
   }, [setActiveNavTab]);
 
   const isAr = profile.language === 'ar';
   const todayStr = localDateKey();
   const todayDueCount = tasks.filter((t) => t.status !== 'completed' && t.scheduledDate === todayStr).length;
 
-  const workspaceNav: Array<{ id: typeof activeNavTab; label: string; icon: IconName; count?: number }> = [
+  useEffect(() => {
+    if (!sidebarCollapsed) {
+      setSidebarTooltip(null);
+    }
+  }, [sidebarCollapsed]);
+
+  const showCollapsedTooltip = (
+    e: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>,
+    id: string,
+    label: string,
+    badge?: string
+  ) => {
+    if (!sidebarCollapsed || typeof window === 'undefined' || window.innerWidth <= 900) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setSidebarTooltip({
+      id,
+      label,
+      badge,
+      top: rect.top + rect.height / 2,
+      ...(isAr ? { right: Math.round(window.innerWidth - rect.left + 12) } : { left: Math.round(rect.right + 12) })
+    });
+  };
+
+  const hideCollapsedTooltip = () => {
+    setSidebarTooltip(null);
+  };
+
+  const handleSidebarKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === 'Escape') {
+      setSidebarTooltip(null);
+      if (typeof window !== 'undefined' && window.innerWidth <= 900 && sidebarOpen) {
+        setSidebarOpen(false);
+        topbarToggleRef.current?.focus();
+      }
+      return;
+    }
+
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+    const target = e.target as HTMLElement | null;
+    if (!target || target.dataset.sidebarNav !== 'true') return;
+
+    const aside = sidebarRef.current;
+    if (!aside) return;
+    const items = Array.from(aside.querySelectorAll<HTMLButtonElement>('button[data-sidebar-nav="true"]')).filter(
+      (btn) => !btn.disabled && btn.tabIndex !== -1 && btn.getAttribute('aria-hidden') !== 'true'
+    );
+    if (items.length === 0) return;
+
+    const currentIndex = items.indexOf(target as HTMLButtonElement);
+    if (currentIndex === -1) return;
+
+    e.preventDefault();
+    let nextIndex = currentIndex;
+    if (e.key === 'ArrowDown') nextIndex = (currentIndex + 1) % items.length;
+    else if (e.key === 'ArrowUp') nextIndex = (currentIndex - 1 + items.length) % items.length;
+    else if (e.key === 'Home') nextIndex = 0;
+    else if (e.key === 'End') nextIndex = items.length - 1;
+
+    items[nextIndex]?.focus();
+  };
+
+  type NavDef = {
+    id: typeof activeNavTab;
+    label: string;
+    shortLabel?: string;
+    icon: IconName;
+    count?: number;
+  };
+
+  const workspaceNav: NavDef[] = [
     { id: 'today', label: isAr ? 'نظرة عامة' : 'Overview', icon: 'grid', count: todayDueCount },
     { id: 'tasks', label: isAr ? 'المهام' : 'Tasks', icon: 'check-square' },
     { id: 'habits', label: isAr ? 'العادات' : 'Habits', icon: 'repeat' },
@@ -140,15 +222,15 @@ export default function App() {
     { id: 'calendar', label: isAr ? 'التقويم' : 'Calendar', icon: 'calendar' }
   ];
 
-  const studiosNav: Array<{ id: typeof activeNavTab; label: string; icon: IconName }> = [
-    { id: 'quran', label: isAr ? 'حفظ القرآن' : 'Quran Studio', icon: 'book-open' },
-    { id: 'reading', label: isAr ? 'استوديو القراءة' : 'Reading Vault', icon: 'book-open' },
-    { id: 'workout', label: isAr ? 'اللياقة البدنية' : 'Home Workout', icon: 'activity' },
-    { id: 'drawing', label: isAr ? 'مرسم الإبداع' : 'Art Studio', icon: 'grid' }
+  const studiosNav: NavDef[] = [
+    { id: 'quran', label: isAr ? 'حفظ القرآن' : 'Quran Studio', shortLabel: isAr ? 'القرآن' : 'Quran', icon: 'book-open' },
+    { id: 'reading', label: isAr ? 'استوديو القراءة' : 'Reading Vault', shortLabel: isAr ? 'القراءة' : 'Reading', icon: 'book-open' },
+    { id: 'workout', label: isAr ? 'اللياقة البدنية' : 'Home Workout', shortLabel: isAr ? 'اللياقة' : 'Workout', icon: 'activity' },
+    { id: 'drawing', label: isAr ? 'مرسم الإبداع' : 'Art Studio', shortLabel: isAr ? 'المرسم' : 'Studio', icon: 'grid' }
   ];
 
-  const lifeNav: Array<{ id: typeof activeNavTab; label: string; icon: IconName }> = [
-    { id: 'archive', label: isAr ? 'الذاكرة والأرشيف' : 'Archive & History', icon: 'archive' },
+  const lifeNav: NavDef[] = [
+    { id: 'archive', label: isAr ? 'الذاكرة والأرشيف' : 'Archive & History', shortLabel: isAr ? 'الأرشيف' : 'Archive', icon: 'archive' },
     { id: 'finance', label: isAr ? 'المال' : 'Money', icon: 'wallet' },
     { id: 'health', label: isAr ? 'الصحة' : 'Health', icon: 'activity' },
     { id: 'journal', label: isAr ? 'اليوميات' : 'Journal', icon: 'book-open' },
@@ -218,6 +300,7 @@ export default function App() {
       dir={isAr ? 'rtl' : 'ltr'}
       className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
     >
+      <AmbientBackdrop />
       <StorageIssueBanner isAr={isAr} />
       {/* Global Modals */}
       <RescueModal />
@@ -241,81 +324,176 @@ export default function App() {
       {/* Mobile Scrim Backdrop */}
       <div
         onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
         className={`sidebar-scrim ${sidebarOpen ? 'open' : ''}`}
       />
 
+      {/* Collapsed Sidebar Floating Glass Tooltip */}
+      {sidebarTooltip && (
+        <div
+          key={sidebarTooltip.id}
+          role="tooltip"
+          id={`sidebar-tip-${sidebarTooltip.id}`}
+          className="sidebar-tooltip"
+          style={{
+            top: `${sidebarTooltip.top}px`,
+            ...(isAr
+              ? { right: `${sidebarTooltip.right ?? 96}px` }
+              : { left: `${sidebarTooltip.left ?? 96}px` })
+          }}
+        >
+          <span>{sidebarTooltip.label}</span>
+          {sidebarTooltip.badge && (
+            <span className="sidebar-tooltip-badge tabular-nums">{sidebarTooltip.badge}</span>
+          )}
+        </div>
+      )}
+
       {/* ==================== SIDEBAR ==================== */}
       <aside
+        ref={sidebarRef}
+        aria-label={isAr ? 'التنقل الرئيسي' : 'Primary navigation'}
+        onScroll={hideCollapsedTooltip}
+        onKeyDown={handleSidebarKeyDown}
         className={`sidebar ${sidebarOpen ? 'open' : ''}`}
       >
         {/* Brand Row with Collapse Toggle */}
-        <div className="brand-row justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="brand-mark"></div>
-            <div className="brand-copy">
-              <span className="brand-name">
-                NUQTA<span className="brand-period">.</span>
-              </span>
-              <span className="brand-tag">
-                {isAr ? 'نظام إدارة الحياة' : 'Life Operating System'}
-              </span>
-            </div>
+        <div className="brand-row">
+          <button
+            type="button"
+            className="brand-mark-btn"
+            aria-label={
+              sidebarCollapsed
+                ? isAr
+                  ? 'توسيع الشريط الجانبي'
+                  : 'Expand Sidebar'
+                : isAr
+                ? 'نظرة عامة'
+                : 'Go to Overview'
+            }
+            aria-expanded={sidebarCollapsed ? false : undefined}
+            aria-describedby={sidebarTooltip?.id === 'brand' ? 'sidebar-tip-brand' : undefined}
+            onClick={() => {
+              if (sidebarCollapsed && window.innerWidth > 900) {
+                setSidebarCollapsed(false);
+                hideCollapsedTooltip();
+              } else {
+                setActiveNavTab('today');
+                if (window.innerWidth <= 900) setSidebarOpen(false);
+              }
+            }}
+            onMouseEnter={(e) =>
+              showCollapsedTooltip(e, 'brand', isAr ? 'توسيع الشريط الجانبي' : 'Expand Sidebar')
+            }
+            onMouseLeave={hideCollapsedTooltip}
+            onFocus={(e) =>
+              showCollapsedTooltip(e, 'brand', isAr ? 'توسيع الشريط الجانبي' : 'Expand Sidebar')
+            }
+            onBlur={hideCollapsedTooltip}
+          >
+            <span className="brand-mark" aria-hidden="true"></span>
+          </button>
+
+          <div className="brand-copy" aria-hidden={sidebarCollapsed}>
+            <span className="brand-name">
+              NUQTA<span className="brand-period">.</span>
+            </span>
+            <span className="brand-tag">
+              {isAr ? 'نظام إدارة الحياة' : 'Life Operating System'}
+            </span>
           </div>
 
           {/* Hide Sidebar button (Desktop & Mobile) */}
           <button
+            type="button"
+            tabIndex={sidebarCollapsed ? -1 : 0}
+            aria-hidden={sidebarCollapsed}
+            aria-expanded={!sidebarCollapsed}
             onClick={() => {
+              hideCollapsedTooltip();
               if (window.innerWidth <= 900) {
                 setSidebarOpen(false);
               } else {
                 setSidebarCollapsed(true);
               }
             }}
-            className="icon-btn text-muted hover:text-[var(--text-primary)]"
-            title={isAr ? 'إخفاء الشريط الجانبي' : 'Collapse Sidebar'}
+            className="icon-btn sidebar-collapse-btn text-muted hover:text-[var(--text-primary)]"
+            title={isAr ? 'طي الشريط الجانبي' : 'Collapse Sidebar'}
+            aria-label={isAr ? 'طي الشريط الجانبي' : 'Collapse Sidebar'}
           >
-            <span className="text-sm font-bold">◨</span>
+            <NuqtaIcon name={isAr ? 'chevronRight' : 'chevronLeft'} className="w-4 h-4" />
           </button>
         </div>
 
         {/* Quick Capture Shortcut Button */}
         <button
+          type="button"
+          data-sidebar-nav="true"
+          aria-label={isAr ? 'التقاط فوري (Q)' : 'Quick Capture (Q)'}
+          aria-describedby={sidebarTooltip?.id === 'capture' ? 'sidebar-tip-capture' : undefined}
           onClick={() => {
+            hideCollapsedTooltip();
             setActiveNavTab('tasks');
-            if (window.innerWidth < 1024) setSidebarOpen(false);
+            if (window.innerWidth <= 900) setSidebarOpen(false);
           }}
+          onMouseEnter={(e) =>
+            showCollapsedTooltip(e, 'capture', isAr ? 'التقاط فوري' : 'Quick Capture', 'Q')
+          }
+          onMouseLeave={hideCollapsedTooltip}
+          onFocus={(e) =>
+            showCollapsedTooltip(e, 'capture', isAr ? 'التقاط فوري' : 'Quick Capture', 'Q')
+          }
+          onBlur={hideCollapsedTooltip}
           className="capture-shortcut"
         >
-          <span className="capture-plus">+</span>
-          <span>{isAr ? 'التقاط فوري' : 'Quick Capture'}</span>
-          <kbd>Q</kbd>
+          <span className="capture-plus" aria-hidden="true">+</span>
+          <span className="capture-text truncate">{isAr ? 'التقاط فوري' : 'Quick Capture'}</span>
+          <kbd className="capture-kbd">Q</kbd>
         </button>
 
         {/* Workspace Nav Group */}
         <div className="nav-label">
-          {isAr ? 'مساحة العمل' : 'Workspace'}
+          <span>{isAr ? 'مساحة العمل' : 'Workspace'}</span>
         </div>
-        <nav className="primary-nav">
+        <nav className="primary-nav" aria-label={isAr ? 'مساحة العمل' : 'Workspace'}>
           {workspaceNav.map((item) => {
             const isActive = activeNavTab === item.id;
+            const badgeText = item.count !== undefined && item.count > 0 ? String(item.count) : undefined;
             return (
               <button
+                type="button"
                 key={item.id}
-                title={item.label}
+                data-sidebar-nav="true"
                 aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
+                aria-describedby={!isActive && sidebarTooltip?.id === item.id ? `sidebar-tip-${item.id}` : undefined}
                 onClick={() => {
+                  hideCollapsedTooltip();
                   setActiveNavTab(item.id);
-                  if (window.innerWidth < 1024) setSidebarOpen(false);
+                  if (window.innerWidth <= 900) setSidebarOpen(false);
                 }}
+                onMouseEnter={(e) => {
+                  if (!isActive) showCollapsedTooltip(e, item.id, item.label, badgeText);
+                }}
+                onMouseLeave={hideCollapsedTooltip}
+                onFocus={(e) => {
+                  if (!isActive) showCollapsedTooltip(e, item.id, item.label, badgeText);
+                }}
+                onBlur={hideCollapsedTooltip}
                 className={`nav-item ${isActive ? 'active' : ''}`}
               >
-                <span className="nav-icon">
+                <span className="nav-icon" aria-hidden="true">
                   <NuqtaIcon name={item.icon} className="w-4 h-4" />
                 </span>
-                <span className="truncate flex-1">{item.label}</span>
+                <span className="nav-item-label truncate flex-1">{item.label}</span>
                 {item.count !== undefined && item.count > 0 && (
-                  <span className="nav-trailing">
+                  <span className="nav-trailing tabular-nums">
                     {item.count}
+                  </span>
+                )}
+                {isActive && (
+                  <span className="nav-active-mini-label" aria-hidden="true">
+                    {item.shortLabel ?? item.label}
                   </span>
                 )}
               </button>
@@ -325,26 +503,43 @@ export default function App() {
 
         {/* Specialized Habit Studios Group */}
         <div className="nav-label nav-label-spaced">
-          {isAr ? 'استوديوهات الإتقان' : 'Habit Studios'}
+          <span>{isAr ? 'استوديوهات الإتقان' : 'Habit Studios'}</span>
         </div>
-        <nav className="primary-nav">
+        <nav className="primary-nav" aria-label={isAr ? 'استوديوهات الإتقان' : 'Habit Studios'}>
           {studiosNav.map((item) => {
             const isActive = activeNavTab === item.id;
             return (
               <button
+                type="button"
                 key={item.id}
-                title={item.label}
+                data-sidebar-nav="true"
                 aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
+                aria-describedby={!isActive && sidebarTooltip?.id === item.id ? `sidebar-tip-${item.id}` : undefined}
                 onClick={() => {
+                  hideCollapsedTooltip();
                   setActiveNavTab(item.id);
-                  if (window.innerWidth < 1024) setSidebarOpen(false);
+                  if (window.innerWidth <= 900) setSidebarOpen(false);
                 }}
+                onMouseEnter={(e) => {
+                  if (!isActive) showCollapsedTooltip(e, item.id, item.label);
+                }}
+                onMouseLeave={hideCollapsedTooltip}
+                onFocus={(e) => {
+                  if (!isActive) showCollapsedTooltip(e, item.id, item.label);
+                }}
+                onBlur={hideCollapsedTooltip}
                 className={`nav-item ${isActive ? 'active' : ''}`}
               >
-                <span className="nav-icon">
+                <span className="nav-icon" aria-hidden="true">
                   <NuqtaIcon name={item.icon} className="w-4 h-4" />
                 </span>
-                <span className="truncate flex-1">{item.label}</span>
+                <span className="nav-item-label truncate flex-1">{item.label}</span>
+                {isActive && (
+                  <span className="nav-active-mini-label" aria-hidden="true">
+                    {item.shortLabel ?? item.label}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -352,26 +547,43 @@ export default function App() {
 
         {/* Life & Self Group */}
         <div className="nav-label nav-label-spaced">
-          {isAr ? 'الحياة والذات' : 'Life & Self'}
+          <span>{isAr ? 'الحياة والذات' : 'Life & Self'}</span>
         </div>
-        <nav className="primary-nav">
+        <nav className="primary-nav" aria-label={isAr ? 'الحياة والذات' : 'Life & Self'}>
           {lifeNav.map((item) => {
             const isActive = activeNavTab === item.id;
             return (
               <button
+                type="button"
                 key={item.id}
-                title={item.label}
+                data-sidebar-nav="true"
                 aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
+                aria-describedby={!isActive && sidebarTooltip?.id === item.id ? `sidebar-tip-${item.id}` : undefined}
                 onClick={() => {
+                  hideCollapsedTooltip();
                   setActiveNavTab(item.id);
-                  if (window.innerWidth < 1024) setSidebarOpen(false);
+                  if (window.innerWidth <= 900) setSidebarOpen(false);
                 }}
+                onMouseEnter={(e) => {
+                  if (!isActive) showCollapsedTooltip(e, item.id, item.label);
+                }}
+                onMouseLeave={hideCollapsedTooltip}
+                onFocus={(e) => {
+                  if (!isActive) showCollapsedTooltip(e, item.id, item.label);
+                }}
+                onBlur={hideCollapsedTooltip}
                 className={`nav-item ${isActive ? 'active' : ''}`}
               >
-                <span className="nav-icon">
+                <span className="nav-icon" aria-hidden="true">
                   <NuqtaIcon name={item.icon} className="w-4 h-4" />
                 </span>
-                <span className="truncate flex-1">{item.label}</span>
+                <span className="nav-item-label truncate flex-1">{item.label}</span>
+                {isActive && (
+                  <span className="nav-active-mini-label" aria-hidden="true">
+                    {item.shortLabel ?? item.label}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -380,7 +592,7 @@ export default function App() {
         <div className="sidebar-spacer"></div>
 
         {/* Sidebar Footer Advice Card */}
-        <div className="sidebar-footer-card">
+        <div className="sidebar-footer-card" aria-hidden={sidebarCollapsed}>
           <span className="footer-spark">✳</span>
           <p>
             {isAr
@@ -388,6 +600,8 @@ export default function App() {
               : 'You do not have to do everything. Choose strictly 1 clear anchor.'}
           </p>
           <button
+            type="button"
+            tabIndex={sidebarCollapsed ? -1 : 0}
             onClick={() => setRescueModeOpen(true)}
             className="text-link"
           >
@@ -398,24 +612,73 @@ export default function App() {
 
         {/* Bottom Profile and Settings Row */}
         <div className="sidebar-bottom">
-          <button
-            onClick={() => {
-              setActiveNavTab('settings');
-              if (window.innerWidth < 1024) setSidebarOpen(false);
-            }}
-            className={`nav-item ${activeNavTab === 'settings' ? 'active' : ''}`}
-          >
-            <span className="nav-icon">
-              <NuqtaIcon name="settings" className="w-4 h-4" />
-            </span>
-            <span>{isAr ? 'الإعدادات والبيانات' : 'Settings & Data'}</span>
-          </button>
+          {(() => {
+            const isSettingsActive = activeNavTab === 'settings';
+            const settingsLabel = isAr ? 'الإعدادات والبيانات' : 'Settings & Data';
+            const settingsShort = isAr ? 'الإعدادات' : 'Settings';
+            return (
+              <button
+                type="button"
+                data-sidebar-nav="true"
+                aria-label={settingsLabel}
+                aria-current={isSettingsActive ? 'page' : undefined}
+                aria-describedby={!isSettingsActive && sidebarTooltip?.id === 'settings' ? 'sidebar-tip-settings' : undefined}
+                onClick={() => {
+                  hideCollapsedTooltip();
+                  setActiveNavTab('settings');
+                  if (window.innerWidth <= 900) setSidebarOpen(false);
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSettingsActive) showCollapsedTooltip(e, 'settings', settingsLabel);
+                }}
+                onMouseLeave={hideCollapsedTooltip}
+                onFocus={(e) => {
+                  if (!isSettingsActive) showCollapsedTooltip(e, 'settings', settingsLabel);
+                }}
+                onBlur={hideCollapsedTooltip}
+                className={`nav-item ${isSettingsActive ? 'active' : ''}`}
+              >
+                <span className="nav-icon" aria-hidden="true">
+                  <NuqtaIcon name="settings" className="w-4 h-4" />
+                </span>
+                <span className="nav-item-label truncate flex-1">{settingsLabel}</span>
+                {isSettingsActive && (
+                  <span className="nav-active-mini-label" aria-hidden="true">
+                    {settingsShort}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
 
           <button
+            type="button"
+            data-sidebar-nav="true"
+            aria-label={profile.name || (isAr ? 'الملف الشخصي' : 'Local profile')}
+            aria-describedby={sidebarTooltip?.id === 'profile' ? 'sidebar-tip-profile' : undefined}
             onClick={() => {
+              hideCollapsedTooltip();
               setActiveNavTab('settings');
-              if (window.innerWidth < 1024) setSidebarOpen(false);
+              if (window.innerWidth <= 900) setSidebarOpen(false);
             }}
+            onMouseEnter={(e) =>
+              showCollapsedTooltip(
+                e,
+                'profile',
+                profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
+                isAr ? 'محلي' : 'Private'
+              )
+            }
+            onMouseLeave={hideCollapsedTooltip}
+            onFocus={(e) =>
+              showCollapsedTooltip(
+                e,
+                'profile',
+                profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
+                isAr ? 'محلي' : 'Private'
+              )
+            }
+            onBlur={hideCollapsedTooltip}
             className="profile-row"
           >
             <span className="avatar">
@@ -438,7 +701,10 @@ export default function App() {
         <header className="topbar">
           <div className="topbar-start">
             <button
+              ref={topbarToggleRef}
+              type="button"
               onClick={() => {
+                hideCollapsedTooltip();
                 if (window.innerWidth <= 900) {
                   setSidebarOpen(!sidebarOpen);
                 } else {
@@ -447,7 +713,8 @@ export default function App() {
               }}
               className={`icon-btn ${sidebarCollapsed ? 'border-accent/40 bg-accent/10 text-accent' : ''}`}
               aria-label="Toggle sidebar"
-              title={isAr ? (sidebarCollapsed ? 'إظهار الشريط الجانبي' : 'إخفاء الشريط الجانبي') : (sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar')}
+              aria-expanded={typeof window !== 'undefined' && window.innerWidth <= 900 ? sidebarOpen : !sidebarCollapsed}
+              title={isAr ? (sidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي') : (sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar')}
             >
               <NuqtaIcon name="menu" className="w-5 h-5" />
             </button>
@@ -593,7 +860,7 @@ export default function App() {
         </header>
 
         {/* Page Content */}
-        <main className="page-content">
+        <main className={`page-content ${activeNavTab === 'today' ? 'dashboard-wide' : ''}`}>
           {activeNavTab === 'today' && <DashboardView />}
           {activeNavTab === 'tasks' && <TasksView />}
           {activeNavTab === 'habits' && <HabitsView />}
