@@ -1174,6 +1174,18 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   // Dedicated Quran App Actions
   logQuranSession: (habitId, sessionDraft) => {
     const todayStr = localDateKey();
+
+    // Validate the surah reference before touching any state. An out-of-range
+    // number rejects the whole operation: no session, no streak/completion
+    // change, no XP and no total drift.
+    const surahNumber = sessionDraft.surahNumber;
+    const isValidSurah =
+      Number.isInteger(surahNumber) && surahNumber >= 1 && surahNumber <= QURAN_SURAHS.length;
+    if (!isValidSurah) {
+      console.warn(`NUQTA: logQuranSession rejected an invalid surah number (${surahNumber}).`);
+      return;
+    }
+
     const targetHabit = get().habits.find((h) => h.id === habitId);
     const newSession: import('../types').QuranSessionLog = {
       id: 'qs-' + crypto.randomUUID().slice(0, 8),
@@ -1202,56 +1214,48 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
         activeSurahNumber: 1
       };
 
-      const surahNumber = sessionDraft.surahNumber;
       const surahMeta = getSurahMeta(surahNumber);
-      const isValidSurah = Number.isInteger(surahNumber) && surahNumber >= 1 && surahNumber <= QURAN_SURAHS.length;
 
       // Update Surahs array. A valid surah that is not tracked yet is created
-      // (upsert) so its memorisation is never silently dropped; an invalid
-      // reference is rejected explicitly instead of mutating an unrelated surah.
+      // (upsert) so its memorisation is never silently dropped.
       let updatedSurahs = [...quran.surahs];
+      const existingSurahIdx = updatedSurahs.findIndex((s) => s.surahNumber === surahNumber);
+      const baseSurah: import('../types').SurahMemorizationState =
+        existingSurahIdx >= 0
+          ? updatedSurahs[existingSurahIdx]
+          : { surahNumber, status: 'not_started', memorizedAyahsRanges: [], memorizedAyahsCount: 0 };
 
-      if (!isValidSurah) {
-        console.warn(`NUQTA: logQuranSession ignored an invalid surah number (${surahNumber}).`);
+      let nextSurah: import('../types').SurahMemorizationState;
+      if (sessionDraft.type === 'new_memorization') {
+        const mergedRanges = mergeAyahRanges(baseSurah.memorizedAyahsRanges || [], {
+          start: sessionDraft.ayahStart,
+          end: sessionDraft.ayahEnd
+        });
+        const distinctCount = calculateDistinctAyahs(mergedRanges);
+        const isDone = distinctCount >= surahMeta.totalAyahs;
+        nextSurah = {
+          ...baseSurah,
+          memorizedAyahsRanges: mergedRanges,
+          memorizedAyahsCount: distinctCount,
+          status: isDone ? 'completed' : 'in_progress',
+          lastReviewedDate: todayStr,
+          masteryRating: sessionDraft.quality === 'excellent' ? 5 : sessionDraft.quality === 'very_good' ? 4 : 3,
+          notes: sessionDraft.notes || baseSurah.notes
+        };
       } else {
-        const existingSurahIdx = updatedSurahs.findIndex((s) => s.surahNumber === surahNumber);
-        const baseSurah: import('../types').SurahMemorizationState =
-          existingSurahIdx >= 0
-            ? updatedSurahs[existingSurahIdx]
-            : { surahNumber, status: 'not_started', memorizedAyahsRanges: [], memorizedAyahsCount: 0 };
+        // revision or recitation test
+        nextSurah = {
+          ...baseSurah,
+          lastReviewedDate: todayStr,
+          masteryRating: sessionDraft.quality === 'excellent' ? 5 : sessionDraft.quality === 'very_good' ? 4 : sessionDraft.quality === 'good' ? 3 : 2,
+          status: sessionDraft.quality === 'needs_reinforcement' && baseSurah.status !== 'completed' ? 'needs_revision' : baseSurah.status
+        };
+      }
 
-        let nextSurah: import('../types').SurahMemorizationState;
-        if (sessionDraft.type === 'new_memorization') {
-          const mergedRanges = mergeAyahRanges(baseSurah.memorizedAyahsRanges || [], {
-            start: sessionDraft.ayahStart,
-            end: sessionDraft.ayahEnd
-          });
-          const distinctCount = calculateDistinctAyahs(mergedRanges);
-          const isDone = distinctCount >= surahMeta.totalAyahs;
-          nextSurah = {
-            ...baseSurah,
-            memorizedAyahsRanges: mergedRanges,
-            memorizedAyahsCount: distinctCount,
-            status: isDone ? 'completed' : 'in_progress',
-            lastReviewedDate: todayStr,
-            masteryRating: sessionDraft.quality === 'excellent' ? 5 : sessionDraft.quality === 'very_good' ? 4 : 3,
-            notes: sessionDraft.notes || baseSurah.notes
-          };
-        } else {
-          // revision or recitation test
-          nextSurah = {
-            ...baseSurah,
-            lastReviewedDate: todayStr,
-            masteryRating: sessionDraft.quality === 'excellent' ? 5 : sessionDraft.quality === 'very_good' ? 4 : sessionDraft.quality === 'good' ? 3 : 2,
-            status: sessionDraft.quality === 'needs_reinforcement' && baseSurah.status !== 'completed' ? 'needs_revision' : baseSurah.status
-          };
-        }
-
-        if (existingSurahIdx >= 0) {
-          updatedSurahs[existingSurahIdx] = nextSurah;
-        } else {
-          updatedSurahs = [...updatedSurahs, nextSurah];
-        }
+      if (existingSurahIdx >= 0) {
+        updatedSurahs[existingSurahIdx] = nextSurah;
+      } else {
+        updatedSurahs = [...updatedSurahs, nextSurah];
       }
 
       // Recompute totals strictly without duplicate counting
@@ -1259,7 +1263,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
         ...quran,
         surahs: updatedSurahs,
         sessions: [newSession, ...quran.sessions],
-        activeSurahNumber: isValidSurah ? surahNumber : quran.activeSurahNumber
+        activeSurahNumber: surahNumber
       });
 
       // Mark habit completed today

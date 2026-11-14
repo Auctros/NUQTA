@@ -489,19 +489,79 @@ describe('F. Specialized studios', () => {
     expect(surah1.status).toBe('completed'); // Al-Fatihah is 7 ayahs
   });
 
-  it('F4 regression: an out-of-range surah number is rejected without corrupting state', () => {
+  it('F4 regression: an invalid surah number rejects the WHOLE operation (no partial side effects)', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const base = emptyStudioHabit('quran');
     base.quranData!.surahs = [{ surahNumber: 1, status: 'not_started', memorizedAyahsRanges: [], memorizedAyahsCount: 0 }];
     NuqtaStorageEngine.saveHabits([base]);
     S().initializeStore();
+
+    const before = S().habits[0];
+    const beforeXP = S().profile.experiencePoints;
+    const beforeSessions = before.quranData!.sessions.length;
+    const beforeCompleted = [...before.completedDates];
+    const beforeStreak = before.currentStreak;
+    const beforeActive = before.quranData!.activeSurahNumber;
+
     S().logQuranSession('h1', { type: 'new_memorization', surahNumber: 999, surahName: 'x', ayahStart: 1, ayahEnd: 5, ayahCount: 5, durationMinutes: 10, quality: 'good' } as any);
-    const q = S().habits[0].quranData!;
-    expect(q.surahs.length).toBe(1); // no bogus surah appended
-    expect(q.totalAyahsMemorized).toBe(0);
-    expect(q.activeSurahNumber).toBe(1); // unchanged
+
+    const after = S().habits[0];
+    // No session, no surah mutation, no totals drift.
+    expect(after.quranData!.sessions.length).toBe(beforeSessions);
+    expect(after.quranData!.surahs.length).toBe(1); // no bogus surah appended
+    expect(after.quranData!.totalAyahsMemorized).toBe(0);
+    expect(after.quranData!.totalMemorizationMinutes).toBe(0);
+    expect(after.quranData!.activeSurahNumber).toBe(beforeActive);
+    // No completion, no streak change, no XP.
+    expect(after.completedDates).toEqual(beforeCompleted);
+    expect(after.completedDates).not.toContain(today());
+    expect(after.currentStreak).toBe(beforeStreak);
+    expect(S().profile.experiencePoints).toBe(beforeXP);
+    // Storage untouched too.
+    expect(NuqtaStorageEngine.getHabits()[0].quranData!.sessions.length).toBe(beforeSessions);
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  it('F4 regression: invalid surah numbers of every shape are all rejected as no-ops', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const base = emptyStudioHabit('quran');
+    base.quranData!.surahs = [{ surahNumber: 1, status: 'not_started', memorizedAyahsRanges: [], memorizedAyahsCount: 0 }];
+    NuqtaStorageEngine.saveHabits([base]);
+    S().initializeStore();
+    const beforeXP = S().profile.experiencePoints;
+
+    for (const bad of [0, -1, 115, 1000, 1.5, NaN, undefined as any, null as any, '5' as any]) {
+      S().logQuranSession('h1', { type: 'new_memorization', surahNumber: bad, surahName: 'x', ayahStart: 1, ayahEnd: 5, ayahCount: 5, durationMinutes: 10, quality: 'good' } as any);
+    }
+
+    const q = S().habits[0].quranData!;
+    expect(q.sessions.length).toBe(0);
+    expect(q.surahs.length).toBe(1);
+    expect(q.totalAyahsMemorized).toBe(0);
+    expect(q.activeSurahNumber).toBe(1);
+    expect(S().habits[0].completedDates).not.toContain(today());
+    expect(S().profile.experiencePoints).toBe(beforeXP); // no XP granted for any rejected call
+    warn.mockRestore();
+  });
+
+  it('F4 regression: a valid session still records everything it should (happy path intact)', () => {
+    const base = emptyStudioHabit('quran');
+    base.quranData!.surahs = [{ surahNumber: 1, status: 'not_started', memorizedAyahsRanges: [], memorizedAyahsCount: 0 }];
+    NuqtaStorageEngine.saveHabits([base]);
+    S().initializeStore();
+    const beforeXP = S().profile.experiencePoints;
+
+    S().logQuranSession('h1', { type: 'new_memorization', surahNumber: 1, surahName: 'الفاتحة', ayahStart: 1, ayahEnd: 3, ayahCount: 3, durationMinutes: 10, quality: 'good' } as any);
+
+    const q = S().habits[0].quranData!;
+    expect(q.sessions.length).toBe(1);
+    expect(q.totalAyahsMemorized).toBe(3);
+    expect(q.totalMemorizationMinutes).toBe(10);
+    expect(q.activeSurahNumber).toBe(1);
+    expect(S().habits[0].completedDates).toContain(today());
+    expect(S().habits[0].currentStreak).toBe(1);
+    expect(S().profile.experiencePoints).toBe(beforeXP + 40);
   });
 
   it('F2 regression: deleting a quran session recomputes memorised totals and minutes', () => {

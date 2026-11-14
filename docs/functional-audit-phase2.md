@@ -140,18 +140,39 @@ the dashboards read. Confirmed for three studios:
 after any deletion. Note the asymmetry: `deleteArtworkPiece` *does* refresh `totalSketches` but not
 `totalDrawingMinutes` — evidence the omission is accidental, not a design choice.
 
-### F4 — Quran: memorisation silently dropped for an unknown surah (Low / latent)
+### F4 — Quran: unknown/invalid surah references (Low / latent)
 
-`logQuranSession` only updates `updatedSurahs[existingSurahIdx]` when the surah already exists in
-`quranData.surahs` (`nuqtaStore.ts:1466-1480`). If it is absent, the session is stored but the surah
-state is never created, so `totalAyahsMemorized` stays 0.
+Two related problems lived in `logQuranSession` (`nuqtaStore.ts`):
 
-Evidence — "AUDIT FINDING (latent): a memorisation session for a surah missing from quranData.surahs
-is silently ignored": `sessions.length === 1` but `totalAyahsMemorized === 0`.
+1. **Unknown surah (upsert gap).** The original code only updated
+   `updatedSurahs[existingSurahIdx]` when the surah already existed in `quranData.surahs`. If it was
+   absent, the session was stored but the surah state was never created, so `totalAyahsMemorized`
+   stayed 0. Evidence — "AUDIT FINDING (latent): a memorisation session for a surah missing from
+   quranData.surahs is silently ignored": `sessions.length === 1` but `totalAyahsMemorized === 0`.
+2. **Invalid surah (partial side effects).** A surah number outside 1..114 was guarded *inside* the
+   per-habit map: only the surah-state update was skipped, while the session was still appended,
+   minutes were still counted, `completedDates`/`currentStreak` were still advanced and 40 XP was
+   still granted. Evidence — "AUDIT FINDING: an out-of-range surah number is rejected without
+   corrupting state" originally asserted the session was written; the operation was not atomic.
 
-**Reachability:** normally `createHabit` seeds all 114 surahs, so this is not hit in the default flow;
-it becomes reachable for a Quran habit created without seeded surahs (e.g. via restore/import or a
-future code path). Latent, but a silent data-loss trap.
+**Fix.** The surah reference is validated up front (`Number.isInteger` and `1 <= n <= 114`). A valid
+but untracked surah is upserted; an invalid number rejects the **entire** operation before any state
+is touched — no session, no surah mutation, no totals change, no `completedDates`/streak change and
+no XP.
+
+**Regression evidence** (`tests/audit-functional.test.ts`):
+
+- "F4 regression: a memorisation session for a surah missing from quranData.surahs upserts its state"
+- "F4 regression: an invalid surah number rejects the WHOLE operation (no partial side effects)"
+  — asserts sessions, surahs, totals, `activeSurahNumber`, `completedDates`, `currentStreak`, XP and
+  the persisted storage are all unchanged.
+- "F4 regression: invalid surah numbers of every shape are all rejected as no-ops"
+  (`0, -1, 115, 1000, 1.5, NaN, undefined, null, '5'`).
+- "F4 regression: a valid session still records everything it should (happy path intact)".
+
+**Reachability:** the unknown-surah path is not hit in the default flow (`createHabit` seeds all 114
+surahs); it becomes reachable for a Quran habit created without seeded surahs (restore/import or a
+future code path). The invalid-number path is reachable from any caller that passes a bad reference.
 
 ---
 
@@ -195,7 +216,7 @@ future code path). Latent, but a silent data-loss trap.
 | F1 | High | `nuqtaStore.ts:512-910` (`createHabit`), `quranData.ts:186` | Create a specialised habit (UI: Enable Reading Sanctuary) | New studio starts empty (or the seeded content is explicitly labelled as sample) | Fixed |
 | F2 | Medium | `nuqtaStore.ts:1057`, `:1343`, `:1572` | Log a session, then delete the record | Totals recompute from remaining records | Fixed |
 | F3 | Medium | `nuqtaStore.ts:460-472` (`toggleHabitToday`) | Complete after a missed day | Streak restarts at 1 when yesterday was not completed | Fixed |
-| F4 | Low | `nuqtaStore.ts:1466-1480` (`logQuranSession`) | Log a memorisation for a surah absent from `surahs` | Create the surah state and count the ayahs | Fixed |
+| F4 | Low | `nuqtaStore.ts` (`logQuranSession`) | Log a memorisation for a surah absent from `surahs`, or pass an out-of-range number | Upsert the surah state; reject an invalid number as a full no-op | Fixed |
 | N1 | Cosmetic | `TasksView.tsx:168` | Inspect P2/P3 tag colours | Tag colour matches the quadrant | Fixed |
 
 ---
@@ -211,7 +232,9 @@ All findings above are fixed on branch `fix/phase2-functional-findings`:
    totals (pages/minutes, sketches/minutes, ayahs/minutes) from the remaining records.
 3. **F3** — `computeCurrentStreak` derives the streak from `completedDates`, honouring
    `isHabitDueOn` and streak freezes, and is used by all five completion paths.
-4. **F4** — `logQuranSession` upserts a missing surah state and rejects out-of-range surah numbers.
+4. **F4** — `logQuranSession` validates the surah reference up front; a valid but untracked surah is
+   upserted and an out-of-range number rejects the whole operation (no session, no streak/completion
+   change, no XP, no total drift).
 5. The former `AUDIT FINDING` tests now assert the corrected behaviour and pin it against regression.
 
 ---
