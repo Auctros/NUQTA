@@ -8,8 +8,10 @@ import {
   FitnessDifficulty
 } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
-import { EXERCISE_CATALOG, PrebuiltExercise } from '../lib/exerciseCatalog';
+import { EXERCISE_CATALOG, PrebuiltExercise, categoryLabel, muscleLabel } from '../lib/exerciseCatalog';
 import { NuqtaSelect } from './ui';
+import { ExerciseCard } from './workout/ExerciseCard';
+import { ExerciseDetailModal } from './workout/ExerciseDetailModal';
 
 interface WorkoutAppModalProps {
   habit: Habit;
@@ -94,6 +96,8 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
 
   // Exercise Library Filtering
   const [libraryMovementFilter, setLibraryMovementFilter] = useState<'all' | MuscleMovement>('all');
+  const [libraryQuery, setLibraryQuery] = useState('');
+  const [openExercise, setOpenExercise] = useState<PrebuiltExercise | null>(null);
 
   // Routine Creator State
   const [isCreatingRoutine, setIsCreatingRoutine] = useState(false);
@@ -776,21 +780,31 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                 </div>
               </div>
 
-              {/* Movement Filters */}
-              <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-[var(--d-workout-surface)] border border-[var(--d-workout-border)]">
+              {/* Search + movement filters */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <input
+                  type="search"
+                  value={libraryQuery}
+                  onChange={(e) => setLibraryQuery(e.target.value)}
+                  placeholder={isAr ? 'ابحث بالاسم أو العضلة…' : 'Search by name or muscle…'}
+                  aria-label={isAr ? 'بحث في المكتبة' : 'Search the library'}
+                  className="input flex-1 min-w-[160px] text-xs"
+                />
                 {[
-                  { key: 'all', labelAr: 'الكل' },
-                  { key: 'push', labelAr: 'الدفع (Push)' },
-                  { key: 'legs', labelAr: 'الأرجل (Legs)' },
-                  { key: 'core', labelAr: 'البطن والجذع (Core)' },
-                  { key: 'mobility', labelAr: 'المرونة والاستطالة (Mobility)' },
-                  { key: 'cardio', labelAr: 'الكارديو والرشاقة (Cardio)' }
+                  { key: 'all', labelAr: isAr ? 'الكل' : 'All' },
+                  { key: 'push', labelAr: isAr ? 'الدفع' : 'Push' },
+                  { key: 'legs', labelAr: isAr ? 'الأرجل' : 'Legs' },
+                  { key: 'core', labelAr: isAr ? 'البطن والجذع' : 'Core' },
+                  { key: 'mobility', labelAr: isAr ? 'المرونة' : 'Mobility' },
+                  { key: 'cardio', labelAr: isAr ? 'الكارديو' : 'Cardio' }
                 ].map((item) => (
                   <button
                     key={item.key}
                     onClick={() => setLibraryMovementFilter(item.key as any)}
-                    className={`px-3 py-1 text-xs rounded-lg transition-colors ${
-                      libraryMovementFilter === item.key ? 'bg-[var(--d-workout-raised)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
+                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                      libraryMovementFilter === item.key
+                        ? 'bg-[var(--d-workout-raised)] text-[var(--d-workout-accent-strong)] font-bold'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     {item.labelAr}
@@ -802,39 +816,25 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {exerciseCatalog
                   .filter((ex) => libraryMovementFilter === 'all' || ex.movement === libraryMovementFilter)
+                  .filter((ex) => {
+                    const q = libraryQuery.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      ex.nameAr.toLowerCase().includes(q) ||
+                      ex.nameEn.toLowerCase().includes(q) ||
+                      categoryLabel(ex.category, isAr).toLowerCase().includes(q) ||
+                      ex.primary.some((m) => muscleLabel(m, isAr).toLowerCase().includes(q))
+                    );
+                  })
                   .map((ex) => (
-                    <div
+                    <ExerciseCard
                       key={ex.id}
-                      className="panel p-4 border border-[var(--d-workout-border)] bg-[var(--d-workout-surface)] rounded-xl flex flex-col justify-between space-y-3"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--d-workout-accent-strong)]">
-                            {ex.movement}
-                          </span>
-                          <span className="text-[10px] font-mono text-muted uppercase">
-                            {ex.difficulty}
-                          </span>
-                        </div>
-
-                        <h4 className="font-bold text-[var(--text-primary)] text-sm">{isAr ? ex.nameAr : ex.nameEn}</h4>
-                        <p className="text-xs text-muted/90 mt-1.5 leading-relaxed">
-                          {ex.tipsAr}
-                        </p>
-                      </div>
-
-                      <div className="pt-2 border-t border-[var(--d-workout-border-soft)] flex items-center justify-between">
-                        <span className="text-[11px] text-muted font-mono">
-                          {ex.defaultReps} {isAr ? 'تكرار موصى به' : 'reps'}
-                        </span>
-                        <button
-                          onClick={() => handleApplyCatalogExercise(ex)}
-                          className="btn subtle small text-xs text-[var(--d-workout-accent-strong)] hover:bg-[var(--tone-success-wash)]"
-                        >
-                          + {isAr ? 'إدراج للتمرين' : 'Add to Workout'}
-                        </button>
-                      </div>
-                    </div>
+                      exercise={ex}
+                      isAr={isAr}
+                      onOpen={setOpenExercise}
+                      onAdd={handleApplyCatalogExercise}
+                      addLabel={isAr ? 'إدراج للتمرين' : 'Add to workout'}
+                    />
                   ))}
               </div>
             </div>
@@ -1057,6 +1057,14 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
             </div>
           )}
         </div>
+
+        <ExerciseDetailModal
+          exercise={openExercise}
+          isAr={isAr}
+          onClose={() => setOpenExercise(null)}
+          onAdd={handleApplyCatalogExercise}
+          addLabel={isAr ? 'إدراج للتمرين' : 'Add to workout'}
+        />
       </div>
     </div>
   );

@@ -1,163 +1,22 @@
-import { MuscleMovement, FitnessDifficulty, HomeEquipment, ExerciseEntry } from '../types';
+import { MuscleMovement, HomeEquipment, ExerciseEntry } from '../types';
+import { PrebuiltExercise, MuscleId } from './exerciseTypes';
+import { UPPER_BODY } from './catalog/upperBody';
+import { LOWER_BODY } from './catalog/lowerBody';
 
 /**
  * Single source of truth for the built-in home exercise catalog.
  * Shared by WorkoutAppModal (dashboard/habits entry point) and the Workout
  * Studio so the library is never duplicated or allowed to drift.
+ *
+ * The data itself lives in ./catalog/*, split by body region so each file stays
+ * readable. This module owns the ordering, the derived helpers, and the labels.
  */
-export interface PrebuiltExercise {
-  id: string;
-  nameAr: string;
-  nameEn: string;
-  movement: MuscleMovement;
-  difficulty: FitnessDifficulty;
-  equipment: HomeEquipment;
-  defaultReps: number;
-  tipsAr: string;
-}
 
-export const EXERCISE_CATALOG: PrebuiltExercise[] = [
-  {
-    id: 'cat-push-1',
-    nameAr: 'تمرين الضغط القياسي (Standard Push-ups)',
-    nameEn: 'Standard Push-ups',
-    movement: 'push',
-    difficulty: 'intermediate',
-    equipment: 'bodyweight_only',
-    defaultReps: 15,
-    tipsAr: 'حافظ على استقامة الجذع واقتراب المرفقين بزاوية 45 درجة من الجسم.'
-  },
-  {
-    id: 'cat-push-2',
-    nameAr: 'ضغط الماس للذراعين (Diamond Push-ups)',
-    nameEn: 'Diamond Push-ups',
-    movement: 'push',
-    difficulty: 'advanced',
-    equipment: 'bodyweight_only',
-    defaultReps: 10,
-    tipsAr: 'تلامس الإبهامين والسبابتين يركز الجهد على الترايسبس والجزء الداخلي للصدر.'
-  },
-  {
-    id: 'cat-push-3',
-    nameAr: 'تغطيس الكرسي (Chair Dips)',
-    nameEn: 'Chair Tricep Dips',
-    movement: 'push',
-    difficulty: 'beginner',
-    equipment: 'chair_elevated',
-    defaultReps: 12,
-    tipsAr: 'استند على كرسي منزلي ثابت مع النزول بزاوية 90 درجة للمرفق.'
-  },
-  {
-    id: 'cat-legs-1',
-    nameAr: 'القرفصاء الحرة (Bodyweight Air Squats)',
-    nameEn: 'Bodyweight Air Squats',
-    movement: 'legs',
-    difficulty: 'beginner',
-    equipment: 'bodyweight_only',
-    defaultReps: 20,
-    tipsAr: 'اجعل وزنك على الكعبين وانزل حتى يتوازى الفخذان مع الأرض.'
-  },
-  {
-    id: 'cat-legs-2',
-    nameAr: 'السكوات البلغاري الأحادي (Bulgarian Split Squats)',
-    nameEn: 'Bulgarian Split Squats',
-    movement: 'legs',
-    difficulty: 'intermediate',
-    equipment: 'chair_elevated',
-    defaultReps: 12,
-    tipsAr: 'ضع ساقك الخلفية على طرف كرسي وركّز الوزن على فخذ الساق الأمامية.'
-  },
-  {
-    id: 'cat-legs-3',
-    nameAr: 'جسر الحوض (Glute Bridges)',
-    nameEn: 'Glute Bridges',
-    movement: 'legs',
-    difficulty: 'beginner',
-    equipment: 'mat',
-    defaultReps: 20,
-    tipsAr: 'ارفع الحوض واثبت ثانية في الأعلى لتفعيل عضلات الألوية وأسفل الظهر.'
-  },
-  {
-    id: 'cat-core-1',
-    nameAr: 'بلانك الثبات للجذع (Plank Core Hold)',
-    nameEn: 'Plank Core Hold',
-    movement: 'core',
-    difficulty: 'intermediate',
-    equipment: 'mat',
-    defaultReps: 45,
-    tipsAr: 'شد عضلات البطن والأرداف دون رفع أو خفض أسفل الظهر.'
-  },
-  {
-    id: 'cat-core-2',
-    nameAr: 'تسلق الجبل الحركي (Mountain Climbers)',
-    nameEn: 'Mountain Climbers',
-    movement: 'core',
-    difficulty: 'intermediate',
-    equipment: 'bodyweight_only',
-    defaultReps: 25,
-    tipsAr: 'سحب الركبتين بالتناوب نحو الصدر بوتيرة ثابتة.'
-  },
-  {
-    id: 'cat-core-3',
-    nameAr: 'رفع الأرجل لأسفل البطن (Lying Leg Raises)',
-    nameEn: 'Lying Leg Raises',
-    movement: 'core',
-    difficulty: 'intermediate',
-    equipment: 'mat',
-    defaultReps: 15,
-    tipsAr: 'الصعود والنزول ببطء مع تثبيت أسفل الظهر ملامساً للأرض.'
-  },
-  {
-    id: 'cat-mob-1',
-    nameAr: 'إطالة القطة والبقرة (Cat-Cow Stretch)',
-    nameEn: 'Cat-Cow Spinal Mobility',
-    movement: 'mobility',
-    difficulty: 'beginner',
-    equipment: 'mat',
-    defaultReps: 15,
-    tipsAr: 'تنفس بعمق مع تقويس وبسط العمود الفقري لتحرير التوتر المتراكم.'
-  },
-  {
-    id: 'cat-mob-2',
-    nameAr: 'إطالة الحوض والورك (Hip Flexor Stretch)',
-    nameEn: 'Deep Hip Flexor Stretch',
-    movement: 'mobility',
-    difficulty: 'beginner',
-    equipment: 'mat',
-    defaultReps: 30,
-    tipsAr: 'ممتاز لمعالجة قصر عضلات الحوض الناتج عن الجلوس المكتبي.'
-  },
-  {
-    id: 'cat-mob-3',
-    nameAr: 'وضعية الطفل للاسترخاء (Child’s Pose)',
-    nameEn: 'Restorative Child’s Pose',
-    movement: 'mobility',
-    difficulty: 'beginner',
-    equipment: 'mat',
-    defaultReps: 60,
-    tipsAr: 'أرخِ الجبين على الأرض وتمدد بالذراعين للأمام للتنفس والاستشفاء.'
-  },
-  {
-    id: 'cat-cardio-1',
-    nameAr: 'قفز جاكس المنزلي (Jumping Jacks)',
-    nameEn: 'Jumping Jacks',
-    movement: 'cardio',
-    difficulty: 'beginner',
-    equipment: 'bodyweight_only',
-    defaultReps: 40,
-    tipsAr: 'تنشيط الدورة الدموية ومعدل ضربات القلب برفق.'
-  },
-  {
-    id: 'cat-cardio-2',
-    nameAr: 'الجري في المكان مع رفع الركبتين (High Knees)',
-    nameEn: 'High Knees Cadence',
-    movement: 'cardio',
-    difficulty: 'intermediate',
-    equipment: 'bodyweight_only',
-    defaultReps: 30,
-    tipsAr: 'رفع الركبة لمستوى الحوض بالتناوب مع الحفاظ على وتيرة خفيفة.'
-  }
-];
+export type { PrebuiltExercise } from './exerciseTypes';
+export * from './exerciseTypes';
+
+/** Chest → back → shoulders → arms → legs → glutes → core → full body → mobility. */
+export const EXERCISE_CATALOG: PrebuiltExercise[] = [...UPPER_BODY, ...LOWER_BODY];
 
 export const MOVEMENT_TO_CATEGORY: Record<MuscleMovement, ExerciseEntry['category']> = {
   push: 'chest',
@@ -222,3 +81,136 @@ export const equipmentLabel = (e: HomeEquipment, isAr: boolean): string => {
   };
   return isAr ? ar[e] : en[e];
 };
+
+export const difficultyLabel = (d: PrebuiltExercise['difficulty'], isAr: boolean): string => {
+  const ar: Record<PrebuiltExercise['difficulty'], string> = {
+    beginner: 'مبتدئ',
+    intermediate: 'متوسط',
+    advanced: 'متقدم'
+  };
+  const en: Record<PrebuiltExercise['difficulty'], string> = {
+    beginner: 'Beginner',
+    intermediate: 'Intermediate',
+    advanced: 'Advanced'
+  };
+  return isAr ? ar[d] : en[d];
+};
+
+export const categoryLabel = (c: PrebuiltExercise['category'], isAr: boolean): string => {
+  const ar: Record<PrebuiltExercise['category'], string> = {
+    chest: 'الصدر',
+    back: 'الظهر',
+    shoulders: 'الكتفان',
+    biceps: 'البايسبس',
+    triceps: 'الترايسبس',
+    forearms: 'الساعدان',
+    quadriceps: 'الفخذ الأمامي',
+    hamstrings: 'المأبض',
+    glutes: 'الألوية',
+    calves: 'السمانة',
+    core: 'الجذع والبطن',
+    full_body: 'الجسم كامل',
+    mobility: 'المرونة',
+    warmup: 'التسخين'
+  };
+  const en: Record<PrebuiltExercise['category'], string> = {
+    chest: 'Chest',
+    back: 'Back',
+    shoulders: 'Shoulders',
+    biceps: 'Biceps',
+    triceps: 'Triceps',
+    forearms: 'Forearms',
+    quadriceps: 'Quadriceps',
+    hamstrings: 'Hamstrings',
+    glutes: 'Glutes',
+    calves: 'Calves',
+    core: 'Core & abs',
+    full_body: 'Full body',
+    mobility: 'Mobility',
+    warmup: 'Warm-up'
+  };
+  return isAr ? ar[c] : en[c];
+};
+
+export const patternLabel = (p: PrebuiltExercise['pattern'], isAr: boolean): string => {
+  const ar: Record<PrebuiltExercise['pattern'], string> = {
+    push: 'دفع',
+    pull: 'سحب',
+    squat: 'قرفصاء',
+    hinge: 'ثني الحوض',
+    lunge: 'طعن',
+    core_stability: 'ثبات الجذع',
+    rotation: 'تدوير',
+    anti_rotation: 'مقاومة الدوران',
+    single_leg: 'ساق واحدة',
+    mobility: 'حركية',
+    cardio: 'كارديو',
+    carry: 'حمل'
+  };
+  const en: Record<PrebuiltExercise['pattern'], string> = {
+    push: 'Push',
+    pull: 'Pull',
+    squat: 'Squat',
+    hinge: 'Hinge',
+    lunge: 'Lunge',
+    core_stability: 'Core stability',
+    rotation: 'Rotation',
+    anti_rotation: 'Anti-rotation',
+    single_leg: 'Single leg',
+    mobility: 'Mobility',
+    cardio: 'Cardio',
+    carry: 'Carry'
+  };
+  return isAr ? ar[p] : en[p];
+};
+
+export const muscleLabel = (m: MuscleId, isAr: boolean): string => {
+  const ar: Record<MuscleId, string> = {
+    chest: 'الصدر',
+    front_delts: 'الكتف الأمامي',
+    biceps: 'البايسبس',
+    forearms: 'الساعدان',
+    abs: 'البطن',
+    obliques: 'الجوانب',
+    hip_flexors: 'مثنيات الحوض',
+    quads: 'الفخذ الأمامي',
+    calves: 'السمانة',
+    traps: 'الترابيس',
+    upper_back: 'أعلى الظهر',
+    lats: 'الظهر الجانبي',
+    lower_back: 'أسفل الظهر',
+    rear_delts: 'الكتف الخلفي',
+    triceps: 'الترايسبس',
+    glutes: 'الألوية',
+    hamstrings: 'المأبض'
+  };
+  const en: Record<MuscleId, string> = {
+    chest: 'Chest',
+    front_delts: 'Front delts',
+    biceps: 'Biceps',
+    forearms: 'Forearms',
+    abs: 'Abs',
+    obliques: 'Obliques',
+    hip_flexors: 'Hip flexors',
+    quads: 'Quads',
+    calves: 'Calves',
+    traps: 'Traps',
+    upper_back: 'Upper back',
+    lats: 'Lats',
+    lower_back: 'Lower back',
+    rear_delts: 'Rear delts',
+    triceps: 'Triceps',
+    glutes: 'Glutes',
+    hamstrings: 'Hamstrings'
+  };
+  return isAr ? ar[m] : en[m];
+};
+
+/** Distinct values actually present in the catalog, for building filter menus. */
+export const CATALOG_CATEGORIES: PrebuiltExercise['category'][] = Array.from(
+  new Set(EXERCISE_CATALOG.map((e) => e.category))
+);
+export const CATALOG_EQUIPMENT: HomeEquipment[] = Array.from(new Set(EXERCISE_CATALOG.map((e) => e.equipment)));
+export const CATALOG_PATTERNS: PrebuiltExercise['pattern'][] = Array.from(
+  new Set(EXERCISE_CATALOG.map((e) => e.pattern))
+);

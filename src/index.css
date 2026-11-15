@@ -2337,3 +2337,91 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 [data-studio='workout'] { --studio-accent: var(--d-workout-accent); --studio-accent-line: color-mix(in srgb, var(--d-workout-accent) 42%, transparent); --studio-accent-soft: color-mix(in srgb, var(--d-workout-accent) 16%, transparent); --studio-accent-ink: var(--d-workout-accent-strong); --studio-panel: var(--d-workout-surface); --studio-line: var(--d-workout-border); --studio-line-strong: var(--d-workout-border-accent); --studio-rail-bg: var(--d-workout-raised); }
 [data-studio='reading'] { --studio-accent: var(--d-reading-accent); --studio-accent-line: var(--d-reading-border-accent); --studio-accent-soft: color-mix(in srgb, var(--d-reading-accent) 14%, transparent); --studio-accent-ink: var(--d-reading-accent-strong); --studio-panel: var(--d-reading-surface); --studio-line: var(--d-reading-border); --studio-line-strong: var(--d-reading-border-accent); --studio-rail-bg: var(--d-reading-raised); }
 [data-studio='drawing'] { --studio-accent: var(--d-drawing-accent); --studio-accent-line: var(--d-drawing-border-accent); --studio-accent-soft: color-mix(in srgb, var(--d-drawing-accent) 15%, transparent); --studio-accent-ink: var(--d-drawing-accent-strong); --studio-panel: var(--d-drawing-surface); --studio-line: var(--d-drawing-border); --studio-line-strong: var(--d-drawing-border-accent); --studio-rail-bg: var(--d-drawing-raised); --studio-tile-bg: var(--d-drawing-raised); }
+
+/* ============================================================
+   NUQTA — Exercise Library
+   Illustrations, anatomical muscle map, and library cards.
+   All colour comes from tokens; the figure inherits the workout
+   studio accent so it reads as part of the studio, not bolted on.
+   ============================================================ */
+
+/* ---------- code-generated exercise illustrations ---------- */
+.ex-illustration { display: block; width: 100%; height: auto; overflow: visible; }
+
+.ex-fig-torso { fill: var(--surface-chip); stroke: var(--text-secondary); stroke-width: 2; stroke-linejoin: round; }
+.ex-fig-limb { fill: none; stroke: var(--text-secondary); stroke-width: 7.5; stroke-linecap: round; stroke-linejoin: round; }
+.ex-fig-spine { stroke: var(--text-tertiary); stroke-width: 1.2; stroke-dasharray: 2 3; opacity: 0.7; }
+.ex-fig-head { fill: var(--surface-raised); stroke: var(--text-secondary); stroke-width: 2; }
+.ex-fig-eye { fill: var(--text-secondary); }
+.ex-fig-joint { fill: var(--studio-accent, var(--brand)); stroke: var(--surface-raised); stroke-width: 1.2; }
+.ex-fig-extremity { fill: var(--studio-accent, var(--brand)); }
+.ex-fig-far { opacity: 0.34; }
+.ex-fig-far.ex-fig-limb { stroke-width: 7; }
+
+/* props: floor, mat, wall, chair, bar — quiet, never competing with the body */
+.ex-ground { stroke: var(--border-strong); stroke-width: 2.4; stroke-linecap: round; }
+.ex-mat { fill: color-mix(in srgb, var(--studio-accent, var(--brand)) 22%, transparent); stroke: color-mix(in srgb, var(--studio-accent, var(--brand)) 40%, transparent); stroke-width: 1; }
+.ex-prop-line { fill: none; stroke: var(--border-strong); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ex-bar { stroke: var(--text-tertiary); stroke-width: 4; }
+
+/* movement arrow */
+.ex-motion-path { fill: none; stroke: var(--studio-accent, var(--brand)); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 7 5; }
+.ex-motion-head { fill: var(--studio-accent, var(--brand)); }
+.ex-motion { animation: ex-motion-flow 1.6s linear infinite; }
+@keyframes ex-motion-flow { to { stroke-dashoffset: -24; } }
+
+/* ---------- anatomical muscle map ---------- */
+.ex-mm { display: flex; flex-direction: column; gap: var(--sp-3); }
+.ex-mm-views { display: flex; gap: var(--sp-4); justify-content: center; }
+.ex-mm-figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: var(--sp-1); }
+.ex-mm-svg { width: 118px; max-width: 40vw; height: auto; }
+.ex-mm-caption { font-size: var(--fs-micro); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
+.ex-mm-skin { fill: var(--surface-chip); stroke: var(--border-default); stroke-width: 1; }
+.ex-mm-line { fill: none; stroke: var(--border-default); stroke-width: 0.8; stroke-dasharray: 2 3; }
+.ex-mm-region { stroke: var(--surface-raised); stroke-width: 0.8; transition: fill var(--dur-base) var(--ease-standard); }
+.ex-mm-neutral { fill: var(--surface-track); }
+.ex-mm-primary { fill: var(--studio-accent, var(--brand)); }
+.ex-mm-secondary { fill: color-mix(in srgb, var(--studio-accent, var(--brand)) 38%, var(--surface-chip)); }
+.ex-mm-legend { display: flex; flex-wrap: wrap; gap: var(--sp-3); justify-content: center; font-size: var(--fs-micro); color: var(--text-secondary); margin: 0; padding: 0; list-style: none; }
+.ex-mm-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.ex-mm-swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-default); }
+
+/* ---------- library cards ---------- */
+.ex-card { display: flex; flex-direction: column; gap: var(--sp-2); text-align: start; width: 100%; border: 1px solid var(--studio-line, var(--border-default)); border-radius: var(--r-md); background: var(--studio-panel, var(--surface-raised)); padding: var(--sp-3); transition: border-color var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-standard); }
+.ex-card:hover { border-color: var(--studio-accent-line, var(--border-strong)); transform: translateY(-2px); }
+.ex-card-media { display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: var(--r-sm); background: var(--surface-inset); overflow: hidden; }
+.ex-card-media .ex-illustration { width: 78%; max-height: 100%; }
+.ex-card-name { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-primary); }
+.ex-card-muscles { display: flex; flex-wrap: wrap; gap: 4px; }
+.ex-chip { font-size: var(--fs-micro); padding: 1px 7px; border-radius: var(--r-full); border: 1px solid var(--studio-line, var(--border-default)); color: var(--text-secondary); }
+.ex-chip-primary { border-color: var(--studio-accent-line, var(--border-strong)); color: var(--studio-accent, var(--brand-strong)); }
+.ex-card-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-top: auto; }
+.ex-difficulty { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-micro); color: var(--text-secondary); }
+.ex-difficulty-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-tertiary); }
+.ex-difficulty-1 { background: var(--state-success); }
+.ex-difficulty-2 { background: var(--state-warning); }
+.ex-difficulty-3 { background: var(--state-danger); }
+
+/* ---------- detail sheet ---------- */
+.ex-detail { display: flex; flex-direction: column; gap: var(--sp-4); }
+.ex-detail-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: var(--sp-4); align-items: center; }
+@media (max-width: 640px) { .ex-detail-hero { grid-template-columns: 1fr; } }
+.ex-detail-stage { display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: var(--r-md); background: var(--surface-inset); border: 1px solid var(--studio-line, var(--border-default)); overflow: hidden; }
+.ex-detail-stage .ex-illustration { width: 86%; max-height: 100%; }
+.ex-detail-blocks { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.ex-meta { display: flex; flex-direction: column; gap: 2px; }
+.ex-meta-label { font-size: var(--fs-micro); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; }
+.ex-meta-value { font-size: var(--fs-sm); color: var(--text-primary); font-weight: var(--fw-semibold); }
+.ex-steps { margin: 0; padding-inline-start: 1.1em; display: flex; flex-direction: column; gap: 6px; }
+.ex-steps li { font-size: var(--fs-xs); color: var(--text-secondary); line-height: var(--lh-relaxed, 1.7); }
+.ex-list { margin: 0; padding-inline-start: 1.1em; display: flex; flex-direction: column; gap: 5px; }
+.ex-list li { font-size: var(--fs-xs); color: var(--text-secondary); line-height: 1.65; }
+.ex-callout { border-radius: var(--r-sm); border: 1px solid var(--studio-line, var(--border-default)); padding: var(--sp-3); background: var(--surface-inset); }
+.ex-callout-warn { border-color: var(--tone-warning-line); background: var(--tone-warning-wash); }
+.ex-callout-good { border-color: var(--tone-success-line); background: var(--tone-success-wash); }
+.ex-variations { display: grid; gap: var(--sp-2); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-motion { animation: none; }
+  .ex-card:hover { transform: none; }
+}
