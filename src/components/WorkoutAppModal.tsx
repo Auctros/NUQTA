@@ -5,26 +5,16 @@ import {
   ExerciseEntry,
   WorkoutRoutine,
   MuscleMovement,
-  FitnessDifficulty,
-  HomeEquipment
+  FitnessDifficulty
 } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { EXERCISE_CATALOG, PrebuiltExercise } from '../lib/exerciseCatalog';
 
 interface WorkoutAppModalProps {
   habit: Habit;
   onClose: () => void;
 }
 
-interface PrebuiltExercise {
-  id: string;
-  nameAr: string;
-  nameEn: string;
-  movement: MuscleMovement;
-  difficulty: FitnessDifficulty;
-  equipment: HomeEquipment;
-  defaultReps: number;
-  tipsAr: string;
-}
 
 export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose }) => {
   const {
@@ -112,148 +102,8 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
   const [routineDuration, setRoutineDuration] = useState<number>(25);
 
   // Home Exercises Catalog
-  const exerciseCatalog: PrebuiltExercise[] = [
-    {
-      id: 'cat-push-1',
-      nameAr: 'تمرين الضغط القياسي (Standard Push-ups)',
-      nameEn: 'Standard Push-ups',
-      movement: 'push',
-      difficulty: 'intermediate',
-      equipment: 'bodyweight_only',
-      defaultReps: 15,
-      tipsAr: 'حافظ على استقامة الجذع واقتراب المرفقين بزاوية 45 درجة من الجسم.'
-    },
-    {
-      id: 'cat-push-2',
-      nameAr: 'ضغط الماس للذراعين (Diamond Push-ups)',
-      nameEn: 'Diamond Push-ups',
-      movement: 'push',
-      difficulty: 'advanced',
-      equipment: 'bodyweight_only',
-      defaultReps: 10,
-      tipsAr: 'تلامس الإبهامين والسبابتين يركز الجهد على الترايسبس والجزء الداخلي للصدر.'
-    },
-    {
-      id: 'cat-push-3',
-      nameAr: 'تغطيس الكرسي (Chair Dips)',
-      nameEn: 'Chair Tricep Dips',
-      movement: 'push',
-      difficulty: 'beginner',
-      equipment: 'chair_elevated',
-      defaultReps: 12,
-      tipsAr: 'استند على كرسي منزلي ثابت مع النزول بزاوية 90 درجة للمرفق.'
-    },
-    {
-      id: 'cat-legs-1',
-      nameAr: 'القرفصاء الحرة (Bodyweight Air Squats)',
-      nameEn: 'Bodyweight Air Squats',
-      movement: 'legs',
-      difficulty: 'beginner',
-      equipment: 'bodyweight_only',
-      defaultReps: 20,
-      tipsAr: 'اجعل وزنك على الكعبين وانزل حتى يتوازى الفخذان مع الأرض.'
-    },
-    {
-      id: 'cat-legs-2',
-      nameAr: 'السكوات البلغاري الأحادي (Bulgarian Split Squats)',
-      nameEn: 'Bulgarian Split Squats',
-      movement: 'legs',
-      difficulty: 'intermediate',
-      equipment: 'chair_elevated',
-      defaultReps: 12,
-      tipsAr: 'ضع ساقك الخلفية على طرف كرسي وركّز الوزن على فخذ الساق الأمامية.'
-    },
-    {
-      id: 'cat-legs-3',
-      nameAr: 'جسر الحوض (Glute Bridges)',
-      nameEn: 'Glute Bridges',
-      movement: 'legs',
-      difficulty: 'beginner',
-      equipment: 'mat',
-      defaultReps: 20,
-      tipsAr: 'ارفع الحوض واثبت ثانية في الأعلى لتفعيل عضلات الألوية وأسفل الظهر.'
-    },
-    {
-      id: 'cat-core-1',
-      nameAr: 'بلانك الثبات للجذع (Plank Core Hold)',
-      nameEn: 'Plank Core Hold',
-      movement: 'core',
-      difficulty: 'intermediate',
-      equipment: 'mat',
-      defaultReps: 45,
-      tipsAr: 'شد عضلات البطن والأرداف دون رفع أو خفض أسفل الظهر.'
-    },
-    {
-      id: 'cat-core-2',
-      nameAr: 'تسلق الجبل الحركي (Mountain Climbers)',
-      nameEn: 'Mountain Climbers',
-      movement: 'core',
-      difficulty: 'intermediate',
-      equipment: 'bodyweight_only',
-      defaultReps: 25,
-      tipsAr: 'سحب الركبتين بالتناوب نحو الصدر بوتيرة ثابتة.'
-    },
-    {
-      id: 'cat-core-3',
-      nameAr: 'رفع الأرجل لأسفل البطن (Lying Leg Raises)',
-      nameEn: 'Lying Leg Raises',
-      movement: 'core',
-      difficulty: 'intermediate',
-      equipment: 'mat',
-      defaultReps: 15,
-      tipsAr: 'الصعود والنزول ببطء مع تثبيت أسفل الظهر ملامساً للأرض.'
-    },
-    {
-      id: 'cat-mob-1',
-      nameAr: 'إطالة القطة والبقرة (Cat-Cow Stretch)',
-      nameEn: 'Cat-Cow Spinal Mobility',
-      movement: 'mobility',
-      difficulty: 'beginner',
-      equipment: 'mat',
-      defaultReps: 15,
-      tipsAr: 'تنفس بعمق مع تقويس وبسط العمود الفقري لتحرير التوتر المتراكم.'
-    },
-    {
-      id: 'cat-mob-2',
-      nameAr: 'إطالة الحوض والورك (Hip Flexor Stretch)',
-      nameEn: 'Deep Hip Flexor Stretch',
-      movement: 'mobility',
-      difficulty: 'beginner',
-      equipment: 'mat',
-      defaultReps: 30,
-      tipsAr: 'ممتاز لمعالجة قصر عضلات الحوض الناتج عن الجلوس المكتبي.'
-    },
-    {
-      id: 'cat-mob-3',
-      nameAr: 'وضعية الطفل للاسترخاء (Child’s Pose)',
-      nameEn: 'Restorative Child’s Pose',
-      movement: 'mobility',
-      difficulty: 'beginner',
-      equipment: 'mat',
-      defaultReps: 60,
-      tipsAr: 'أرخِ الجبين على الأرض وتمدد بالذراعين للأمام للتنفس والاستشفاء.'
-    },
-    {
-      id: 'cat-cardio-1',
-      nameAr: 'قفز جاكس المنزلي (Jumping Jacks)',
-      nameEn: 'Jumping Jacks',
-      movement: 'cardio',
-      difficulty: 'beginner',
-      equipment: 'bodyweight_only',
-      defaultReps: 40,
-      tipsAr: 'تنشيط الدورة الدموية ومعدل ضربات القلب برفق.'
-    },
-    {
-      id: 'cat-cardio-2',
-      nameAr: 'الجري في المكان مع رفع الركبتين (High Knees)',
-      nameEn: 'High Knees Cadence',
-      movement: 'cardio',
-      difficulty: 'intermediate',
-      equipment: 'bodyweight_only',
-      defaultReps: 30,
-      tipsAr: 'رفع الركبة لمستوى الحوض بالتناوب مع الحفاظ على وتيرة خفيفة.'
-    }
-  ];
+  // Exercise catalog is shared with the Workout Studio (single source of truth).
+  const exerciseCatalog: PrebuiltExercise[] = EXERCISE_CATALOG;
 
   // Helper calculations
   const past7DaysStart = new Date();
