@@ -4,6 +4,8 @@ import { ExerciseCard } from '../src/components/workout/ExerciseCard';
 import { ExerciseDetailModal } from '../src/components/workout/ExerciseDetailModal';
 import { MuscleMap, MUSCLE_IDS } from '../src/components/workout/MuscleMap';
 import { ExerciseIllustration } from '../src/components/workout/illustration/ExerciseIllustration';
+import { WorkoutAppModal } from '../src/components/WorkoutAppModal';
+import { useNuqtaStore } from '../src/store/nuqtaStore';
 import { EXERCISE_CATALOG } from '../src/lib/exerciseCatalog';
 import { ILLUSTRATION_KEYS, getIllustration } from '../src/components/workout/illustration/registry';
 
@@ -193,5 +195,31 @@ describe('ExerciseDetailModal', () => {
   it('renders nothing when no exercise is selected', () => {
     const { container } = render(<ExerciseDetailModal exercise={null} isAr={false} onClose={() => {}} />);
     expect(container.firstChild).toBeNull();
+  });
+});
+
+describe('WorkoutAppModal library tab', () => {
+  it('renders the catalog grid and opens the detail modal', () => {
+    useNuqtaStore.getState().initializeStore();
+    const habit: any = {
+      id: 'h-workout',
+      title: 'Home Workout',
+      specializedType: 'workout',
+      workoutData: { sessions: [], customRoutines: [], weeklyTargetSessions: 4 }
+    };
+    render(<WorkoutAppModal habit={habit} onClose={() => {}} />);
+    fireEvent.click(screen.getByText('Exercise Catalog'));
+    expect(document.querySelectorAll('.ex-card').length).toBe(EXERCISE_CATALOG.length);
+
+    // search narrows the grid
+    const search = screen.getByLabelText('Search the library');
+    fireEvent.change(search, { target: { value: 'push-up' } });
+    expect(document.querySelectorAll('.ex-card').length).toBeLessThan(EXERCISE_CATALOG.length);
+
+    // clearing restores, and a card opens the detail modal
+    fireEvent.change(search, { target: { value: '' } });
+    fireEvent.click(document.querySelector('.ex-card button') as HTMLElement);
+    expect(document.querySelector('.ex-detail')).toBeTruthy();
+    expect(document.querySelectorAll('.ex-mm-primary').length).toBeGreaterThan(0);
   });
 });
