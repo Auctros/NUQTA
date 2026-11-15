@@ -30,7 +30,25 @@ export type IconName =
   | 'flame'
   | 'leaf'
   | 'archive'
-  | 'plusCircle';
+  | 'plusCircle'
+  | 'book'
+  | 'layers'
+  | 'compass'
+  | 'dumbbell'
+  | 'list'
+  | 'trophy'
+  | 'brush'
+  | 'image'
+  | 'play'
+  | 'pause'
+  | 'clock'
+  | 'sparkle'
+  | 'eye'
+  | 'eyeOff'
+  | 'star'
+  | 'flag'
+  | 'quote'
+  | 'history';
 
 const iconPaths: Record<IconName, React.ReactNode> = {
   grid: (
@@ -160,6 +178,92 @@ const iconPaths: Record<IconName, React.ReactNode> = {
       <polyline points="21 8 21 21 3 21 3 8" />
       <rect x="1" y="3" width="22" height="5" />
       <line x1="10" y1="12" x2="14" y2="12" />
+    </>
+  ),
+  book: (
+    <>
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </>
+  ),
+  layers: (
+    <>
+      <path d="m12 2 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 12 9 5 9-5M3 17l9 5 9-5" />
+    </>
+  ),
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+    </>
+  ),
+  dumbbell: (
+    <>
+      <path d="M6.5 6.5v11M3.5 9v5M17.5 6.5v11M20.5 9v5M6.5 12h11" />
+    </>
+  ),
+  list: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
+  trophy: (
+    <>
+      <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" />
+    </>
+  ),
+  brush: (
+    <>
+      <path d="M9.5 14.5 3 21M14 4l6 6-8.5 8.5a3 3 0 0 1-4.24-4.24L14 4Z" />
+      <path d="m14 4 3-3 6 6-3 3" />
+    </>
+  ),
+  image: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="m21 15-5-5L5 21" />
+    </>
+  ),
+  play: <path d="M6 4l14 8-14 8V4Z" />,
+  pause: <path d="M8 5v14M16 5v14" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  sparkle: (
+    <>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" />
+      <circle cx="12" cy="12" r="2.5" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  eyeOff: (
+    <>
+      <path d="M3 3l18 18M10.6 5.2A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a10 10 0 0 0 4.4-1" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    </>
+  ),
+  star: <path d="m12 3 2.6 5.7 6.2.6-4.7 4.2 1.4 6.1L12 16.8 6.5 19.6l1.4-6.1L3.2 9.3l6.2-.6L12 3Z" />,
+  flag: (
+    <>
+      <path d="M5 21V4M5 4h11l-1.5 4L16 12H5" />
+    </>
+  ),
+  quote: (
+    <>
+      <path d="M7 7h4v4a4 4 0 0 1-4 4V7ZM13 7h4v4a4 4 0 0 1-4 4V7Z" />
+    </>
+  ),
+  history: (
+    <>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5M12 8v4l3 2" />
     </>
   )
 };

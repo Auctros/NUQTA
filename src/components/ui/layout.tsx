@@ -1,10 +1,11 @@
 import React from 'react';
 import { NuqtaIcon, IconName } from '../NuqtaIcon';
-import { Badge, BadgeTone, ProgressBar, Surface } from './primitives';
+import { Badge, BadgeTone, Surface } from './primitives';
 
 /* ============================================================
    NUQTA — layout components
-   PageHeader · StatTile · TabBar · FilterBar · StudioShell
+   PageHeader · TabBar · FilterBar
+   (Specialized studios use src/components/studios/StudioKit.)
    ============================================================ */
 
 /* ---------- PageHeader ---------- */
@@ -37,43 +38,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ eyebrow, title, descript
     </div>
     {actions && <div className="heading-actions flex flex-wrap items-center gap-2">{actions}</div>}
   </div>
-);
-
-/* ---------- StatTile ---------- */
-export interface StatTileProps {
-  label: string;
-  value: React.ReactNode;
-  hint?: string;
-  icon?: IconName;
-  accent?: 'brand' | 'success' | 'warning' | 'info' | 'danger' | 'neutral';
-  progress?: { value: number; max?: number; tone?: 'brand' | 'success' | 'warning' | 'info' | 'danger' };
-}
-
-const STAT_ACCENT: Record<NonNullable<StatTileProps['accent']>, string> = {
-  brand: 'text-[var(--brand-strong)]',
-  success: 'text-[var(--state-success)]',
-  warning: 'text-[var(--state-warning)]',
-  info: 'text-[var(--state-info)]',
-  danger: 'text-[var(--state-danger)]',
-  neutral: 'text-[var(--text-secondary)]'
-};
-
-export const StatTile: React.FC<StatTileProps> = ({ label, value, hint, icon, accent = 'neutral', progress }) => (
-  <Surface variant="card" padding="sm" radius="md" className="flex flex-col gap-2 min-w-0">
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] truncate">{label}</span>
-      {icon && (
-        <span className={`${STAT_ACCENT[accent]} opacity-90`} aria-hidden="true">
-          <NuqtaIcon name={icon} className="w-4 h-4" />
-        </span>
-      )}
-    </div>
-    <strong className={`text-[var(--fs-xl)] font-[var(--fw-bold)] tabular-nums leading-none ${STAT_ACCENT[accent]}`}>
-      {value}
-    </strong>
-    {progress && <ProgressBar value={progress.value} max={progress.max} tone={progress.tone} height={5} />}
-    {hint && <span className="text-[var(--fs-micro)] text-[var(--text-tertiary)] truncate">{hint}</span>}
-  </Surface>
 );
 
 /* ---------- TabBar ---------- */
@@ -219,40 +183,4 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     </div>
     {trailing && <div className="flex items-center gap-2">{trailing}</div>}
   </Surface>
-);
-
-/* ---------- StudioShell ---------- */
-export interface StudioShellProps {
-  eyebrow: string;
-  title: React.ReactNode;
-  description?: React.ReactNode;
-  actions?: React.ReactNode;
-  meta?: React.ReactNode;
-  tabs?: TabItem[];
-  activeTab?: string;
-  onTabChange?: (id: string) => void;
-  tabVariant?: 'pill' | 'underline';
-  children: React.ReactNode;
-}
-
-export const StudioShell: React.FC<StudioShellProps> = ({
-  eyebrow,
-  title,
-  description,
-  actions,
-  meta,
-  tabs,
-  activeTab,
-  onTabChange,
-  tabVariant = 'pill',
-  children
-}) => (
-  <div className="space-y-[var(--sp-5)]">
-    <PageHeader eyebrow={eyebrow} title={title} description={description} actions={actions} />
-    {meta}
-    {tabs && activeTab !== undefined && onTabChange && (
-      <TabBar items={tabs} value={activeTab} onChange={onTabChange} variant={tabVariant} />
-    )}
-    <div className="space-y-[var(--sp-4)]">{children}</div>
-  </div>
 );

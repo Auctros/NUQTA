@@ -1,17 +1,56 @@
-import { localDateKey } from '../lib/dateKey';
-import React, { useState } from 'react';
+import { localDateKey, parseDateKey } from '../lib/dateKey';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
-import { WorkoutRoutine, ExerciseEntry, ExerciseSet } from '../types';
-import { NuqtaIcon } from './NuqtaIcon';
-import { StudioShell, TabBar } from './ui';
+import { WorkoutRoutine, ExerciseEntry, ExerciseSet, MuscleMovement } from '../types';
+import { Button } from './ui';
+import {
+  StudioFrame,
+  StudioSection,
+  StudioStat,
+  StudioBars,
+  StudioEmpty,
+  StudioTab
+} from './studios/StudioKit';
+import {
+  EXERCISE_CATALOG,
+  PrebuiltExercise,
+  exerciseEntryFromCatalog,
+  movementLabel,
+  equipmentLabel
+} from '../lib/exerciseCatalog';
 
-const STUDIO_TABS = [
-  { id: 'dashboard', ar: 'لوحة اللياقة', en: 'Fitness Dashboard' },
-  { id: 'session', ar: 'تسجيل حصة تمرين', en: 'Log Workout' },
-  { id: 'routines', ar: 'برامج التمارين', en: 'Routines Vault' },
-  { id: 'history', ar: 'سجل الحصص', en: 'Workout History' },
-  { id: 'targets', ar: 'أهداف اللياقة', en: 'Fitness Targets' }
-];
+type WTab = 'today' | 'programs' | 'exercises' | 'history' | 'progress';
+
+interface DraftExercise {
+  key: string;
+  name: string;
+  category: ExerciseEntry['category'];
+  movement?: MuscleMovement;
+  restSeconds: number;
+  sets: { reps: number; weightKg: number; completed: boolean; type: 'warmup' | 'working' }[];
+  notes?: string;
+}
+
+const makeDraftFromEntry = (e: ExerciseEntry): DraftExercise => ({
+  key: 'dx-' + crypto.randomUUID().slice(0, 6),
+  name: e.name,
+  category: e.category,
+  movement: e.movement,
+  restSeconds: e.sets[0]?.restSeconds ?? 60,
+  notes: e.notes,
+  sets: (e.sets.length ? e.sets : [{ setNumber: 1, reps: 10, completed: false }]).map((s, i) => ({
+    reps: s.reps || 0,
+    weightKg: s.weightKg || 0,
+    completed: !!s.completed,
+    type: i === 0 ? 'warmup' : 'working'
+  }))
+});
+
+const formatClock = (sec: number): string => {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
 
 export const WorkoutView: React.FC = () => {
   const {
@@ -29,9 +68,6 @@ export const WorkoutView: React.FC = () => {
   const todayStr = localDateKey();
 
   const workoutHabit = habits.find((h) => h.specializedType === 'workout');
-
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'session' | 'routines' | 'history' | 'targets'>('dashboard');
-
   const workoutData = workoutHabit?.workoutData || {
     sessions: [],
     customRoutines: [],
@@ -44,44 +80,64 @@ export const WorkoutView: React.FC = () => {
     favoriteRoutine: 'Home Calisthenics'
   };
 
-  // Session Logger State
-  const [sessionTitle, setSessionTitle] = useState('تمارين وزن الجسم والرشاقة');
-  const [workoutType, setWorkoutType] = useState<'bodyweight' | 'strength' | 'cardio' | 'hiit' | 'mobility'>('bodyweight');
-  const [durationMinutes, setDurationMinutes] = useState(30);
+  const sessions = workoutData.sessions || [];
+  const routines = workoutData.customRoutines || [];
+
+  const [activeTab, setActiveTab] = useState<WTab>('today');
+
+  // ---------- Active workout (execution mode) ----------
+  const [active, setActive] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [draftExercises, setDraftExercises] = useState<DraftExercise[]>([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [sessionTitle, setSessionTitle] = useState(isAr ? 'حصة تمرين منزلية' : 'Home workout');
   const [intensityRating, setIntensityRating] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [sessionNotes, setSessionNotes] = useState('');
-  const [repsInput, setRepsInput] = useState(60);
-  const [sessionExercises, setSessionExercises] = useState<ExerciseEntry[]>([
-    {
-      id: 'ex-1',
-      name: 'تمرين الضغط (Push-ups)',
-      category: 'chest',
-      movement: 'push',
-      sets: [
-        { setNumber: 1, reps: 15, completed: true },
-        { setNumber: 2, reps: 15, completed: true }
-      ]
-    },
-    {
-      id: 'ex-2',
-      name: 'سكوات بوزن الجسم (Air Squats)',
-      category: 'legs',
-      movement: 'legs',
-      sets: [
-        { setNumber: 1, reps: 20, completed: true },
-        { setNumber: 2, reps: 20, completed: true }
-      ]
-    }
-  ]);
-  const [showLogSuccess, setShowLogSuccess] = useState(false);
+  const [rest, setRest] = useState<{ remaining: number; total: number } | null>(null);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const timerRef = useRef<number | null>(null);
 
-  // Targets state
+  useEffect(() => {
+    if (!active) return;
+    timerRef.current = window.setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    };
+  }, [active]);
+
+  useEffect(() => {
+    if (!rest) return;
+    if (rest.remaining <= 0) {
+      setRest(null);
+      return;
+    }
+    const t = window.setTimeout(() => setRest((r) => (r ? { ...r, remaining: r.remaining - 1 } : r)), 1000);
+    return () => window.clearTimeout(t);
+  }, [rest]);
+
+  // ---------- Programs / routines ----------
+  const [routineTitle, setRoutineTitle] = useState('');
+  const [routineDesc, setRoutineDesc] = useState('');
+  const [routineMinutes, setRoutineMinutes] = useState(25);
+  const [routineSaved, setRoutineSaved] = useState(false);
+
+  // ---------- Exercise library ----------
+  const [libQuery, setLibQuery] = useState('');
+  const [libMovement, setLibMovement] = useState<'all' | MuscleMovement>('all');
+  const [libEquipment, setLibEquipment] = useState<'all' | string>('all');
+  const [libDifficulty, setLibDifficulty] = useState<'all' | string>('all');
+
+  // ---------- Progress ----------
+  const [progressMetric, setProgressMetric] = useState<'reps' | 'volume' | 'minutes'>('reps');
+  const [selectedExercise, setSelectedExercise] = useState<string>('');
+
+  // ---------- Targets ----------
   const [tempWeeklySessions, setTempWeeklySessions] = useState(workoutData.weeklyTargetSessions || 4);
   const [tempMonthlyReps, setTempMonthlyReps] = useState(workoutData.monthlyTargetReps || 500);
   const [targetsSaved, setTargetsSaved] = useState(false);
 
-  // Handle initialization if not present
-  const handleInitWorkoutHabit = () => {
+  const handleInitWorkoutHabit = () =>
     createHabit({
       name: isAr ? 'تمارين وزن الجسم والرشاقة المنزلية' : 'Home Calisthenics & Fitness',
       anchor: isAr ? 'بعد إنهاء العمل -> أبدأ تمارين الضغط والسكوات' : 'After work -> start home workout',
@@ -89,40 +145,212 @@ export const WorkoutView: React.FC = () => {
       timeOfDay: 'afternoon',
       specializedType: 'workout'
     });
+
+  // ---------- analytics ----------
+  const weekBars = useMemo(() => {
+    const out: { label: string; value: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = localDateKey(d);
+      const count = sessions.filter((s) => s.date === key).length;
+      out.push({ label: d.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { weekday: 'narrow' }), value: count });
+    }
+    return out;
+  }, [sessions, isAr]);
+
+  const volumeFor = (s: { exercises: ExerciseEntry[] }) =>
+    s.exercises.reduce((acc, ex) => acc + ex.sets.reduce((a, st) => a + (st.weightKg || 0) * (st.reps || 0), 0), 0);
+
+  const totalVolume = sessions.reduce((acc, s) => acc + (s.volumeKg || volumeFor(s)), 0);
+
+  // exercise names appearing across history (for progress selection)
+  const exerciseNames = useMemo(() => {
+    const set = new Set<string>();
+    sessions.forEach((s) => s.exercises.forEach((e) => set.add(e.name)));
+    return Array.from(set);
+  }, [sessions]);
+
+  useEffect(() => {
+    if (!selectedExercise && exerciseNames.length) setSelectedExercise(exerciseNames[0]);
+  }, [exerciseNames, selectedExercise]);
+
+  const exerciseProgress = useMemo(() => {
+    if (!selectedExercise) return [] as { label: string; value: number }[];
+    const byDate = new Map<string, number>();
+    [...sessions]
+      .sort((a, b) => (a.date < b.date ? -1 : 1))
+      .forEach((s) => {
+        s.exercises
+          .filter((e) => e.name === selectedExercise)
+          .forEach((e) => {
+            const v = e.sets.reduce((a, st) => {
+              if (!st.completed) return a;
+              if (progressMetric === 'volume') return a + (st.weightKg || 0) * (st.reps || 0);
+              if (progressMetric === 'minutes') return a + (s.durationMinutes || 0);
+              return a + (st.reps || 0);
+            }, 0);
+            byDate.set(s.date, (byDate.get(s.date) || 0) + v);
+          });
+      });
+    return Array.from(byDate.entries())
+      .slice(-8)
+      .map(([date, value]) => ({ label: date.slice(5), value }));
+  }, [sessions, selectedExercise, progressMetric]);
+
+  const personalRecords = useMemo(() => {
+    const best = new Map<string, number>();
+    sessions.forEach((s) =>
+      s.exercises.forEach((e) => {
+        const reps = e.sets.reduce((a, st) => a + (st.completed ? st.reps || 0 : 0), 0);
+        if (reps > (best.get(e.name) || 0)) best.set(e.name, reps);
+      })
+    );
+    return Array.from(best.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, [sessions]);
+
+  const muscleDistribution = useMemo(() => {
+    const dist: Record<string, number> = {};
+    sessions.forEach((s) =>
+      s.exercises.forEach((e) => {
+        const mov = e.movement || 'core';
+        const reps = e.sets.reduce((a, st) => a + (st.reps || 0), 0);
+        dist[mov] = (dist[mov] || 0) + reps;
+      })
+    );
+    return dist;
+  }, [sessions]);
+
+  // ---------- active workout helpers ----------
+  const startWorkout = (title: string, entries: ExerciseEntry[]) => {
+    const drafts = entries.length ? entries.map(makeDraftFromEntry) : [];
+    setDraftExercises(drafts);
+    setCurrentIdx(0);
+    setSessionTitle(title);
+    setElapsed(0);
+    setIntensityRating(3);
+    setSessionNotes('');
+    setRest(null);
+    setSavedFlash(false);
+    setShowCatalog(false);
+    setActive(true);
   };
 
-  // Submit session
-  const handleSubmitSession = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!workoutHabit) return;
+  const addCatalogExercise = (catEx: PrebuiltExercise) => {
+    const draft = makeDraftFromEntry(exerciseEntryFromCatalog(catEx, isAr));
+    draft.sets = draft.sets.map((s, i) => ({ ...s, completed: false, type: i === 0 ? 'warmup' : 'working' }));
+    setDraftExercises((prev) => [...prev, draft]);
+  };
 
-    const totalRepsCalculated = sessionExercises.reduce(
-      (sum, ex) => sum + ex.sets.reduce((sSum, set) => sSum + (set.completed ? set.reps : 0), 0),
-      0
-    ) || repsInput;
+  const addSet = (idx: number) => {
+    setDraftExercises((prev) =>
+      prev.map((ex, i) => {
+        if (i !== idx) return ex;
+        const last = ex.sets[ex.sets.length - 1];
+        return { ...ex, sets: [...ex.sets, { reps: last?.reps || 10, weightKg: last?.weightKg || 0, completed: false, type: 'working' }] };
+      })
+    );
+  };
+
+  const removeSet = (idx: number, setIdx: number) => {
+    setDraftExercises((prev) =>
+      prev.map((ex, i) => (i === idx ? { ...ex, sets: ex.sets.filter((_, si) => si !== setIdx) } : ex))
+    );
+  };
+
+  const updateSet = (idx: number, setIdx: number, patch: Partial<DraftExercise['sets'][number]>) => {
+    setDraftExercises((prev) =>
+      prev.map((ex, i) =>
+        i === idx ? { ...ex, sets: ex.sets.map((s, si) => (si === setIdx ? { ...s, ...patch } : s)) } : ex
+      )
+    );
+  };
+
+  const toggleSetDone = (idx: number, setIdx: number) => {
+    const ex = draftExercises[idx];
+    const nextDone = !ex.sets[setIdx].completed;
+    updateSet(idx, setIdx, { completed: nextDone });
+    if (nextDone && ex.restSeconds > 0) setRest({ remaining: ex.restSeconds, total: ex.restSeconds });
+  };
+
+  const removeExercise = (idx: number) => {
+    setDraftExercises((prev) => prev.filter((_, i) => i !== idx));
+    setCurrentIdx((c) => Math.max(0, Math.min(c, draftExercises.length - 2)));
+  };
+
+  const previousFor = (name: string): { date: string; sets: ExerciseSet[] } | null => {
+    for (const s of sessions) {
+      const match = s.exercises.find((e) => e.name === name);
+      if (match) return { date: s.date, sets: match.sets };
+    }
+    return null;
+  };
+
+  const finishWorkout = () => {
+    if (!workoutHabit) return;
+    const exercises: ExerciseEntry[] = draftExercises.map((d) => ({
+      id: 'ex-' + crypto.randomUUID().slice(0, 6),
+      name: d.name,
+      category: d.category,
+      movement: d.movement,
+      notes: d.notes,
+      sets: d.sets.map((s, i) => ({
+        setNumber: i + 1,
+        reps: s.reps,
+        weightKg: s.weightKg,
+        restSeconds: d.restSeconds,
+        completed: s.completed
+      }))
+    }));
+    const totalReps = exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.completed ? s.reps : 0), 0), 0);
+    const volumeKg = exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.completed ? (s.weightKg || 0) * s.reps : 0), 0), 0);
 
     logWorkoutSession(workoutHabit.id, {
-      title: sessionTitle.trim(),
-      workoutType,
-      durationMinutes: Number(durationMinutes),
-      totalReps: totalRepsCalculated,
-      volumeKg: 0,
+      title: sessionTitle.trim() || (isAr ? 'تمارين منزلية' : 'Home workout'),
+      workoutType: 'bodyweight',
+      durationMinutes: Math.max(1, Math.round(elapsed / 60)),
+      totalReps,
+      volumeKg,
+      exercises,
       intensityRating,
       difficultyLevel: 'intermediate',
-      exercises: sessionExercises,
       notes: sessionNotes.trim() || undefined
     });
-
-    setShowLogSuccess(true);
-    setSessionNotes('');
-    setTimeout(() => {
-      setShowLogSuccess(false);
-      setActiveTab('dashboard');
-    }, 1800);
+    setSavedFlash(true);
+    window.setTimeout(() => {
+      setSavedFlash(false);
+      setActive(false);
+    }, 700);
   };
 
-  // Save targets
-  const handleSaveTargets = (e: React.FormEvent) => {
+  const saveRoutine = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!workoutHabit || !routineTitle.trim()) return;
+    const routine: WorkoutRoutine = {
+      id: 'rt-' + crypto.randomUUID().slice(0, 8),
+      name: routineTitle.trim(),
+      nameAr: routineTitle.trim(),
+      description: routineDesc.trim() || undefined,
+      targetLevel: 'intermediate',
+      estimatedMinutes: routineMinutes,
+      category: 'bodyweight',
+      isCustom: true,
+      exercises: draftExercises.map((d) => ({
+        id: 'ex-' + crypto.randomUUID().slice(0, 6),
+        name: d.name,
+        category: d.category,
+        movement: d.movement,
+        sets: d.sets.map((s, i) => ({ setNumber: i + 1, reps: s.reps, weightKg: s.weightKg, completed: true }))
+      }))
+    };
+    addOrUpdateWorkoutRoutine(workoutHabit.id, routine);
+    setRoutineSaved(true);
+    setRoutineTitle('');
+    setRoutineDesc('');
+    window.setTimeout(() => setRoutineSaved(false), 2000);
+  };
+
+  const saveTargets = (e: React.FormEvent) => {
     e.preventDefault();
     if (!workoutHabit) return;
     updateFitnessTargets(workoutHabit.id, {
@@ -130,616 +358,940 @@ export const WorkoutView: React.FC = () => {
       monthlyTargetReps: Number(tempMonthlyReps)
     });
     setTargetsSaved(true);
-    setTimeout(() => setTargetsSaved(false), 2500);
+    window.setTimeout(() => setTargetsSaved(false), 2000);
   };
+
+  const filteredCatalog = EXERCISE_CATALOG.filter((e) => {
+    if (libMovement !== 'all' && e.movement !== libMovement) return false;
+    if (libEquipment !== 'all' && e.equipment !== libEquipment) return false;
+    if (libDifficulty !== 'all' && e.difficulty !== libDifficulty) return false;
+    if (libQuery.trim()) {
+      const q = libQuery.trim().toLowerCase();
+      if (!e.nameAr.toLowerCase().includes(q) && !e.nameEn.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
 
   if (!workoutHabit) {
     return (
-      <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-        <div className="page-heading">
-          <div>
-            <div className="eyebrow flex items-center gap-2">
-              <span className="line"></span>
-              <span className="font-mono text-[var(--d-workout-accent)]">NUQTA / HOME FITNESS</span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-[var(--text-primary)]">
-              {isAr ? 'استوديو اللياقة المنزلية' : 'Home Fitness & Calisthenics'}
-            </h1>
-            <p className="text-sm text-muted">
-              {isAr ? 'تمارين وزن الجسم، وتتبع التكرارات، وبناء القوة والرشاقة دون أجهزة معقدة.' : 'Bodyweight mastery, reps analytics, and home workout routines.'}
+      <div className="studio-root" data-studio="workout" dir={isAr ? 'rtl' : 'ltr'}>
+        <header className="studio-head">
+          <div className="min-w-0">
+            <span className="studio-eyebrow">NUQTA / HOME FITNESS</span>
+            <h1 className="studio-title mt-1">{isAr ? 'استوديو اللياقة المنزلية' : 'Home Fitness Studio'}</h1>
+            <p className="studio-lede mt-1">
+              {isAr
+                ? 'تمارين وزن الجسم، تتبع التكرارات، وبناء القوة والرشاقة دون أجهزة معقدة.'
+                : 'Bodyweight training, set logging, and routine management at home.'}
             </p>
           </div>
-        </div>
-
-        <div className="p-8 rounded-2xl border border-emerald-500/30 bg-[var(--d-workout-surface)] text-center max-w-2xl mx-auto space-y-4 shadow-xl">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-[var(--d-workout-accent)] flex items-center justify-center text-3xl mx-auto border border-emerald-500/30">
-            ⚡
-          </div>
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">
-            {isAr ? 'ابدأ رحلة القوة والرشاقة من منزلك' : 'Initialize Home Fitness Studio'}
-          </h2>
-          <p className="text-xs text-muted leading-relaxed max-w-md mx-auto">
-            {isAr
-              ? 'تتبع التكرارات اليومية، الحصص التدريبية، ومجموعات التمارين الذاتية بانتظام.'
-              : 'Autonomous fitness engine with routines, reps volume tracker, and habit cadence.'}
-          </p>
-          <button
-            onClick={handleInitWorkoutHabit}
-            className="btn primary px-6 py-2.5 text-sm font-bold shadow-lg"
-          >
-            <span>+</span>
-            <span>{isAr ? 'تفعيل استوديو التمارين الآن' : 'Enable Workout Studio'}</span>
-          </button>
-        </div>
+        </header>
+        <StudioSection>
+          <StudioEmpty
+            icon="dumbbell"
+            title={isAr ? 'ابدأ رحلة القوة والرشاقة' : 'Initialize your training log'}
+            description={
+              isAr
+                ? 'حصص تدريبية، مكتبة تمارين، وتتبع للأداء الشخصي.'
+                : 'Workout sessions, an exercise library, and personal-performance tracking.'
+            }
+            action={
+              <Button variant="primary" onClick={handleInitWorkoutHabit}>
+                {isAr ? 'تفعيل استوديو التمارين' : 'Enable Workout Studio'}
+              </Button>
+            }
+          />
+        </StudioSection>
       </div>
     );
   }
 
-  return (
-    <StudioShell
-      eyebrow="NUQTA / HOME FITNESS"
-      title={isAr ? 'استوديو اللياقة المنزلية' : 'Home Fitness & Calisthenics'}
-      description={
-        isAr
-          ? 'مساحة التدريب المنزلي، تكرارات وزن الجسم، وبرامج الكاليسثنكس والرشاقة.'
-          : 'Bodyweight training sanctuary, volume tracking, and daily physical vitality.'
-      }
-      actions={
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('session')}
-            className="btn primary small text-xs flex items-center gap-1.5"
-          >
-            <span>+</span>
-            <span>{isAr ? 'تسجيل تمرين منزلي' : 'Log Workout Session'}</span>
-          </button>
-          <button
-            onClick={() => setActiveNavTab('archive')}
-            className="btn subtle small text-xs flex items-center gap-1.5"
-            title={isAr ? 'فتح أرشيف وسجل التمارين الشامل' : 'Open Workout Archive & History'}
-          >
-            <span>🗄️</span>
-            <span>{isAr ? 'الذاكرة والأرشيف' : 'Archive'}</span>
-          </button>
-          <button
-            onClick={() => setActiveNavTab('habits')}
-            className="btn subtle small text-xs"
-          >
-            <span>{isAr ? 'كل العادات' : 'All Habits'}</span>
-            <span>→</span>
-          </button>
-        </div>
-      }
-      meta={
-        <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-        {/* Total Reps */}
-        <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1">
-          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
-            <span>{isAr ? 'إجمالي التكرارات' : 'Total Reps'}</span>
-            <span className="text-[var(--d-workout-accent)] text-xs">⚡</span>
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <strong className="text-xl font-bold font-mono text-[var(--d-workout-accent)]">
-              {(workoutData.totalReps || 0).toLocaleString()}
-            </strong>
-            <span className="text-xs text-muted">{isAr ? 'تكرار' : 'reps'}</span>
-          </div>
-          <span className="text-[var(--fs-micro)] text-muted block">
-            {isAr ? 'الهدف الشهري:' : 'Monthly Target:'} {workoutData.monthlyTargetReps || 500} {isAr ? 'تكرار' : 'reps'}
-          </span>
-        </div>
+  const tabs: StudioTab[] = [
+    { id: 'today', label: isAr ? 'اليوم' : 'Today', icon: 'dumbbell' },
+    { id: 'programs', label: isAr ? 'البرامج' : 'Programs', icon: 'list', count: routines.length },
+    { id: 'exercises', label: isAr ? 'مكتبة التمارين' : 'Exercises', icon: 'search' },
+    { id: 'history', label: isAr ? 'السجل' : 'History', icon: 'history' },
+    { id: 'progress', label: isAr ? 'التقدم' : 'Progress', icon: 'chart' }
+  ];
 
-        {/* Workouts Logged */}
-        <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1">
-          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
-            <span>{isAr ? 'الحصص المنجزة' : 'Workouts Logged'}</span>
-            <span className="text-[var(--state-info)] text-xs">✓</span>
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <strong className="text-xl font-bold font-mono text-[var(--text-primary)]">
-              {workoutData.totalWorkouts || 0}
-            </strong>
-            <span className="text-xs text-muted">{isAr ? 'حصة' : 'sessions'}</span>
-          </div>
-          <span className="text-[var(--fs-micro)] text-muted block font-mono">
-            ~{Math.round((workoutData.totalMinutes || 0) / 60)} {isAr ? 'ساعات تدريب' : 'hours total'}
-          </span>
-        </div>
+  // ============================ ACTIVE WORKOUT ============================
+  if (active) {
+    const ex = draftExercises[currentIdx];
+    const prev = ex ? previousFor(ex.name) : null;
+    const completedSets = draftExercises.reduce((a, e) => a + e.sets.filter((s) => s.completed).length, 0);
+    const totalSets = draftExercises.reduce((a, e) => a + e.sets.length, 0);
 
-        {/* Weekly Target Sessions */}
-        <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1">
-          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
-            <span>{isAr ? 'الهدف الأسبوعي' : 'Weekly Sessions'}</span>
-            <span className="text-[var(--state-warning)] text-xs">🎯</span>
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <strong className="text-xl font-bold font-mono text-[var(--state-warning-strong)]">
-              {workoutData.weeklyTargetSessions || 4}
-            </strong>
-            <span className="text-xs text-muted">{isAr ? 'حصص/أسبوع' : 'sessions/wk'}</span>
-          </div>
-          <span className="text-[var(--fs-micro)] text-muted block">
-            {isAr ? 'انتظام مستمر' : 'Active Cadence'}
-          </span>
-        </div>
-
-        {/* Streak */}
-        <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1">
-          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
-            <span>{isAr ? 'سلسلة النشاط' : 'Current Streak'}</span>
-            <span className="text-accent text-xs">♨</span>
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <strong className="text-xl font-bold font-mono text-accent">
-              {workoutHabit.currentStreak || 0}
-            </strong>
-            <span className="text-xs text-muted">{isAr ? 'أيام' : 'days'}</span>
-          </div>
-          <span className="text-[var(--fs-micro)] text-muted block">
-            {isAr ? 'أطول سلسلة:' : 'Best:'} {workoutHabit.longestStreak || 0} {isAr ? 'يوم' : 'd'}
-          </span>
-        </div>
-
-        {/* Favorite Routine */}
-        <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-1 col-span-2 sm:col-span-1">
-          <span className="text-[var(--fs-xs)] text-muted block flex items-center justify-between">
-            <span>{isAr ? 'البرنامج المفضل' : 'Favorite Focus'}</span>
-            <span className="text-[var(--d-workout-accent)] text-xs">🏆</span>
-          </span>
-          <strong className="text-xs font-bold text-[var(--text-primary)] block truncate">
-            {workoutData.favoriteRoutine || (isAr ? 'وزن الجسم والبلانك' : 'Home Calisthenics')}
-          </strong>
-          <span className="text-[var(--fs-micro)] text-muted block">
-            {isAr ? 'تمارين حرة بدون أوزان' : 'Pure bodyweight'}
-          </span>
-        </div>
-      </div>
-
-        </>
-      }
-      tabs={STUDIO_TABS.map((t) => ({ id: t.id, label: isAr ? t.ar : t.en }))}
-      activeTab={activeTab}
-      onTabChange={(id) => setActiveTab(id as any)}
-    >
-
-      {/* =========================================================================
-          TAB 1: DASHBOARD
-         ========================================================================= */}
-      {activeTab === 'dashboard' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Quick Workout Launcher Card */}
-            <div className="p-5 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-[var(--d-workout-surface)] via-[var(--d-workout-surface)] to-[var(--d-workout-raised)] space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-10 h-10 rounded-xl bg-emerald-500/20 text-[var(--d-workout-accent)] flex items-center justify-center font-bold text-lg border border-emerald-500/30">
-                    ⚡
-                  </span>
-                  <div>
-                    <span className="text-[var(--fs-micro)] font-mono tracking-wider text-[var(--d-workout-accent)] uppercase block">
-                      {isAr ? 'حصة التدريب المقترحة' : 'RECOMMENDED SESSION'}
-                    </span>
-                    <h2 className="text-base font-bold text-[var(--text-primary)]">
-                      {isAr ? 'تمارين وزن الجسم والرشاقة (ضغط، سكوات، وبلانك)' : 'Full Body Calisthenics & Core'}
-                    </h2>
-                    <span className="text-xs text-muted block mt-0.5">
-                      {isAr ? '30 دقيقة · بدون أدوات · تركيز على القوة الوظيفية' : '30 mins · No equipment needed · Functional strength'}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setActiveTab('session')}
-                  className="btn primary small text-xs flex items-center gap-1"
-                >
-                  <span>▶</span>
-                  <span>{isAr ? 'بدء التمرين الآن' : 'Start Workout'}</span>
-                </button>
+    return (
+      <div className="studio-root" data-studio="workout" dir={isAr ? 'rtl' : 'ltr'}>
+        {/* execution header — deliberately different from the browse chrome */}
+        <div className="studio-section" style={{ position: 'sticky', top: 0, zIndex: 30 }}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-[var(--fs-micro)] uppercase tracking-wider font-mono text-[var(--studio-accent)]">
+                {isAr ? 'حصة جارية' : 'LIVE SESSION'}
+              </span>
+              <input
+                value={sessionTitle}
+                onChange={(e) => setSessionTitle(e.target.value)}
+                aria-label={isAr ? 'عنوان الحصة' : 'Session title'}
+                className="block w-full bg-transparent border-0 p-0 text-[var(--fs-lg)] font-[var(--fw-bold)] text-[var(--text-primary)] focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-end">
+                <span className="block text-[var(--fs-micro)] text-[var(--text-secondary)]">
+                  {isAr ? 'المدة' : 'Duration'}
+                </span>
+                <span className="block font-mono text-[var(--fs-lg)] font-[var(--fw-heavy)] text-[var(--text-primary)] tabular-nums">
+                  {formatClock(elapsed)}
+                </span>
               </div>
+              <Button variant="danger" size="sm" icon="check" onClick={finishWorkout}>
+                {isAr ? 'إنهاء الحصة' : 'Finish'}
+              </Button>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="flex-1 h-1.5 rounded-[var(--r-full)] bg-[var(--surface-track)] overflow-hidden">
+              <div
+                className="h-full rounded-[var(--r-full)]"
+                style={{ width: `${totalSets ? (completedSets / totalSets) * 100 : 0}%`, background: 'var(--studio-accent)' }}
+              />
+            </div>
+            <span className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono">
+              {completedSets}/{totalSets} {isAr ? 'مجموعة' : 'sets'}
+            </span>
+          </div>
+          {savedFlash && (
+            <p role="status" className="text-[var(--fs-xs)] text-[var(--state-success)] mt-2">
+              {isAr ? 'تم حفظ الحصة.' : 'Workout saved.'}
+            </p>
+          )}
+        </div>
 
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--d-workout-border-strong)] text-center text-xs">
-                <div className="p-2 rounded-lg bg-[var(--d-workout-raised)]">
-                  <span className="text-[var(--fs-micro)] text-muted block">{isAr ? 'ضغط (Push)' : 'Push-ups'}</span>
-                  <strong className="text-[var(--d-workout-accent)] font-mono">3 × 15</strong>
-                </div>
-                <div className="p-2 rounded-lg bg-[var(--d-workout-raised)]">
-                  <span className="text-[var(--fs-micro)] text-muted block">{isAr ? 'سكوات (Legs)' : 'Air Squats'}</span>
-                  <strong className="text-[var(--d-workout-accent)] font-mono">3 × 20</strong>
-                </div>
-                <div className="p-2 rounded-lg bg-[var(--d-workout-raised)]">
-                  <span className="text-[var(--fs-micro)] text-muted block">{isAr ? 'بلانك (Core)' : 'Plank'}</span>
-                  <strong className="text-[var(--d-workout-accent)] font-mono">3 × 45s</strong>
-                </div>
+        {rest && (
+          <div className="rest-timer">
+            <span className="rest-timer-clock">{formatClock(rest.remaining)}</span>
+            <div className="flex-1">
+              <p className="text-[var(--fs-xs)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
+                {isAr ? 'راحة بين المجموعات' : 'Rest between sets'}
+              </p>
+              <div className="h-1.5 rounded-[var(--r-full)] bg-[var(--surface-track)] overflow-hidden mt-1">
+                <div
+                  className="h-full rounded-[var(--r-full)]"
+                  style={{ width: `${(rest.remaining / rest.total) * 100}%`, background: 'var(--studio-accent)' }}
+                />
               </div>
             </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" icon="pause" onClick={() => setRest(null)}>
+                {isAr ? 'تخطٍّ' : 'Skip'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setRest((r) => (r ? { ...r, remaining: r.remaining + 15, total: r.total + 15 } : r))}
+              >
+                +15s
+              </Button>
+            </div>
+          </div>
+        )}
 
-            {/* Recent Workout Sessions */}
-            <div className="p-5 rounded-2xl border border-[var(--d-workout-border)] bg-[var(--d-workout-surface)] space-y-4">
-              <div className="flex items-center justify-between border-b border-[var(--d-workout-border-soft)] pb-3">
-                <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <span>⚡</span>
-                  <span>{isAr ? 'سجل الحصص التدريبية الأخيرة' : 'Recent Workout Sessions'}</span>
-                </h3>
-                <button onClick={() => setActiveTab('history')} className="text-link text-xs">
-                  <span>{isAr ? 'السجل الكامل' : 'All history'}</span>
-                  <span>→</span>
-                </button>
-              </div>
-
-              {workoutData.sessions.length === 0 ? (
-                <div className="p-6 text-center text-xs text-muted border border-dashed border-[var(--d-workout-border)] rounded-xl">
-                  {isAr ? 'لا توجد حصص مسجلة بعد. ابدأ اليوم بـ 15 دقيقة تمارين خفيفة.' : 'No workout sessions logged yet.'}
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {workoutData.sessions.slice(0, 4).map((s) => (
-                    <div
-                      key={s.id}
-                      className="p-3 rounded-xl border border-[var(--d-workout-border-strong)] bg-[var(--d-workout-chip)] flex items-center justify-between gap-3 text-xs"
-                    >
-                      <div>
-                        <strong className="text-[var(--text-primary)] block truncate">{s.title}</strong>
-                        <span className="text-[var(--fs-xs)] text-muted flex items-center gap-2 mt-0.5 font-mono">
-                          <span>{s.date}</span>
-                          <span>· {s.durationMinutes}m</span>
-                          <span>· {(s.totalReps || 0)} {isAr ? 'تكرار' : 'reps'}</span>
-                          <span>· RPE {s.intensityRating}/5</span>
+        {draftExercises.length === 0 ? (
+          <StudioSection>
+            <StudioEmpty
+              icon="dumbbell"
+              title={isAr ? 'لا توجد تمارين بعد' : 'No exercises yet'}
+              description={isAr ? 'أضف تمريناً من المكتبة لبدء التسجيل.' : 'Add an exercise from the library to start logging.'}
+              action={
+                <Button variant="primary" size="sm" icon="plus" onClick={() => setShowCatalog(true)}>
+                  {isAr ? 'إضافة تمرين' : 'Add exercise'}
+                </Button>
+              }
+            />
+          </StudioSection>
+        ) : (
+          <div className="grid gap-[var(--sp-4)] lg:grid-cols-[220px_1fr]">
+            {/* exercise rail (secondary nav within execution) */}
+            <StudioSection title={isAr ? 'التمارين' : 'Exercises'}>
+              <ul className="space-y-1">
+                {draftExercises.map((e, i) => {
+                  const done = e.sets.filter((s) => s.completed).length;
+                  return (
+                    <li key={e.key}>
+                      <button
+                        type="button"
+                        aria-current={i === currentIdx}
+                        onClick={() => setCurrentIdx(i)}
+                        className="w-full text-start px-2.5 py-2 rounded-[var(--r-sm)] text-[var(--fs-xs)] transition-colors"
+                        style={
+                          i === currentIdx
+                            ? { background: 'var(--studio-accent-soft)', color: 'var(--studio-accent-ink)' }
+                            : { color: 'var(--text-secondary)' }
+                        }
+                      >
+                        <span className="block truncate font-[var(--fw-semibold)]">{e.name}</span>
+                        <span className="block text-[var(--fs-micro)] font-mono opacity-80">
+                          {done}/{e.sets.length} {isAr ? 'مجموعة' : 'sets'}
                         </span>
-                        {s.notes && <p className="text-[var(--fs-xs)] text-muted/80 mt-1 italic">"{s.notes}"</p>}
-                      </div>
-                      <span className="text-[var(--d-workout-accent)] font-mono font-bold text-xs">
-                        +{s.totalReps || 0} {isAr ? 'تكرار' : 'reps'}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <Button variant="ghost" size="sm" icon="plus" block className="mt-2" onClick={() => setShowCatalog(true)}>
+                {isAr ? 'تمرين' : 'Exercise'}
+              </Button>
+            </StudioSection>
+
+            {/* current exercise + set logging */}
+            {ex && (
+              <div className="space-y-[var(--sp-4)]">
+                <StudioSection
+                  title={
+                    <>
+                      <span className="font-mono text-[var(--studio-accent)]">{currentIdx + 1}.</span> {ex.name}
+                    </>
+                  }
+                  action={
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="trash"
+                        aria-label={isAr ? 'حذف التمرين' : 'Remove exercise'}
+                        onClick={() => removeExercise(currentIdx)}
+                      />
+                      {currentIdx < draftExercises.length - 1 && (
+                        <Button variant="secondary" size="sm" onClick={() => setCurrentIdx(currentIdx + 1)}>
+                          {isAr ? 'التالي' : 'Next'}
+                        </Button>
+                      )}
+                    </div>
+                  }
+                >
+                  {prev ? (
+                    <p className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono mb-3">
+                      {isAr ? 'الأداء السابق' : 'Previous'} ({prev.date}):{' '}
+                      {prev.sets.map((s) => `${s.weightKg ? s.weightKg + 'kg×' : ''}${s.reps}`).join(' · ')}
+                    </p>
+                  ) : (
+                    <p className="text-[var(--fs-micro)] text-[var(--text-tertiary)] mb-3">
+                      {isAr ? 'أول مرة تسجل هذا التمرين' : 'First time logging this exercise'}
+                    </p>
+                  )}
+
+                  <div className="set-row set-row-head" aria-hidden="true">
+                    <span>{isAr ? '#' : '#'}</span>
+                    <span>{isAr ? 'الوزن (كغ)' : 'Weight (kg)'}</span>
+                    <span>{isAr ? 'التكرارات' : 'Reps'}</span>
+                    <span>{isAr ? 'راحة' : 'Rest'}</span>
+                    <span>{isAr ? 'تم' : 'Done'}</span>
+                  </div>
+                  {ex.sets.map((s, si) => (
+                    <div className="set-row" key={si}>
+                      <span className="set-index">
+                        {si + 1}
+                        {s.type === 'warmup' && <span className="set-type-tag block">{isAr ? 'إحماء' : 'warm'}</span>}
                       </span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={s.weightKg}
+                        onChange={(e) => updateSet(currentIdx, si, { weightKg: Number(e.target.value) })}
+                        aria-label={isAr ? 'الوزن' : 'Weight'}
+                        className="set-input"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        value={s.reps}
+                        onChange={(e) => updateSet(currentIdx, si, { reps: Number(e.target.value) })}
+                        aria-label={isAr ? 'التكرارات' : 'Reps'}
+                        className="set-input"
+                      />
+                      <span className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono text-center">
+                        {ex.restSeconds}s
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          data-done={s.completed}
+                          aria-pressed={s.completed}
+                          aria-label={isAr ? 'إتمام المجموعة' : 'Complete set'}
+                          className="set-done"
+                          onClick={() => toggleSetDone(currentIdx, si)}
+                        >
+                          ✓
+                        </button>
+                        {ex.sets.length > 1 && (
+                          <button
+                            type="button"
+                            aria-label={isAr ? 'حذف المجموعة' : 'Remove set'}
+                            className="text-[var(--text-tertiary)] hover:text-[var(--state-danger)] text-sm"
+                            onClick={() => removeSet(currentIdx, si)}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Right Column: Built-in Calisthenics Routines */}
-          <div className="space-y-6">
-            <div className="p-5 rounded-2xl border border-[var(--d-workout-border)] bg-[var(--d-workout-surface)] space-y-4">
-              <div className="flex items-center justify-between border-b border-[var(--d-workout-border-soft)] pb-3">
-                <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <span>📋</span>
-                  <span>{isAr ? 'برامج الكاليسثنكس' : 'Calisthenics Routines'}</span>
-                </h3>
-                <button onClick={() => setActiveTab('routines')} className="text-link text-xs">
-                  <span>{isAr ? 'كل البرامج' : 'View all'}</span>
-                  <span>→</span>
-                </button>
-              </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <Button variant="secondary" size="sm" icon="plus" onClick={() => addSet(currentIdx)}>
+                      {isAr ? 'إضافة مجموعة' : 'Add set'}
+                    </Button>
+                    <label className="flex items-center gap-2 text-[var(--fs-xs)] text-[var(--text-secondary)]">
+                      {isAr ? 'راحة' : 'Rest'}
+                      <input
+                        type="number"
+                        min={0}
+                        value={ex.restSeconds}
+                        onChange={(e) =>
+                          setDraftExercises((prev) =>
+                            prev.map((d, i) => (i === currentIdx ? { ...d, restSeconds: Number(e.target.value) } : d))
+                          )
+                        }
+                        className="input w-20 font-mono text-[var(--fs-xs)] tabular-nums"
+                      />
+                      s
+                    </label>
+                  </div>
 
-              <div className="space-y-2">
-                {[
-                  { name: isAr ? 'وزن الجسم والرشاقة الشاملة' : 'Full Body Calisthenics', mins: 25, level: 'مبتدئ / متوسط' },
-                  { name: isAr ? 'قوة الجذع والبطن (Core & Plank)' : 'Core & Midline Power', mins: 20, level: 'متوسط' },
-                  { name: isAr ? 'مرونة المفاصل وإطالات الظهر' : 'Spinal Mobility Flow', mins: 15, level: 'لجميع المستويات' }
-                ].map((r, i) => (
-                  <div
-                    key={i}
-                    onClick={() => {
-                      setSessionTitle(r.name);
-                      setDurationMinutes(r.mins);
-                      setActiveTab('session');
-                    }}
-                    className="p-3 rounded-xl border border-[var(--d-workout-border-strong)] bg-[var(--d-workout-chip)] hover:border-emerald-500/40 transition-all cursor-pointer flex items-center justify-between text-xs group"
-                  >
-                    <div>
-                      <strong className="text-[var(--text-primary)] block group-hover:text-[var(--d-workout-accent)]">{r.name}</strong>
-                      <span className="text-[var(--fs-micro)] text-muted">{r.mins}m · {r.level}</span>
-                    </div>
-                    <span className="text-[var(--d-workout-accent)] text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                      {isAr ? 'بدء ↗' : 'Start ↗'}
+                  <label className="field block mt-3">
+                    <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
+                      {isAr ? 'ملاحظات التمرين' : 'Exercise notes'}
                     </span>
+                    <input
+                      type="text"
+                      value={ex.notes || ''}
+                      onChange={(e) =>
+                        setDraftExercises((prev) =>
+                          prev.map((d, i) => (i === currentIdx ? { ...d, notes: e.target.value } : d))
+                        )
+                      }
+                      className="input w-full text-[var(--fs-xs)]"
+                      placeholder={isAr ? 'الوضعية، الإحساس...' : 'Form, feel...'}
+                    />
+                  </label>
+                </StudioSection>
+
+                <StudioSection title={isAr ? 'ملاحظات الحصة والجهد' : 'Session effort & notes'}>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-[var(--fs-xs)] text-[var(--text-secondary)]">
+                      {isAr ? 'الجهد (RPE)' : 'Effort (RPE)'}
+                    </span>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          aria-pressed={intensityRating === r}
+                          onClick={() => setIntensityRating(r as 1 | 2 | 3 | 4 | 5)}
+                          className="w-9 h-9 rounded-[var(--r-sm)] border font-mono font-[var(--fw-bold)]"
+                          style={
+                            intensityRating === r
+                              ? { background: 'var(--studio-accent)', color: 'var(--text-on-state)', borderColor: 'transparent' }
+                              : { borderColor: 'var(--studio-line)', color: 'var(--text-secondary)' }
+                          }
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea
+                    value={sessionNotes}
+                    onChange={(e) => setSessionNotes(e.target.value)}
+                    rows={2}
+                    className="textarea w-full text-[var(--fs-xs)] mt-3"
+                    placeholder={isAr ? 'كيف كان شعورك خلال الحصة؟' : 'How did the session feel?'}
+                  />
+                </StudioSection>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* add-exercise drawer */}
+        {showCatalog && (
+          <StudioSection
+            title={isAr ? 'أضف تمريناً من المكتبة' : 'Add from library'}
+            action={
+              <Button variant="ghost" size="sm" icon="close" onClick={() => setShowCatalog(false)}>
+                {isAr ? 'إغلاق' : 'Close'}
+              </Button>
+            }
+          >
+            <div className="grid gap-2 sm:grid-cols-2">
+              {EXERCISE_CATALOG.map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => addCatalogExercise(e)}
+                  className="studio-tile text-start hover:border-[var(--studio-accent-line)] transition-colors"
+                >
+                  <span className="block text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
+                    {isAr ? e.nameAr : e.nameEn}
+                  </span>
+                  <span className="block text-[var(--fs-micro)] text-[var(--text-secondary)] mt-0.5">
+                    {movementLabel(e.movement, isAr)} · {equipmentLabel(e.equipment, isAr)} · {e.defaultReps}{' '}
+                    {isAr ? 'تكرار' : 'reps'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </StudioSection>
+        )}
+      </div>
+    );
+  }
+
+  // ============================ BROWSE MODE ============================
+  const todaySession = sessions.find((s) => s.date === todayStr);
+
+  return (
+    <StudioFrame
+      studio="workout"
+      eyebrow="NUQTA / HOME FITNESS"
+      title={isAr ? 'استوديو اللياقة المنزلية' : 'Home Fitness Studio'}
+      description={
+        isAr
+          ? 'خطّط الحصة، نفّذها بتركيز، وحلّل أدائك — كل ذلك في مساحة تدريب واحدة.'
+          : 'Plan a session, execute it with focus, and analyze performance — one training space.'
+      }
+      actions={
+        <>
+          <Button variant="primary" size="sm" icon="play" onClick={() => startWorkout(isAr ? 'حصة سريعة' : 'Quick workout', [])}>
+            {isAr ? 'بدء تمرين' : 'Start workout'}
+          </Button>
+          <Button variant="ghost" size="sm" icon="archive" onClick={() => setActiveNavTab('archive')}>
+            {isAr ? 'الأرشيف' : 'Archive'}
+          </Button>
+        </>
+      }
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={(id) => setActiveTab(id as WTab)}
+      navVariant="segmented"
+      context={
+        <span className="text-[var(--fs-micro)] font-mono text-[var(--text-secondary)]">
+          {workoutData.totalWorkouts || 0} {isAr ? 'حصة' : 'sessions'}
+        </span>
+      }
+    >
+      {/* ---------------- TODAY ---------------- */}
+      {activeTab === 'today' && (
+        <div className="space-y-[var(--sp-4)]">
+          <StudioSection title={isAr ? 'حصة اليوم' : "Today's session"}>
+            {todaySession ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
+                    {todaySession.title}
+                  </p>
+                  <p className="text-[var(--fs-xs)] text-[var(--text-secondary)] font-mono mt-0.5">
+                    {todaySession.durationMinutes}m · {todaySession.totalReps || 0} {isAr ? 'تكرار' : 'reps'} · RPE{' '}
+                    {todaySession.intensityRating}/5
+                  </p>
+                </div>
+                <span className="px-2 h-6 inline-flex items-center rounded-[var(--r-full)] border text-[var(--fs-micro)] font-[var(--fw-semibold)] text-[var(--state-success)] border-[color-mix(in_srgb,var(--state-success)_45%,transparent)]">
+                  ✓ {isAr ? 'منجزة اليوم' : 'Done today'}
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
+                    {routines[0]?.name || (isAr ? 'تمرين وزن الجسم الشامل' : 'Full-body bodyweight')}
+                  </p>
+                  <p className="text-[var(--fs-xs)] text-[var(--text-secondary)] mt-0.5">
+                    {routines[0]
+                      ? `${routines[0].estimatedMinutes}m · ${routines[0].exercises.length} ${isAr ? 'تمارين' : 'exercises'}`
+                      : isAr
+                      ? 'لا توجد حصة مسجلة اليوم — ابدأ الآن.'
+                      : 'No session logged today — start now.'}
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon="play"
+                  onClick={() =>
+                    startWorkout(
+                      routines[0]?.name || (isAr ? 'تمرين وزن الجسم الشامل' : 'Full-body bodyweight'),
+                      routines[0]?.exercises || []
+                    )
+                  }
+                >
+                  {isAr ? 'بدء الحصة' : 'Start session'}
+                </Button>
+              </div>
+            )}
+          </StudioSection>
+
+          <div className="grid gap-[var(--sp-4)] lg:grid-cols-3">
+            <StudioSection title={isAr ? 'نشاط الأسبوع' : 'Weekly activity'}>
+              <StudioBars data={weekBars} unit={isAr ? 'حصة' : 'sessions'} />
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <StudioStat
+                  label={isAr ? 'الهدف الأسبوعي' : 'Weekly target'}
+                  value={workoutData.weeklyTargetSessions || 4}
+                  tone="accent"
+                />
+                <StudioStat
+                  label={isAr ? 'هذا الأسبوع' : 'This week'}
+                  value={weekBars.reduce((a, b) => a + b.value, 0)}
+                />
+              </div>
+            </StudioSection>
+
+            <StudioSection className="lg:col-span-2" title={isAr ? 'حصصك الأخيرة' : 'Recent sessions'}
+              action={<Button variant="ghost" size="sm" onClick={() => setActiveTab('history')}>{isAr ? 'السجل' : 'History'}</Button>}>
+              {sessions.length === 0 ? (
+                <StudioEmpty icon="history" title={isAr ? 'لا توجد حصص بعد' : 'No sessions yet'} />
+              ) : (
+                <ul className="space-y-2">
+                  {sessions.slice(0, 4).map((s) => (
+                    <li key={s.id} className="flex items-center justify-between gap-3 text-[var(--fs-xs)] border-b border-[var(--studio-line)] last:border-0 pb-2 last:pb-0">
+                      <span className="min-w-0">
+                        <span className="block text-[var(--text-primary)] font-[var(--fw-semibold)] truncate">{s.title}</span>
+                        <span className="block text-[var(--text-secondary)] font-mono">
+                          {s.date} · {s.durationMinutes}m · {s.exercises.length} {isAr ? 'تمارين' : 'exercises'}
+                        </span>
+                      </span>
+                      <span className="font-mono text-[var(--studio-accent)] font-[var(--fw-bold)] shrink-0">
+                        {s.totalReps || 0} {isAr ? 'تكرار' : 'reps'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </StudioSection>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- PROGRAMS ---------------- */}
+      {activeTab === 'programs' && (
+        <div className="space-y-[var(--sp-4)]">
+          <StudioSection title={isAr ? 'برامجك المحفوظة' : 'Your programs'}>
+            {routines.length === 0 ? (
+              <StudioEmpty
+                icon="list"
+                title={isAr ? 'لا توجد برامج بعد' : 'No programs yet'}
+                description={isAr ? 'أنشئ برنامجاً من مكتبة التمارين أو ابنِ حصة أثناء التدريب.' : 'Create a program from the exercise library, or build one during a session.'}
+              />
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {routines.map((r) => (
+                  <div key={r.id} className="studio-tile flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)] truncate">
+                          {r.name}
+                        </p>
+                        <p className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono">
+                          {r.estimatedMinutes}m · {r.exercises.length} {isAr ? 'تمارين' : 'exercises'}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="trash"
+                        aria-label={isAr ? 'حذف البرنامج' : 'Delete program'}
+                        onClick={() => {
+                          if (confirm(isAr ? 'حذف هذا البرنامج؟' : 'Delete this program?')) {
+                            deleteWorkoutRoutine(workoutHabit.id, r.id);
+                          }
+                        }}
+                      />
+                    </div>
+                    {r.description && <p className="text-[var(--fs-xs)] text-[var(--text-secondary)]">{r.description}</p>}
+                    <ul className="text-[var(--fs-xs)] text-[var(--text-secondary)] space-y-0.5">
+                      {r.exercises.slice(0, 4).map((e) => (
+                        <li key={e.id} className="truncate">
+                          • {e.name} — {e.sets.length}×{e.sets[0]?.reps ?? 0}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button variant="secondary" size="sm" icon="play" className="mt-auto" onClick={() => startWorkout(r.name, r.exercises)}>
+                      {isAr ? 'ابدأ البرنامج' : 'Start program'}
+                    </Button>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
+          </StudioSection>
 
-            {/* Health Sync Note */}
-            <div className="p-4 rounded-xl border border-emerald-500/20 bg-[var(--d-workout-surface)] space-y-2 text-xs">
-              <span className="text-[var(--d-workout-accent)] font-bold block flex items-center gap-1.5">
-                <span>✦</span>
-                <span>{isAr ? 'ربط حي مع صحة اليوم' : 'Live Health Sync'}</span>
-              </span>
-              <p className="text-muted leading-relaxed text-[var(--fs-xs)]">
-                {isAr
-                  ? 'تسجيل أي حصة تدريبية هنا يرفع طاقة اليوم تلقائياً، ويوثق نشاطك الرياضي في لوحة الصحة العامة وذكاء الأهداف.'
-                  : 'Logging a session automatically updates your daily energy gauge and syncs to goals.'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          TAB 2: LOG WORKOUT SESSION
-         ========================================================================= */}
-      {activeTab === 'session' && (
-        <div className="max-w-2xl mx-auto p-6 rounded-2xl border border-emerald-500/30 bg-[var(--d-workout-surface)] shadow-xl space-y-6">
-          <div className="flex items-center justify-between border-b border-[var(--d-workout-border-soft)] pb-4">
-            <div>
-              <h2 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                <span>⚡</span>
-                <span>{isAr ? 'تسجيل حصة تمرين منزلي' : 'Log Workout Session'}</span>
-              </h2>
-              <p className="text-xs text-muted mt-0.5">
-                {isAr ? 'سجل تكراراتك ووقت تدريبك لربطها التلقائي بمؤشرات الطاقة والأهداف.' : 'Track reps and duration for automated health and goal intelligence.'}
-              </p>
-            </div>
-            <button onClick={() => setActiveTab('dashboard')} className="text-muted hover:text-[var(--text-primary)] text-sm">
-              ✕
-            </button>
-          </div>
-
-          {showLogSuccess && (
-            <div className="p-3 rounded-xl border border-emerald-500/30 bg-[var(--d-workout-chip)] text-[var(--d-workout-accent-strong)] text-xs">
-              {isAr ? 'تم تسجيل حصة التمرين وتحديث نقاط اللياقة بنجاح!' : 'Workout logged successfully!'}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmitSession} className="space-y-4">
-            <div className="field">
-              <label className="text-xs text-muted block mb-1">{isAr ? 'عنوان الحصة أو البرنامج:' : 'Workout Title:'}</label>
-              <input
-                type="text"
-                value={sessionTitle}
-                onChange={(e) => setSessionTitle(e.target.value)}
-                className="input w-full text-xs font-semibold"
-                required
-                autoFocus
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="field">
-                <label className="text-xs text-muted block mb-1">{isAr ? 'مدة التمرين (دقائق):' : 'Duration (mins):'}</label>
+          <StudioSection title={isAr ? 'إنشاء برنامج جديد' : 'New program'}>
+            <form onSubmit={saveRoutine} className="grid gap-3 sm:grid-cols-2">
+              <label className="field">
+                <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
+                  {isAr ? 'اسم البرنامج' : 'Program name'}
+                </span>
+                <input
+                  value={routineTitle}
+                  onChange={(e) => setRoutineTitle(e.target.value)}
+                  className="input w-full text-[var(--fs-xs)]"
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
+                  {isAr ? 'المدة المتوقعة (دقائق)' : 'Estimated minutes'}
+                </span>
                 <input
                   type="number"
                   min={5}
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                  className="input w-full font-mono text-xs font-bold text-[var(--d-workout-accent)]"
-                  required
+                  value={routineMinutes}
+                  onChange={(e) => setRoutineMinutes(Number(e.target.value))}
+                  className="input w-full font-mono tabular-nums"
                 />
+              </label>
+              <label className="field sm:col-span-2">
+                <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
+                  {isAr ? 'الوصف' : 'Description'}
+                </span>
+                <input
+                  value={routineDesc}
+                  onChange={(e) => setRoutineDesc(e.target.value)}
+                  className="input w-full text-[var(--fs-xs)]"
+                />
+              </label>
+              <div className="sm:col-span-2 flex items-center justify-between">
+                <span className="text-[var(--fs-xs)] text-[var(--text-secondary)]">
+                  {isAr ? 'التمارين المضافة:' : 'Exercises added:'} {draftExercises.length}
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" icon="plus" onClick={() => setShowCatalog((v) => !v)}>
+                    {isAr ? 'إضافة تمرين' : 'Add exercise'}
+                  </Button>
+                  <Button variant="primary" size="sm" type="submit" icon="check">
+                    {isAr ? 'حفظ البرنامج' : 'Save program'}
+                  </Button>
+                </div>
               </div>
+            </form>
+            {showCatalog && (
+              <div className="grid gap-2 sm:grid-cols-2 mt-3">
+                {EXERCISE_CATALOG.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => addCatalogExercise(e)}
+                    className="studio-tile text-start hover:border-[var(--studio-accent-line)] transition-colors"
+                  >
+                    <span className="block text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
+                      {isAr ? e.nameAr : e.nameEn}
+                    </span>
+                    <span className="block text-[var(--fs-micro)] text-[var(--text-secondary)] mt-0.5">
+                      {movementLabel(e.movement, isAr)} · {e.defaultReps} {isAr ? 'تكرار' : 'reps'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {routineSaved && (
+              <p role="status" className="text-[var(--fs-xs)] text-[var(--state-success)] mt-2">
+                {isAr ? 'تم حفظ البرنامج.' : 'Program saved.'}
+              </p>
+            )}
+          </StudioSection>
+        </div>
+      )}
 
-              <div className="field">
-                <label className="text-xs text-muted block mb-1">{isAr ? 'مجموع التكرارات المنجزة:' : 'Total Reps:'}</label>
+      {/* ---------------- EXERCISES ---------------- */}
+      {activeTab === 'exercises' && (
+        <div className="space-y-[var(--sp-4)]">
+          <StudioSection>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="search"
+                value={libQuery}
+                onChange={(e) => setLibQuery(e.target.value)}
+                placeholder={isAr ? 'ابحث عن تمرين…' : 'Search exercises…'}
+                className="input flex-1 min-w-[160px] text-[var(--fs-xs)]"
+              />
+              <select
+                className="select text-[var(--fs-xs)]"
+                value={libMovement}
+                onChange={(e) => setLibMovement(e.target.value as typeof libMovement)}
+                aria-label={isAr ? 'الحركة' : 'Movement'}
+              >
+                <option value="all">{isAr ? 'كل الحركات' : 'All movements'}</option>
+                {(['push', 'legs', 'core', 'back_pull', 'mobility', 'cardio'] as MuscleMovement[]).map((m) => (
+                  <option key={m} value={m}>
+                    {movementLabel(m, isAr)}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="select text-[var(--fs-xs)]"
+                value={libEquipment}
+                onChange={(e) => setLibEquipment(e.target.value)}
+                aria-label={isAr ? 'الأدوات' : 'Equipment'}
+              >
+                <option value="all">{isAr ? 'كل الأدوات' : 'All equipment'}</option>
+                {['bodyweight_only', 'mat', 'chair_elevated', 'light_dumbbells', 'resistance_band', 'pullup_bar'].map((eq) => (
+                  <option key={eq} value={eq}>
+                    {equipmentLabel(eq as never, isAr)}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="select text-[var(--fs-xs)]"
+                value={libDifficulty}
+                onChange={(e) => setLibDifficulty(e.target.value)}
+                aria-label={isAr ? 'المستوى' : 'Difficulty'}
+              >
+                <option value="all">{isAr ? 'كل المستويات' : 'All levels'}</option>
+                <option value="beginner">{isAr ? 'مبتدئ' : 'Beginner'}</option>
+                <option value="intermediate">{isAr ? 'متوسط' : 'Intermediate'}</option>
+                <option value="advanced">{isAr ? 'متقدم' : 'Advanced'}</option>
+              </select>
+            </div>
+          </StudioSection>
+
+          <StudioSection
+            title={isAr ? 'مكتبة التمارين' : 'Exercise library'}
+            action={
+              <span className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono">
+                {filteredCatalog.length} / {EXERCISE_CATALOG.length}
+              </span>
+            }
+          >
+            {filteredCatalog.length === 0 ? (
+              <StudioEmpty icon="search" title={isAr ? 'لا نتائج' : 'No matches'} />
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredCatalog.map((e) => {
+                  const prev = previousFor(isAr ? e.nameAr : e.nameEn);
+                  return (
+                    <div key={e.id} className="studio-tile flex flex-col gap-2">
+                      <div>
+                        <p className="text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
+                          {isAr ? e.nameAr : e.nameEn}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          <span className="px-2 h-5 inline-flex items-center rounded-[var(--r-full)] border border-[var(--studio-line)] text-[var(--fs-micro)] text-[var(--text-secondary)]">
+                            {movementLabel(e.movement, isAr)}
+                          </span>
+                          <span className="px-2 h-5 inline-flex items-center rounded-[var(--r-full)] border border-[var(--studio-line)] text-[var(--fs-micro)] text-[var(--text-secondary)]">
+                            {equipmentLabel(e.equipment, isAr)}
+                          </span>
+                          <span className="px-2 h-5 inline-flex items-center rounded-[var(--r-full)] border border-[var(--studio-line)] text-[var(--fs-micro)] text-[var(--text-secondary)]">
+                            {e.difficulty === 'beginner'
+                              ? isAr
+                                ? 'مبتدئ'
+                                : 'Beginner'
+                              : e.difficulty === 'intermediate'
+                              ? isAr
+                                ? 'متوسط'
+                                : 'Intermediate'
+                              : isAr
+                              ? 'متقدم'
+                              : 'Advanced'}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-[var(--fs-xs)] text-[var(--text-secondary)] leading-relaxed">{e.tipsAr}</p>
+                      {prev && (
+                        <p className="text-[var(--fs-micro)] text-[var(--text-tertiary)] font-mono">
+                          {isAr ? 'سابقاً' : 'Previous'}: {prev.sets.map((s) => `${s.weightKg ? s.weightKg + 'kg×' : ''}${s.reps}`).join(' · ')}
+                        </p>
+                      )}
+                      <Button variant="secondary" size="sm" icon="play" className="mt-auto" onClick={() => startWorkout(isAr ? e.nameAr : e.nameEn, [exerciseEntryFromCatalog(e, isAr)])}>
+                        {isAr ? 'ابدأ التمرين' : 'Start exercise'}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </StudioSection>
+        </div>
+      )}
+
+      {/* ---------------- HISTORY ---------------- */}
+      {activeTab === 'history' && (
+        <div className="space-y-[var(--sp-4)]">
+          <div className="grid gap-[var(--sp-4)] sm:grid-cols-3">
+            <StudioStat label={isAr ? 'إجمالي الحصص' : 'Total sessions'} value={sessions.length} icon="history" />
+            <StudioStat label={isAr ? 'إجمالي التكرارات' : 'Total reps'} value={(workoutData.totalReps || 0).toLocaleString()} tone="accent" />
+            <StudioStat label={isAr ? 'إجمالي الحجم (كغ)' : 'Total volume (kg)'} value={Math.round(totalVolume).toLocaleString()} />
+          </div>
+          <StudioSection title={isAr ? 'سجل الحصص' : 'Workout history'}>
+            {sessions.length === 0 ? (
+              <StudioEmpty icon="history" title={isAr ? 'لا توجد حصص بعد' : 'No sessions yet'} />
+            ) : (
+              <ul className="space-y-2">
+                {sessions.map((s) => (
+                  <li key={s.id} className="studio-tile">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)] truncate">{s.title}</p>
+                        <p className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono">
+                          {s.date} · {s.durationMinutes}m · {s.totalReps || 0} {isAr ? 'تكرار' : 'reps'} · RPE {s.intensityRating}/5
+                        </p>
+                      </div>
+                      <span className="font-mono text-[var(--studio-accent)] font-[var(--fw-bold)] text-[var(--fs-xs)]">
+                        {Math.round(s.volumeKg || volumeFor(s))} {isAr ? 'كغ' : 'kg'}
+                      </span>
+                    </div>
+                    {s.exercises.length > 0 && (
+                      <ul className="mt-2 text-[var(--fs-xs)] text-[var(--text-secondary)] space-y-0.5">
+                        {s.exercises.map((e) => (
+                          <li key={e.id} className="truncate">
+                            • {e.name} — {e.sets.filter((x) => x.completed).length}/{e.sets.length} ×{' '}
+                            {e.sets[0]?.reps ?? 0}
+                            {e.sets[0]?.weightKg ? ` @ ${e.sets[0].weightKg}kg` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {s.notes && <p className="text-[var(--fs-xs)] text-[var(--text-tertiary)] italic mt-1">“{s.notes}”</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </StudioSection>
+        </div>
+      )}
+
+      {/* ---------------- PROGRESS ---------------- */}
+      {activeTab === 'progress' && (
+        <div className="space-y-[var(--sp-4)]">
+          <div className="grid gap-[var(--sp-4)] sm:grid-cols-3">
+            <StudioStat label={isAr ? 'تكرارات الشهر' : 'Reps this month'} value={workoutData.totalReps || 0} tone="accent" icon="dumbbell" />
+            <StudioStat label={isAr ? 'الحجم الكلي (كغ)' : 'Total volume (kg)'} value={Math.round(totalVolume).toLocaleString()} />
+            <StudioStat label={isAr ? 'دقائق التدريب' : 'Training minutes'} value={workoutData.totalMinutes || 0} />
+          </div>
+
+          <StudioSection
+            title={isAr ? 'أداء التمرين عبر الزمن' : 'Exercise performance over time'}
+            action={
+              <div className="flex gap-2">
+                <select
+                  className="select text-[var(--fs-xs)]"
+                  value={selectedExercise}
+                  onChange={(e) => setSelectedExercise(e.target.value)}
+                  aria-label={isAr ? 'التمرين' : 'Exercise'}
+                >
+                  {exerciseNames.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="select text-[var(--fs-xs)]"
+                  value={progressMetric}
+                  onChange={(e) => setProgressMetric(e.target.value as typeof progressMetric)}
+                  aria-label={isAr ? 'المقياس' : 'Metric'}
+                >
+                  <option value="reps">{isAr ? 'تكرارات' : 'Reps'}</option>
+                  <option value="volume">{isAr ? 'حجم' : 'Volume'}</option>
+                  <option value="minutes">{isAr ? 'دقائق' : 'Minutes'}</option>
+                </select>
+              </div>
+            }
+          >
+            {exerciseProgress.length === 0 ? (
+              <StudioEmpty icon="chart" title={isAr ? 'لا بيانات كافية بعد' : 'Not enough data yet'} />
+            ) : (
+              <StudioBars data={exerciseProgress} unit={progressMetric} />
+            )}
+          </StudioSection>
+
+          <div className="grid gap-[var(--sp-4)] lg:grid-cols-2">
+            <StudioSection title={isAr ? 'أفضل الأرقام الشخصية' : 'Personal records'}>
+              {personalRecords.length === 0 ? (
+                <StudioEmpty icon="trophy" title={isAr ? 'لا أرقام بعد' : 'No records yet'} />
+              ) : (
+                <ul className="space-y-2">
+                  {personalRecords.map(([name, reps]) => (
+                    <li key={name} className="flex items-center justify-between gap-2 text-[var(--fs-xs)]">
+                      <span className="text-[var(--text-primary)] truncate">🏆 {name}</span>
+                      <span className="font-mono text-[var(--studio-accent)] font-[var(--fw-bold)]">
+                        {reps} {isAr ? 'تكرار' : 'reps'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </StudioSection>
+
+            <StudioSection title={isAr ? 'توزيع العضلات' : 'Muscle-group distribution'}>
+              {Object.keys(muscleDistribution).length === 0 ? (
+                <StudioEmpty icon="chart" title={isAr ? 'لا بيانات بعد' : 'No data yet'} />
+              ) : (
+                <ul className="space-y-2">
+                  {Object.entries(muscleDistribution)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([mov, reps]) => {
+                      const max = Math.max(...Object.values(muscleDistribution));
+                      return (
+                        <li key={mov} className="text-[var(--fs-xs)]">
+                          <div className="flex justify-between mb-1">
+                            <span className="text-[var(--text-primary)]">{movementLabel(mov as MuscleMovement, isAr)}</span>
+                            <span className="font-mono text-[var(--text-secondary)]">{reps}</span>
+                          </div>
+                          <div className="h-1.5 rounded-[var(--r-full)] bg-[var(--surface-track)] overflow-hidden">
+                            <div
+                              className="h-full rounded-[var(--r-full)]"
+                              style={{ width: `${(reps / max) * 100}%`, background: 'var(--studio-accent)' }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                </ul>
+              )}
+            </StudioSection>
+          </div>
+
+          <StudioSection title={isAr ? 'أهداف اللياقة' : 'Fitness targets'}>
+            <form onSubmit={saveTargets} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] items-end">
+              <label className="field">
+                <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
+                  {isAr ? 'حصص أسبوعية' : 'Weekly sessions'}
+                </span>
                 <input
                   type="number"
                   min={1}
-                  value={repsInput}
-                  onChange={(e) => setRepsInput(Number(e.target.value))}
-                  className="input w-full font-mono text-xs font-bold text-[var(--d-workout-accent)]"
-                  required
+                  max={14}
+                  value={tempWeeklySessions}
+                  onChange={(e) => setTempWeeklySessions(Number(e.target.value))}
+                  className="input w-full font-mono tabular-nums"
                 />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="field">
-                <label className="text-xs text-muted block mb-1">{isAr ? 'نوع التمرين:' : 'Type:'}</label>
-                <select
-                  className="select w-full text-xs"
-                  value={workoutType}
-                  onChange={(e) => setWorkoutType(e.target.value as any)}
-                >
-                  <option value="bodyweight">{isAr ? 'وزن الجسم (Bodyweight)' : 'Bodyweight'}</option>
-                  <option value="hiit">{isAr ? 'متقطع عالي الكثافة (HIIT)' : 'HIIT'}</option>
-                  <option value="strength">{isAr ? 'قوة ومقاومة' : 'Strength'}</option>
-                  <option value="mobility">{isAr ? 'مرونة وإطالات' : 'Mobility'}</option>
-                  <option value="cardio">{isAr ? 'كارديو وتحمل' : 'Cardio'}</option>
-                </select>
-              </div>
-
-              <div className="field">
-                <label className="text-xs text-muted block mb-1">{isAr ? 'مستوى الجهد (RPE 1-5):' : 'Intensity Rating (RPE):'}</label>
-                <select
-                  className="select w-full text-xs font-mono"
-                  value={intensityRating}
-                  onChange={(e) => setIntensityRating(Number(e.target.value) as any)}
-                >
-                  <option value={1}>1 - {isAr ? 'خفيف جداً' : 'Very Light'}</option>
-                  <option value={2}>2 - {isAr ? 'هادئ ومريح' : 'Moderate'}</option>
-                  <option value={3}>3 - {isAr ? 'متوسط ومستقر' : 'Steady'}</option>
-                  <option value={4}>4 - {isAr ? 'قوي ومجهد' : 'Challenging'}</option>
-                  <option value={5}>5 - {isAr ? 'أقصى جهد' : 'Maximum Effort'}</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="field">
-              <label className="text-xs text-muted block mb-1">{isAr ? 'ملاحظات وتأمل الأداء:' : 'Session Notes:'}</label>
-              <textarea
-                value={sessionNotes}
-                onChange={(e) => setSessionNotes(e.target.value)}
-                placeholder={isAr ? 'شعور الطاقة، راحة المفاصل، تقدم في أحد التمارين...' : 'Notes on form, energy, or reps...'}
-                className="textarea w-full text-xs"
-                rows={2}
-              />
-            </div>
-
-            <div className="pt-3 border-t border-[var(--d-workout-border-soft)] flex justify-end gap-2">
-              <button type="button" onClick={() => setActiveTab('dashboard')} className="btn subtle small text-xs">
-                {isAr ? 'إلغاء' : 'Cancel'}
-              </button>
-              <button type="submit" className="btn primary small text-xs px-5 py-2 font-bold">
-                <span>✓</span>
-                <span>{isAr ? 'حفظ الحصة والإنجاز' : 'Save Workout'}</span>
-              </button>
-            </div>
-          </form>
+              </label>
+              <label className="field">
+                <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
+                  {isAr ? 'هدف التكرارات الشهري' : 'Monthly reps'}
+                </span>
+                <input
+                  type="number"
+                  min={50}
+                  value={tempMonthlyReps}
+                  onChange={(e) => setTempMonthlyReps(Number(e.target.value))}
+                  className="input w-full font-mono tabular-nums"
+                />
+              </label>
+              <Button variant="secondary" size="sm" type="submit">
+                {isAr ? 'حفظ' : 'Save'}
+              </Button>
+            </form>
+            {targetsSaved && (
+              <p role="status" className="text-[var(--fs-xs)] text-[var(--state-success)] mt-2">
+                {isAr ? 'تم حفظ الأهداف.' : 'Targets saved.'}
+              </p>
+            )}
+          </StudioSection>
         </div>
       )}
-
-      {/* =========================================================================
-          TAB 3: ROUTINES VAULT
-         ========================================================================= */}
-      {activeTab === 'routines' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                title: isAr ? 'أساسيات الكاليسثنكس (ضغط وسكوات)' : 'Core Calisthenics Routine',
-                mins: 25,
-                focus: isAr ? 'الصدر، الأرجل، والجذع' : 'Chest, Legs, Core',
-                exercises: [
-                  isAr ? 'ضغط بوزن الجسم: 3 مجموعات × 15 تكرار' : 'Push-ups: 3 sets x 15 reps',
-                  isAr ? 'سكوات بوزن الجسم: 3 مجموعات × 20 تكرار' : 'Air Squats: 3 sets x 20 reps',
-                  isAr ? 'بلانك أمامي: 3 مجموعات × 45 ثانية' : 'Plank: 3 sets x 45s'
-                ]
-              },
-              {
-                title: isAr ? 'برنامج تقوية الجذع والبطن (Core Power)' : 'Core & Midline Engine',
-                mins: 20,
-                focus: isAr ? 'عضلات البطن وأسفل الظهر' : 'Abs & Lower Back',
-                exercises: [
-                  isAr ? 'تسلق الجبل (Mountain Climbers): 3 × 25' : 'Mountain Climbers: 3 x 25',
-                  isAr ? 'بلانك جانبي: 2 × 30 ثانية لكل جانب' : 'Side Plank: 2 x 30s each side',
-                  isAr ? 'رفع الأرجل (Leg Raises): 3 × 12' : 'Leg Raises: 3 x 12'
-                ]
-              },
-              {
-                title: isAr ? 'تحرير التوتر والمرونة (Spinal Mobility)' : 'Spinal Mobility & Flow',
-                mins: 15,
-                focus: isAr ? 'مرونة المفاصل وتحرير التوتر' : 'Joints & Posture',
-                exercises: [
-                  isAr ? 'إطالة القطة والبقرة (Cat-Cow): 2 × 15' : 'Cat-Cow: 2 x 15 reps',
-                  isAr ? 'إطالة الحوض والورك (Hip Flexor): 2 × 30s' : 'Hip Flexor Stretch: 2 x 30s',
-                  isAr ? 'الطفل المسترخي (Child Pose): دقيقتان' : 'Child Pose: 2 minutes'
-                ]
-              }
-            ].map((rt, i) => (
-              <div key={i} className="p-4 rounded-xl border border-[var(--d-workout-border)] bg-[var(--d-workout-surface)] space-y-3 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[var(--fs-micro)] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-[var(--d-workout-accent-strong)] border border-emerald-500/30">
-                      {rt.mins}m
-                    </span>
-                    <span className="text-xs text-muted">{rt.focus}</span>
-                  </div>
-                  <h3 className="font-bold text-[var(--text-primary)] text-sm">{rt.title}</h3>
-                  <ul className="space-y-1.5 mt-3 text-xs text-muted">
-                    {rt.exercises.map((ex, exIdx) => (
-                      <li key={exIdx} className="flex items-center gap-2">
-                        <span className="text-[var(--d-workout-accent)]">✓</span>
-                        <span>{ex}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setSessionTitle(rt.title);
-                    setDurationMinutes(rt.mins);
-                    setActiveTab('session');
-                  }}
-                  className="btn subtle small w-full justify-center text-[var(--d-workout-accent-strong)] border-emerald-500/30 hover:bg-emerald-500/20 text-xs mt-3"
-                >
-                  {isAr ? 'بدء هذا البرنامج ↗' : 'Start This Routine ↗'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          TAB 4: WORKOUT HISTORY
-         ========================================================================= */}
-      {activeTab === 'history' && (
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl border border-[var(--d-workout-border)] bg-[var(--d-workout-surface)] flex items-center justify-between text-xs">
-            <span className="font-bold text-[var(--text-primary)]">
-              {isAr ? `إجمالي الحصص الموثقة: ${workoutData.sessions.length}` : `Total Logged Workouts: ${workoutData.sessions.length}`}
-            </span>
-            <button onClick={() => setActiveTab('session')} className="btn primary small text-xs">
-              + {isAr ? 'تسجيل حصة جديدة' : 'New Workout'}
-            </button>
-          </div>
-
-          {workoutData.sessions.length === 0 ? (
-            <div className="p-8 text-center text-xs text-muted border border-dashed border-[var(--d-workout-border)] rounded-2xl">
-              {isAr ? 'لا توجد حصص في السجل بعد.' : 'No sessions recorded in archive.'}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {workoutData.sessions.map((s) => (
-                <div
-                  key={s.id}
-                  className="p-3.5 rounded-xl border border-[var(--d-workout-border-strong)] bg-[var(--d-workout-chip)] flex items-center justify-between gap-3 text-xs"
-                >
-                  <div>
-                    <strong className="text-[var(--text-primary)] block truncate">{s.title}</strong>
-                    <div className="flex items-center gap-2 mt-0.5 text-[var(--fs-xs)] text-muted font-mono">
-                      <span>{s.date}</span>
-                      <span>· {s.durationMinutes}m</span>
-                      <span>· {s.totalReps || 0} {isAr ? 'تكرار' : 'reps'}</span>
-                      <span>· RPE {s.intensityRating}/5</span>
-                      <span>· {s.workoutType}</span>
-                    </div>
-                    {s.notes && <p className="text-[var(--fs-xs)] text-muted/80 mt-1 italic">"{s.notes}"</p>}
-                  </div>
-                  <span className="text-[var(--d-workout-accent)] font-mono font-bold text-xs shrink-0">
-                    +{s.totalReps || 0} {isAr ? 'تكرار' : 'reps'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* =========================================================================
-          TAB 5: FITNESS TARGETS
-         ========================================================================= */}
-      {activeTab === 'targets' && (
-        <div className="max-w-xl mx-auto p-6 rounded-2xl border border-emerald-500/30 bg-[var(--d-workout-surface)] space-y-4">
-          <h2 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-            <span>🎯</span>
-            <span>{isAr ? 'أهداف اللياقة والتكرارات' : 'Fitness Targets'}</span>
-          </h2>
-          {targetsSaved && (
-            <div className="p-3 rounded-xl border border-emerald-500/30 bg-[var(--d-workout-chip)] text-[var(--d-workout-accent-strong)] text-xs">
-              {isAr ? 'تم حفظ أهداف اللياقة بنجاح!' : 'Fitness targets saved!'}
-            </div>
-          )}
-          <form onSubmit={handleSaveTargets} className="space-y-4 text-xs">
-            <div className="field">
-              <label className="text-muted block mb-1">{isAr ? 'الحصص التدريبية الأسبوعية:' : 'Weekly Sessions Target:'}</label>
-              <input
-                type="number"
-                min={1}
-                max={14}
-                value={tempWeeklySessions}
-                onChange={(e) => setTempWeeklySessions(Number(e.target.value))}
-                className="input w-full font-mono text-xs font-bold text-[var(--d-workout-accent)]"
-              />
-            </div>
-            <div className="field">
-              <label className="text-muted block mb-1">{isAr ? 'الهدف الشهري للتكرارات (تكرار/شهر):' : 'Monthly Reps Target:'}</label>
-              <input
-                type="number"
-                min={50}
-                value={tempMonthlyReps}
-                onChange={(e) => setTempMonthlyReps(Number(e.target.value))}
-                className="input w-full font-mono text-xs font-bold text-[var(--d-workout-accent)]"
-              />
-            </div>
-            <div className="pt-2 flex justify-end">
-              <button type="submit" className="btn primary small text-xs px-5 py-2">
-                {isAr ? 'حفظ الأهداف' : 'Save Targets'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-    </StudioShell>
+    </StudioFrame>
   );
 };
-

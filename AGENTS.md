@@ -29,6 +29,31 @@ with an IndexedDB mirror for recovery.
   band). Inner flex rows that can hold long content need `flex-wrap` + `min-w-0`.
 - Any responsive change must keep `scripts/e2e/views.py` green across all views and widths.
 
+## Specialized studios (Quran / Workout / Reading / Drawing)
+
+- Each studio lives in `src/components/{Quran,Workout,Reading,Drawing}View.tsx` and is
+  rendered from `App.tsx` when `activeNavTab` matches. All four share one skeleton,
+  `StudioFrame` (`src/components/studios/StudioKit.tsx`), but deliberately choose a
+  different `navVariant` so they do not read as one template:
+  - Quran `structured` · Reading `shelf` (underline) · Workout `segmented` · Drawing `workspace`.
+  `StudioKit` also exports `StudioSection`, `StudioStat`, `StudioBars`, `StudioLegend`,
+  `StudioEmpty`. Colour comes from the `[data-studio='…']` accent scope in `index.css`;
+  never hard-code a studio colour — read `var(--studio-accent)` etc.
+- Studio data is a `specializedType` habit: `quranData` / `workoutData` / `readingData` /
+  `drawingData` (see `src/types/index.ts`). Never add a parallel store — extend the
+  existing one via its actions (`logQuranSession`, `logWorkoutSession`, …).
+- **Quran interval-union is sacred.** `logQuranSession` merges ayah ranges
+  (`mergeAyahRanges` + `calculateDistinctAyahs`) so ayahs are never double-counted. Any
+  Quran UI must feed the existing `ayahStart`/`ayahEnd` model; do not reimplement counts.
+- The built-in exercise library lives in `src/lib/exerciseCatalog.ts`
+  (`EXERCISE_CATALOG`, `exerciseEntryFromCatalog`, `movementLabel`, `equipmentLabel`) and is
+  the single source of truth shared by `WorkoutAppModal` (dashboard/habits entry point) and
+  the Workout Studio. Add exercises there, never in a second copy.
+- Goal linkage: sessions carry `linkedGoalId` and the store defaults it from the habit.
+  Do not compute goal progress in a studio — `goalProgressEngine` owns that.
+- `WorkoutAppModal` / `ReadingAppModal` are the dashboard/habits entry points; keep them
+  working.
+
 ## Storage / backup rules
 
 - localStorage is the source of truth; IndexedDB is only a recovery mirror.
