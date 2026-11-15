@@ -20,7 +20,35 @@ with an IndexedDB mirror for recovery.
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(14 rules). Add a rule whenever a new safety property must never regress.
+(15 rules). Add a rule whenever a new safety property must never regress.
+
+## Theming (light / dark)
+
+- `applyThemeClass()` in `src/lib/themeTransition.ts` toggles the `light-mode` class on
+  `<html>`/`<body>`; `setTheme` in the store drives `runLiquidThemeTransition`. Dark is the
+  default (`:root` in `src/nuqta-theme.css`); `src/index.css` holds the semantic token
+  layer and the `.light-mode` overrides.
+- Never hardcode a colour. Use the tokens: surfaces `--surface-deep/raised/inset/chip/track/
+  active/page`, text `--text-primary/secondary/tertiary/on-state`, `--border-*`, brand
+  `--brand/--brand-strong`, state `--state-*`, tones `--tone-{success,warning,danger,info,
+  purple}` with `-wash` / `-line` roles, and the heatmap ramp `--heat-0..4`.
+- Palette-shade utilities (`text-emerald-400`, `bg-amber-500/15`) and arbitrary hex
+  utilities (`bg-[#141e19]`) are forbidden — invariant #15 fails the build on any hex inside
+  a `className`. Inline `style` colours are allowed only for user data (cover/artwork colours).
+- The pastel accents `--blue/--purple/--orange/--red` are dark-tuned; they are re-declared
+  darker inside `.light-mode` so text on white stays readable. Prefer a `--tone-*` role when
+  one exists.
+- Verify with `scripts/e2e/views.py` (both themes, all widths) — a change that reads well in
+  dark but leaves a dark panel in light mode is a regression.
+
+## Shared UI primitives
+
+- `src/components/ui/` exports the kit: `primitives`, `layout`, `forms`, `overlays`, and
+  `NuqtaSelect`. Import from `./ui`, do not re-implement.
+- **`NuqtaSelect` replaces every native `<select>`.** It keeps the native contract (an event
+  whose `target.value` is the chosen option's value) and accepts `<option>` children, so it
+  is a drop-in swap. It is portal-rendered, RTL-aware, keyboard-accessible and theme-aware.
+  Do not add a new native `<select>`; the styling and behaviour would drift.
 
 ## Layout / responsive rules
 

@@ -2,7 +2,7 @@ import { localDateKey, parseDateKey, addDaysToKey } from '../lib/dateKey';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { BookItem, BookCategory } from '../types';
-import { Button, Field, Input, Modal, Select, Textarea, Toast } from './ui';
+import { Button, Field, Input, Modal, NuqtaSelect, Textarea, Toast } from './ui';
 import {
   StudioFrame,
   StudioSection,
@@ -580,13 +580,14 @@ export const ReadingView: React.FC = () => {
             <form onSubmit={submitSession} className="grid gap-3 sm:grid-cols-2">
               <label className="field sm:col-span-2">
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">{isAr ? 'الكتاب' : 'Book'}</span>
-                <select className="select w-full text-[var(--fs-xs)] font-[var(--fw-semibold)]" value={sessionBookId} onChange={(e) => setSessionBookId(e.target.value)}>
+                <NuqtaSelect value={sessionBookId} onChange={(e) => setSessionBookId(e.target.value)} className="text-[var(--fs-xs)] font-[var(--fw-semibold)]">
+
                   {books.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.title} ({b.currentPage}/{b.totalPages})
                     </option>
                   ))}
-                </select>
+                </NuqtaSelect>
               </label>
               <label className="field">
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">{isAr ? 'عدد الصفحات' : 'Pages read'}</span>
@@ -795,20 +796,20 @@ export const ReadingView: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label={isAr ? 'الحالة' : 'Status'} htmlFor="bk-status">
-              <Select id="bk-status" value={bookStatus} onChange={(e) => setBookStatus(e.target.value as BookItem['status'])}>
+              <NuqtaSelect id="bk-status" value={bookStatus} onChange={(e) => setBookStatus(e.target.value as BookItem['status'])}>
                 <option value="reading">{isAr ? 'أقرأ حالياً' : 'Currently reading'}</option>
                 <option value="want_to_read">{isAr ? 'أرغب بقراءته' : 'Want to read'}</option>
                 <option value="completed">{isAr ? 'مكتمل' : 'Completed'}</option>
-              </Select>
+              </NuqtaSelect>
             </Field>
             <Field label={isAr ? 'التصنيف' : 'Category'} htmlFor="bk-cat">
-              <Select id="bk-cat" value={bookCategory} onChange={(e) => setBookCategory(e.target.value as BookCategory)}>
+              <NuqtaSelect id="bk-cat" value={bookCategory} onChange={(e) => setBookCategory(e.target.value as BookCategory)}>
                 {(['mind', 'philosophy', 'productivity', 'science', 'literature', 'biography', 'business', 'other'] as BookCategory[]).map((c) => (
                   <option key={c} value={c}>
                     {categoryLabel(c, isAr)}
                   </option>
                 ))}
-              </Select>
+              </NuqtaSelect>
             </Field>
           </div>
           <Field label={isAr ? 'لون الغلاف' : 'Cover colour'} htmlFor="bk-color">

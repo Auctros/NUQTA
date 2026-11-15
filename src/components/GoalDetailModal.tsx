@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Goal, KeyResult, KeyResultDataSource, GoalMilestone, SpecializedHabitType } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { evaluateGoalProgress } from '../lib/goalProgressEngine';
+import { NuqtaSelect } from './ui';
 
 interface GoalDetailModalProps {
   goal: Goal;
@@ -478,11 +479,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="field">
                       <label className="text-xs text-muted mb-1 block">{isAr ? 'مصدر البيانات وطريقة الاحتساب' : 'Data Source Engine'}</label>
-                      <select
-                        className="select w-full text-xs"
-                        value={krSource}
-                        onChange={(e) => handleSourceChange(e.target.value as KeyResultDataSource)}
-                      >
+                      <NuqtaSelect value={krSource} onChange={(e) => handleSourceChange(e.target.value as KeyResultDataSource)} className="text-xs">
                         <option value="tasks_completed">{isAr ? '✓ عدد المهام المكتملة المرتبطة' : 'Tasks: Completed Count'}</option>
                         <option value="habit_consistency">{isAr ? '↻ معدل التزام العادات المرتبطة (%)' : 'Habits: Cadence Rate (%)'}</option>
                         <option value="reading_books_completed">{isAr ? '📚 عدد الكتب المكتملة (مكتبة القراءة)' : 'Reading: Finished Books'}</option>
@@ -499,7 +496,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         <option value="quran_revision_sessions">{isAr ? '🔁 عدد جلسات المراجعة والتسميع' : 'Quran: Revision Sessions'}</option>
                         <option value="quran_total_minutes">{isAr ? '⏱️ إجمالي دقائق الحفظ والمراجعة' : 'Quran: Total Minutes'}</option>
                         <option value="manual">{isAr ? '✏️ نتيجة يدوية (تحديث مباشر)' : 'Manual Entry'}</option>
-                      </select>
+                      </NuqtaSelect>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
@@ -785,18 +782,14 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                   <div className="flex flex-wrap items-center gap-2">
                     {unlinkedTasks.length > 0 && (
                       <div className="flex items-center gap-1.5">
-                        <select
-                          className="select text-xs py-1"
-                          value={selectedTaskToLink}
-                          onChange={(e) => setSelectedTaskToLink(e.target.value)}
-                        >
+                        <NuqtaSelect value={selectedTaskToLink} onChange={(e) => setSelectedTaskToLink(e.target.value)} className="text-xs">
                           <option value="">{isAr ? '-- اختر مهمة لربطها --' : '-- Select task to link --'}</option>
                           {unlinkedTasks.map((t) => (
                             <option key={t.id} value={t.id}>
                               {t.title} ({t.status})
                             </option>
                           ))}
-                        </select>
+                        </NuqtaSelect>
                         <button
                           disabled={!selectedTaskToLink}
                           onClick={() => {
@@ -841,16 +834,12 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     />
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                       <div className="flex items-center gap-2">
-                        <select
-                          className="select text-xs py-1"
-                          value={quickTaskPriority}
-                          onChange={(e) => setQuickTaskPriority(Number(e.target.value) as any)}
-                        >
+                        <NuqtaSelect value={quickTaskPriority} onChange={(e) => setQuickTaskPriority(Number(e.target.value) as any)} className="text-xs">
                           <option value={1}>{isAr ? 'Q1 - عاجل ومهم' : 'Q1 - Urgent & Important'}</option>
                           <option value={2}>{isAr ? 'Q2 - مهم' : 'Q2 - Important'}</option>
                           <option value={3}>{isAr ? 'Q3 - عاجل' : 'Q3 - Urgent'}</option>
                           <option value={4}>{isAr ? 'Q4 - عادي' : 'Q4 - Normal'}</option>
-                        </select>
+                        </NuqtaSelect>
                         <input
                           type="date"
                           className="input text-xs py-1"
@@ -914,18 +903,14 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                   <div className="flex flex-wrap items-center gap-2">
                     {unlinkedHabits.length > 0 && (
                       <div className="flex items-center gap-1.5">
-                        <select
-                          className="select text-xs py-1"
-                          value={selectedHabitToLink}
-                          onChange={(e) => setSelectedHabitToLink(e.target.value)}
-                        >
+                        <NuqtaSelect value={selectedHabitToLink} onChange={(e) => setSelectedHabitToLink(e.target.value)} className="text-xs">
                           <option value="">{isAr ? '-- اختر عادة لربطها --' : '-- Select habit to link --'}</option>
                           {unlinkedHabits.map((h) => (
                             <option key={h.id} value={h.id}>
                               {h.name} ({h.currentStreak}d streak)
                             </option>
                           ))}
-                        </select>
+                        </NuqtaSelect>
                         <button
                           disabled={!selectedHabitToLink}
                           onClick={() => {
@@ -1105,18 +1090,14 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                   {unlinkedBooks.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <select
-                        className="select text-xs py-1"
-                        value={selectedBookToLink}
-                        onChange={(e) => setSelectedBookToLink(e.target.value)}
-                      >
+                      <NuqtaSelect value={selectedBookToLink} onChange={(e) => setSelectedBookToLink(e.target.value)} className="text-xs">
                         <option value="">{isAr ? '-- اختر كتاباً لربطه --' : '-- Select book to link --'}</option>
                         {unlinkedBooks.map((b) => (
                           <option key={b.id} value={b.id}>
                             {b.title} ({b.currentPage}/{b.totalPages}p)
                           </option>
                         ))}
-                      </select>
+                      </NuqtaSelect>
                       <button
                         disabled={!selectedBookToLink}
                         onClick={() => {
@@ -1175,18 +1156,14 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                   {unlinkedProjects.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <select
-                        className="select text-xs py-1"
-                        value={selectedProjectToLink}
-                        onChange={(e) => setSelectedProjectToLink(e.target.value)}
-                      >
+                      <NuqtaSelect value={selectedProjectToLink} onChange={(e) => setSelectedProjectToLink(e.target.value)} className="text-xs">
                         <option value="">{isAr ? '-- اختر مشروعاً لربطه --' : '-- Select project to link --'}</option>
                         {unlinkedProjects.map((p) => (
                           <option key={p.id} value={p.id}>
                             {p.title} ({p.stage})
                           </option>
                         ))}
-                      </select>
+                      </NuqtaSelect>
                       <button
                         disabled={!selectedProjectToLink}
                         onClick={() => {

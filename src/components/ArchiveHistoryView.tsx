@@ -14,6 +14,7 @@ import {
   ArchivedItemSummary
 } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
+import { NuqtaSelect } from './ui';
 
 export const ArchiveHistoryView: React.FC = () => {
   const {
@@ -419,11 +420,7 @@ export const ArchiveHistoryView: React.FC = () => {
         {activeTab === 'timeline' && (
           <div className="flex flex-wrap items-center gap-2 ms-auto pt-2 sm:pt-0">
             {/* Event Type */}
-            <select
-              value={eventTypeFilter}
-              onChange={(e) => setEventTypeFilter(e.target.value as any)}
-              className="select text-xs py-1"
-            >
+            <NuqtaSelect value={eventTypeFilter} onChange={(e) => setEventTypeFilter(e.target.value as any)} className="text-xs">
               <option value="all">{isAr ? 'كل أنواع الأحداث' : 'All Event Types'}</option>
               <option value="completed">{isAr ? 'إنجاز واكتمال' : 'Completed'}</option>
               <option value="session">{isAr ? 'جلسات متخصصة' : 'Sessions'}</option>
@@ -431,20 +428,16 @@ export const ArchiveHistoryView: React.FC = () => {
               <option value="created">{isAr ? 'تأسيس وإنشاء' : 'Created'}</option>
               <option value="archived">{isAr ? 'أرشفة' : 'Archived'}</option>
               <option value="restored">{isAr ? 'استعادة' : 'Restored'}</option>
-            </select>
+            </NuqtaSelect>
 
             {/* Timeframe */}
-            <select
-              value={timeframeFilter}
-              onChange={(e) => setTimeframeFilter(e.target.value as any)}
-              className="select text-xs py-1"
-            >
+            <NuqtaSelect value={timeframeFilter} onChange={(e) => setTimeframeFilter(e.target.value as any)} className="text-xs">
               <option value="all">{isAr ? 'كل الفترات الزمنية' : 'All Time'}</option>
               <option value="today">{isAr ? 'اليوم' : 'Today'}</option>
               <option value="week">{isAr ? 'آخر 7 أيام' : 'Past 7 Days'}</option>
               <option value="month">{isAr ? 'آخر شهر' : 'Past Month'}</option>
               <option value="year">{isAr ? 'آخر سنة' : 'Past Year'}</option>
-            </select>
+            </NuqtaSelect>
           </div>
         )}
       </div>

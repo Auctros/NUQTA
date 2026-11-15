@@ -2,6 +2,7 @@ import { localDateKey, parseDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { Habit, BookItem, BookCategory } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { NuqtaSelect } from './ui';
 
 interface ReadingAppModalProps {
   habit: Habit;
@@ -605,20 +606,17 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                   {/* Book Picker for Session */}
                   <div className="field">
                     <label className="text-xs text-muted mb-1 block">{isAr ? 'الكتاب المقروء في هذه الجلسة' : 'Select Book'}</label>
-                    <select
-                      className="select w-full text-xs font-semibold"
-                      value={sessionBookId || activeBook?.id}
-                      onChange={(e) => {
+                    <NuqtaSelect value={sessionBookId || activeBook?.id} onChange={(e) => {
                         setSessionBookId(e.target.value);
                         setActiveBook(habit.id, e.target.value);
-                      }}
-                    >
+                      }} className="text-xs font-semibold">
+
                       {readingData.books.filter((b) => b.status !== 'archived').map((b) => (
                         <option key={b.id} value={b.id}>
                           {b.title} ({b.currentPage} / {b.totalPages}p) — {b.status === 'completed' ? (isAr ? 'مكتمل' : 'Done') : (isAr ? 'قيد القراءة' : 'Reading')}
                         </option>
                       ))}
-                    </select>
+                    </NuqtaSelect>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1031,17 +1029,14 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
 
                         <div className="field">
                           <label className="text-xs text-muted mb-1 block">{isAr ? 'التصنيف' : 'Category'}</label>
-                          <select
-                            className="select w-full text-xs"
-                            value={bookCategory}
-                            onChange={(e) => setBookCategory(e.target.value as BookCategory)}
-                          >
+                          <NuqtaSelect value={bookCategory} onChange={(e) => setBookCategory(e.target.value as BookCategory)} className="text-xs">
+
                             {Object.entries(categoryLabels).map(([catKey, catVal]) => (
                               <option key={catKey} value={catKey}>
                                 {isAr ? catVal.ar : catVal.en}
                               </option>
                             ))}
-                          </select>
+                          </NuqtaSelect>
                         </div>
                       </div>
 
@@ -1072,16 +1067,12 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
 
                         <div className="field">
                           <label className="text-xs text-muted mb-1 block">{isAr ? 'الحالة' : 'Status'}</label>
-                          <select
-                            className="select w-full text-xs"
-                            value={bookStatus}
-                            onChange={(e) => setBookStatus(e.target.value as any)}
-                          >
+                          <NuqtaSelect value={bookStatus} onChange={(e) => setBookStatus(e.target.value as any)} className="text-xs">
                             <option value="reading">{isAr ? 'قيد القراءة' : 'Reading'}</option>
                             <option value="completed">{isAr ? 'مكتمل' : 'Completed'}</option>
                             <option value="want_to_read">{isAr ? 'في الانتظار' : 'Wishlist'}</option>
                             <option value="archived">{isAr ? 'أرشيف' : 'Archived'}</option>
-                          </select>
+                          </NuqtaSelect>
                         </div>
                       </div>
 

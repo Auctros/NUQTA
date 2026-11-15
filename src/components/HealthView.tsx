@@ -3,6 +3,7 @@ import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
+import { NuqtaSelect } from './ui';
 
 export const HealthView: React.FC = () => {
   const { healthMetrics, updateTodayHealth, addHydration, profile } = useNuqtaStore();
@@ -191,16 +192,12 @@ export const HealthView: React.FC = () => {
           <div className="log-form-row">
             <div className="field">
               <label>{isAr ? 'شرب الماء والترطيب' : 'Water Intake'}</label>
-              <select
-                className="select"
-                value={waterCupsToAdd}
-                onChange={(e) => setWaterCupsToAdd(Number(e.target.value))}
-              >
+              <NuqtaSelect value={waterCupsToAdd} onChange={(e) => setWaterCupsToAdd(Number(e.target.value))}>
                 <option value={1}>1 {isAr ? 'كوب (250 مل)' : 'Cup (250ml)'}</option>
                 <option value={2}>2 {isAr ? 'كوب (500 مل)' : 'Cups (500ml)'}</option>
                 <option value={3}>3 {isAr ? 'أكواب (750 مل)' : 'Cups (750ml)'}</option>
                 <option value={4}>4 {isAr ? 'أكواب (1 لتر)' : 'Cups (1 Liter)'}</option>
-              </select>
+              </NuqtaSelect>
             </div>
             <button className="btn primary" onClick={handleAddWater}>
               + {isAr ? 'تسجيل ماء' : 'Add Water'}

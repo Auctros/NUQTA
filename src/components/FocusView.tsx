@@ -4,6 +4,7 @@ import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
 import confetti from 'canvas-confetti';
 import { NuqtaNotificationEngine } from '../lib/notifications';
+import { NuqtaSelect } from './ui';
 
 export const FocusView: React.FC = () => {
   const { tasks, focusSessions, logFocusSession, profile, setActiveNavTab } = useNuqtaStore();
@@ -207,11 +208,7 @@ export const FocusView: React.FC = () => {
           {/* Linked Task Selector */}
           <div className="field" style={{ width: 'min(330px, 100%)', marginTop: '18px', textAlign: 'start' }}>
             <label>{isAr ? 'ربط المهمة بالجلسة' : 'Link Task'}</label>
-            <select
-              className="select"
-              value={taskId}
-              onChange={(e) => setTaskId(e.target.value)}
-            >
+            <NuqtaSelect value={taskId} onChange={(e) => setTaskId(e.target.value)}>
               <option value="">{isAr ? '— بدون ربط مهمة —' : '— No linked task —'}</option>
               {tasks
                 .filter((t) => t.status !== 'completed')
@@ -220,23 +217,19 @@ export const FocusView: React.FC = () => {
                     {t.title}
                   </option>
                 ))}
-            </select>
+            </NuqtaSelect>
           </div>
 
           {/* Pre-session state */}
           <div className="field" style={{ width: 'min(330px, 100%)', marginTop: '11px', textAlign: 'start' }}>
             <label>{isAr ? 'مستوى الطاقة قبل البدء' : 'Mental Energy Level'}</label>
-            <select
-              className="select"
-              value={beforeMood}
-              onChange={(e) => setBeforeMood(Number(e.target.value))}
-            >
+            <NuqtaSelect value={beforeMood} onChange={(e) => setBeforeMood(Number(e.target.value))}>
               <option value={5}>5 / 5 — {isAr ? 'نشاط كامل وتركيز حاد' : 'Peak Clarity'}</option>
               <option value={4}>4 / 5 — {isAr ? 'طاقة جيدة ومستعدة' : 'Good Energy'}</option>
               <option value={3}>3 / 5 — {isAr ? 'متوسط ومستقر' : 'Steady / Neutral'}</option>
               <option value={2}>2 / 5 — {isAr ? 'تشتت خفيف أو إرهاق' : 'Slightly Fatigued'}</option>
               <option value={1}>1 / 5 — {isAr ? 'إرهاق شديد' : 'Depleted'}</option>
-            </select>
+            </NuqtaSelect>
           </div>
 
           <p className="small-muted" style={{ marginTop: '18px' }}>

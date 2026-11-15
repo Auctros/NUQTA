@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Goal, GoalPriority, KeyResult, KeyResultDataSource } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { EmptyState, PageHeader } from './ui';
+import { EmptyState, NuqtaSelect, PageHeader } from './ui';
 import { GoalDetailModal } from './GoalDetailModal';
 import { evaluateGoalProgress } from '../lib/goalProgressEngine';
 
@@ -286,18 +286,14 @@ export const GoalsView: React.FC = () => {
           </button>
 
           {/* Category Dropdown */}
-          <select
-            className="select text-xs py-1"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
+          <NuqtaSelect value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="text-xs">
             <option value="all">{isAr ? 'كل التصنيفات' : 'All Categories'}</option>
             <option value="career">{isAr ? '💼 مهني وعمل' : 'Career'}</option>
             <option value="health">{isAr ? '⚡ صحة وجسد' : 'Health'}</option>
             <option value="finance">{isAr ? '🪙 مالي واستثمار' : 'Finance'}</option>
             <option value="personal">{isAr ? '🌱 شخصي وعائلة' : 'Personal'}</option>
             <option value="intellect">{isAr ? '🧠 فكري وثقافي' : 'Intellect'}</option>
-          </select>
+          </NuqtaSelect>
         </div>
 
         {/* Search Input */}
@@ -564,44 +560,32 @@ export const GoalsView: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="field">
                   <label className="text-xs text-muted mb-1 block">{isAr ? 'التصنيف' : 'Category'}</label>
-                  <select
-                    className="select w-full text-xs"
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value as any)}
-                  >
+                  <NuqtaSelect value={formCategory} onChange={(e) => setFormCategory(e.target.value as any)} className="text-xs">
                     <option value="career">{isAr ? '💼 مهني وعمل' : 'Career'}</option>
                     <option value="health">{isAr ? '⚡ صحة وجسد' : 'Health'}</option>
                     <option value="finance">{isAr ? '🪙 مالي واستثمار' : 'Finance'}</option>
                     <option value="personal">{isAr ? '🌱 شخصي وعائلة' : 'Personal'}</option>
                     <option value="intellect">{isAr ? '🧠 فكري وثقافي' : 'Intellect'}</option>
-                  </select>
+                  </NuqtaSelect>
                 </div>
 
                 <div className="field">
                   <label className="text-xs text-muted mb-1 block">{isAr ? 'الأولوية' : 'Priority'}</label>
-                  <select
-                    className="select w-full text-xs"
-                    value={formPriority}
-                    onChange={(e) => setFormPriority(e.target.value as GoalPriority)}
-                  >
+                  <NuqtaSelect value={formPriority} onChange={(e) => setFormPriority(e.target.value as GoalPriority)} className="text-xs">
                     <option value="urgent">{isAr ? '🔴 عاجل جداً' : 'Urgent'}</option>
                     <option value="high">{isAr ? '🟡 أولوية كبرى' : 'High'}</option>
                     <option value="medium">{isAr ? '🔵 متوسط الأهمية' : 'Medium'}</option>
                     <option value="low">{isAr ? '⚪ أولوية عادية' : 'Low'}</option>
-                  </select>
+                  </NuqtaSelect>
                 </div>
 
                 <div className="field col-span-2 sm:col-span-1">
                   <label className="text-xs text-muted mb-1 block">{isAr ? 'الإطار الزمني' : 'Timeframe'}</label>
-                  <select
-                    className="select w-full text-xs"
-                    value={formTimeframe}
-                    onChange={(e) => setFormTimeframe(e.target.value as any)}
-                  >
+                  <NuqtaSelect value={formTimeframe} onChange={(e) => setFormTimeframe(e.target.value as any)} className="text-xs">
                     <option value="quarterly">{isAr ? 'فصلي (3 أشهر)' : 'Quarterly'}</option>
                     <option value="annual">{isAr ? 'سنوي (سنة)' : 'Annual'}</option>
                     <option value="life">{isAr ? 'رؤية كبرى للحياة' : 'Life Vision'}</option>
-                  </select>
+                  </NuqtaSelect>
                 </div>
               </div>
 
@@ -645,10 +629,7 @@ export const GoalsView: React.FC = () => {
                     </div>
                     <div className="field">
                       <label className="text-[11px] text-muted mb-1 block">{isAr ? 'مصدر البيانات' : 'Data Engine'}</label>
-                      <select
-                        className="select w-full text-xs"
-                        value={formKrSource}
-                        onChange={(e) => {
+                      <NuqtaSelect value={formKrSource} onChange={(e) => {
                           const src = e.target.value as KeyResultDataSource;
                           setFormKrSource(src);
                           if (src === 'tasks_completed') {
@@ -667,8 +648,8 @@ export const GoalsView: React.FC = () => {
                             setFormKrUnit('%');
                             setFormKrTarget(100);
                           }
-                        }}
-                      >
+                        }} className="text-xs">
+
                         <option value="tasks_completed">{isAr ? '✓ عدد المهام المنجزة' : 'Tasks: Completed Count'}</option>
                         <option value="habit_consistency">{isAr ? '↻ نسبة التزام العادات (%)' : 'Habits: Cadence (%)'}</option>
                         <option value="reading_books_completed">{isAr ? '📚 عدد الكتب المكتملة' : 'Reading: Books Finished'}</option>
@@ -677,7 +658,7 @@ export const GoalsView: React.FC = () => {
                         <option value="workout_total_reps">{isAr ? '💪 تكرارات التمارين' : 'Workout: Total Reps'}</option>
                         <option value="drawing_projects_completed">{isAr ? '🏆 مشاريع الرسم المكتملة' : 'Drawing: Finished Projects'}</option>
                         <option value="manual">{isAr ? '✏️ نتيجة يدوية' : 'Manual Entry'}</option>
-                      </select>
+                      </NuqtaSelect>
                     </div>
                   </div>
 

@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { QURAN_SURAHS, TOTAL_QURAN_AYAHS, TOTAL_QURAN_SURAHS, getSurahMeta } from '../lib/quranData';
 import { QuranSessionType, QuranRecitationQuality, QuranSurahStatus, SurahMemorizationState } from '../types';
-import { Button } from './ui';
+import { Button, NuqtaSelect } from './ui';
 import {
   StudioFrame,
   StudioSection,
@@ -396,23 +396,20 @@ export const QuranView: React.FC = () => {
                   <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
                     {isAr ? 'السورة' : 'Surah'}
                   </span>
-                  <select
-                    className="select w-full text-[var(--fs-xs)] font-[var(--fw-semibold)]"
-                    value={selectedSurahNumber}
-                    onChange={(e) => {
+                  <NuqtaSelect value={selectedSurahNumber} onChange={(e) => {
                       const n = Number(e.target.value);
                       setSelectedSurahNumber(n);
                       const meta = getSurahMeta(n);
                       setAyahStart(1);
                       setAyahEnd(Math.min(meta.totalAyahs, quranData?.dailyTargetAyahs || 10));
-                    }}
-                  >
+                    }} className="text-[var(--fs-xs)] font-[var(--fw-semibold)]">
+
                     {QURAN_SURAHS.map((s) => (
                       <option key={s.number} value={s.number}>
                         {s.number}. {s.nameAr} ({s.nameEn}) — {s.totalAyahs} {isAr ? 'آية' : 'ayahs'}
                       </option>
                     ))}
-                  </select>
+                  </NuqtaSelect>
                 </label>
                 <label className="field">
                   <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
@@ -462,16 +459,12 @@ export const QuranView: React.FC = () => {
                   <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
                     {isAr ? 'الإتقان' : 'Quality'}
                   </span>
-                  <select
-                    className="select w-full text-[var(--fs-xs)]"
-                    value={quality}
-                    onChange={(e) => setQuality(e.target.value as QuranRecitationQuality)}
-                  >
+                  <NuqtaSelect value={quality} onChange={(e) => setQuality(e.target.value as QuranRecitationQuality)} className="text-[var(--fs-xs)]">
                     <option value="excellent">{isAr ? 'متقن كالفاتحة' : 'Excellent'}</option>
                     <option value="very_good">{isAr ? 'جيد جداً' : 'Very good'}</option>
                     <option value="good">{isAr ? 'جيد' : 'Good'}</option>
                     <option value="needs_reinforcement">{isAr ? 'يحتاج إعادة وضبط' : 'Needs reinforcement'}</option>
-                  </select>
+                  </NuqtaSelect>
                 </label>
                 <label className="field">
                   <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
@@ -753,15 +746,11 @@ export const QuranView: React.FC = () => {
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
                   {isAr ? 'دورة المراجعة الشاملة (أيام)' : 'Full revision cycle (days)'}
                 </span>
-                <select
-                  className="select w-full text-[var(--fs-xs)]"
-                  value={revisionCycleDays}
-                  onChange={(e) => setRevisionCycleDays(Number(e.target.value))}
-                >
+                <NuqtaSelect value={revisionCycleDays} onChange={(e) => setRevisionCycleDays(Number(e.target.value))} className="text-[var(--fs-xs)]">
                   <option value={7}>{isAr ? 'كل 7 أيام' : 'Every 7 days'}</option>
                   <option value={14}>{isAr ? 'كل 14 يوماً' : 'Every 14 days'}</option>
                   <option value={30}>{isAr ? 'كل 30 يوماً' : 'Every 30 days'}</option>
-                </select>
+                </NuqtaSelect>
               </label>
               <Button variant="secondary" size="sm" type="submit">
                 {isAr ? 'حفظ الإيقاع' : 'Save cadence'}
@@ -785,10 +774,7 @@ export const QuranView: React.FC = () => {
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
                   {isAr ? 'السورة' : 'Surah'}
                 </span>
-                <select
-                  className="select w-full text-[var(--fs-xs)] font-[var(--fw-semibold)]"
-                  value={selectedSurahNumber}
-                  onChange={(e) => {
+                <NuqtaSelect value={selectedSurahNumber} onChange={(e) => {
                     const n = Number(e.target.value);
                     setSelectedSurahNumber(n);
                     const meta = getSurahMeta(n);
@@ -797,14 +783,14 @@ export const QuranView: React.FC = () => {
                     const start = last && last.end < meta.totalAyahs ? last.end + 1 : 1;
                     setAyahStart(start);
                     setAyahEnd(Math.min(meta.totalAyahs, start + (quranData?.dailyTargetAyahs || 10) - 1));
-                  }}
-                >
+                  }} className="text-[var(--fs-xs)] font-[var(--fw-semibold)]">
+
                   {QURAN_SURAHS.map((s) => (
                     <option key={s.number} value={s.number}>
                       {s.number}. {s.nameAr} ({s.nameEn}) — {s.totalAyahs} {isAr ? 'آية' : 'ayahs'}
                     </option>
                   ))}
-                </select>
+                </NuqtaSelect>
               </label>
               <label className="field">
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
@@ -896,24 +882,21 @@ export const QuranView: React.FC = () => {
                   <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
                     {isAr ? 'السورة' : 'Surah'}
                   </span>
-                  <select
-                    className="select w-full text-[var(--fs-xs)]"
-                    value={selectedSurahNumber}
-                    onChange={(e) => {
+                  <NuqtaSelect value={selectedSurahNumber} onChange={(e) => {
                       const n = Number(e.target.value);
                       setSelectedSurahNumber(n);
                       setRevealedAyahs([]);
                       setDifficultAyahs([]);
                       setAyahStart(1);
                       setAyahEnd(Math.min(getSurahMeta(n).totalAyahs, 10));
-                    }}
-                  >
+                    }} className="text-[var(--fs-xs)]">
+
                     {QURAN_SURAHS.map((s) => (
                       <option key={s.number} value={s.number}>
                         {s.number}. {s.nameAr}
                       </option>
                     ))}
-                  </select>
+                  </NuqtaSelect>
                 </label>
                 <label className="field">
                   <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">
@@ -1100,18 +1083,14 @@ export const QuranView: React.FC = () => {
                   className="input w-full text-[var(--fs-xs)]"
                 />
               </div>
-              <select
-                className="select text-[var(--fs-xs)]"
-                value={mapJuzFilter}
-                onChange={(e) => setMapJuzFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-              >
+              <NuqtaSelect value={mapJuzFilter} onChange={(e) => setMapJuzFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="text-[var(--fs-xs)]">
                 <option value="all">{isAr ? 'جميع الأجزاء (1-30)' : 'All Juz'}</option>
                 {Array.from({ length: 30 }).map((_, i) => (
                   <option key={i + 1} value={i + 1}>
                     {isAr ? `الجزء ${i + 1}` : `Juz ${i + 1}`}
                   </option>
                 ))}
-              </select>
+              </NuqtaSelect>
             </div>
 
             <div className="mt-3 flex flex-wrap gap-1.5">

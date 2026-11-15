@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, SpecializedHabitType } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { EmptyState, PageHeader, TabBar } from './ui';
+import { EmptyState, NuqtaSelect, PageHeader, TabBar } from './ui';
 import { ReadingAppModal } from './ReadingAppModal';
 import { WorkoutAppModal } from './WorkoutAppModal';
 
@@ -634,49 +634,37 @@ export const HabitsView: React.FC = () => {
               <div className="form-grid">
                 <div className="field">
                   <label>{isAr ? 'الوقت المفضل' : 'Time of Day'}</label>
-                  <select
-                    className="select"
-                    value={formTimeOfDay}
-                    onChange={(e) => setFormTimeOfDay(e.target.value as any)}
-                  >
+                  <NuqtaSelect value={formTimeOfDay} onChange={(e) => setFormTimeOfDay(e.target.value as any)}>
                     <option value="morning">{isAr ? 'الصباح' : 'Morning'}</option>
                     <option value="afternoon">{isAr ? 'بعد الظهر' : 'Afternoon'}</option>
                     <option value="evening">{isAr ? 'المساء' : 'Evening'}</option>
                     <option value="anytime">{isAr ? 'في أي وقت' : 'Anytime'}</option>
-                  </select>
+                  </NuqtaSelect>
                 </div>
 
                 <div className="field">
                   <label>{isAr ? 'التصنيف' : 'Category'}</label>
-                  <select
-                    className="select"
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value as any)}
-                  >
+                  <NuqtaSelect value={formCategory} onChange={(e) => setFormCategory(e.target.value as any)}>
                     <option value="health">{isAr ? 'صحة وجسد' : 'Health & Body'}</option>
                     <option value="mind">{isAr ? 'صفاء ذهني وتأمل' : 'Mind & Focus'}</option>
                     <option value="productivity">{isAr ? 'إنتاجية وعمل' : 'Productivity'}</option>
                     <option value="learning">{isAr ? 'تعلم وتطوير' : 'Learning'}</option>
                     <option value="relationships">{isAr ? 'علاقات وتواصل' : 'Relationships'}</option>
-                  </select>
+                  </NuqtaSelect>
                 </div>
               </div>
 
               {/* Linked Strategic Goal Selector */}
               <div className="field">
                 <label>{isAr ? 'الهدف الاستراتيجي المرتبط' : 'Linked Strategic Goal'}</label>
-                <select
-                  className="select"
-                  value={formLinkedGoalId}
-                  onChange={(e) => setFormLinkedGoalId(e.target.value)}
-                >
+                <NuqtaSelect value={formLinkedGoalId} onChange={(e) => setFormLinkedGoalId(e.target.value)}>
                   <option value="">{isAr ? 'بدون هدف استراتيجي (عادة عامة)' : 'No linked goal (general habit)'}</option>
                   {goals.map((g) => (
                     <option key={g.id} value={g.id}>
                       🎯 {g.title} ({g.timeframe})
                     </option>
                   ))}
-                </select>
+                </NuqtaSelect>
               </div>
 
               {/* Habit Quick Presets & Types (One-Click Selection) */}

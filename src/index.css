@@ -565,6 +565,7 @@ body.light-mode {
 }
 .light-mode .empty-icon {
   background: #e5f3e9;
+  color: var(--accent-strong);
 }
 .light-mode .empty-state {
   background: #f7faf8;

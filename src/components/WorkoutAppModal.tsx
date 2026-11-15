@@ -9,6 +9,7 @@ import {
 } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { EXERCISE_CATALOG, PrebuiltExercise } from '../lib/exerciseCatalog';
+import { NuqtaSelect } from './ui';
 
 interface WorkoutAppModalProps {
   habit: Habit;
@@ -547,15 +548,11 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
 
                   <div className="field">
                     <label className="text-xs text-muted mb-1 block">{isAr ? 'مستوى الصعوبة' : 'Difficulty'}</label>
-                    <select
-                      className="select w-full text-xs"
-                      value={difficultyLevel}
-                      onChange={(e) => setDifficultyLevel(e.target.value as FitnessDifficulty)}
-                    >
+                    <NuqtaSelect value={difficultyLevel} onChange={(e) => setDifficultyLevel(e.target.value as FitnessDifficulty)} className="text-xs">
                       <option value="beginner">{isAr ? 'مبتدئ (Beginner)' : 'Beginner'}</option>
                       <option value="intermediate">{isAr ? 'متوسط (Intermediate)' : 'Intermediate'}</option>
                       <option value="advanced">{isAr ? 'متقدم (Advanced)' : 'Advanced'}</option>
-                    </select>
+                    </NuqtaSelect>
                   </div>
 
                   <div className="field">
@@ -583,17 +580,13 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
 
                   <div>
                     <span className="text-[11px] text-muted block">{isAr ? 'شدة الجهد (RPE):' : 'RPE Intensity:'}</span>
-                    <select
-                      className="bg-transparent text-xs text-[var(--text-primary)] border-b border-[var(--d-workout-border)] focus:outline-none"
-                      value={intensityRating}
-                      onChange={(e) => setIntensityRating(Number(e.target.value) as any)}
-                    >
+                    <NuqtaSelect value={intensityRating} onChange={(e) => setIntensityRating(Number(e.target.value) as any)} className="bg-transparent text-xs text-[var(--text-primary)] border-b border-[var(--d-workout-border)] focus:outline-none">
                       <option value="1">1 - خفيف ومريح</option>
                       <option value="2">2 - سهل وبسيط</option>
                       <option value="3">3 - متوسط متوازن</option>
                       <option value="4">4 - قوي ومركّز</option>
                       <option value="5">5 - أقصى جهد</option>
-                    </select>
+                    </NuqtaSelect>
                   </div>
 
                   <div className="sm:col-span-2 flex items-center justify-end gap-2">
@@ -890,15 +883,11 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                     </div>
                     <div className="field">
                       <label className="text-xs text-muted mb-1 block">{isAr ? 'المستوى' : 'Level'}</label>
-                      <select
-                        className="select w-full text-xs"
-                        value={routineLevel}
-                        onChange={(e) => setRoutineLevel(e.target.value as any)}
-                      >
+                      <NuqtaSelect value={routineLevel} onChange={(e) => setRoutineLevel(e.target.value as any)} className="text-xs">
                         <option value="beginner">{isAr ? 'مبتدئ' : 'Beginner'}</option>
                         <option value="intermediate">{isAr ? 'متوسط' : 'Intermediate'}</option>
                         <option value="advanced">{isAr ? 'متقدم' : 'Advanced'}</option>
-                      </select>
+                      </NuqtaSelect>
                     </div>
                     <div className="field">
                       <label className="text-xs text-muted mb-1 block">{isAr ? 'المدة التقديرية (دقيقة)' : 'Duration (min)'}</label>

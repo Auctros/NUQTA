@@ -29,7 +29,9 @@ export interface NuqtaSelectChangeEvent {
 }
 
 export interface NuqtaSelectProps {
-  value: string;
+  /** Accepts a number too; it is compared as a string, matching how the
+      native <select> coerces numeric option values. */
+  value: string | number;
   onChange: (event: NuqtaSelectChangeEvent) => void;
   /** Programmatic options. Ignored when <option> children are provided. */
   options?: SelectOption[];
@@ -108,9 +110,10 @@ export const NuqtaSelect: React.FC<NuqtaSelectProps> = ({
     [children, options]
   );
 
+  const valueStr = String(value);
   const selectedIndex = useMemo(
-    () => resolvedOptions.findIndex((o) => o.value === value),
-    [resolvedOptions, value]
+    () => resolvedOptions.findIndex((o) => o.value === valueStr),
+    [resolvedOptions, valueStr]
   );
   const selectedOption = selectedIndex >= 0 ? resolvedOptions[selectedIndex] : undefined;
   const hasValue = selectedOption !== undefined;
@@ -165,14 +168,14 @@ export const NuqtaSelect: React.FC<NuqtaSelectProps> = ({
     (index: number) => {
       const opt = resolvedOptions[index];
       if (!opt || opt.disabled) return;
-      if (opt.value !== value) {
+      if (opt.value !== valueStr) {
         const target = { value: opt.value, name, id };
         onChange({ target, currentTarget: target });
       }
       setOpen(false);
       triggerRef.current?.focus();
     },
-    [resolvedOptions, value, onChange, name, id]
+    [resolvedOptions, valueStr, onChange, name, id]
   );
 
   const move = useCallback(
@@ -289,7 +292,7 @@ export const NuqtaSelect: React.FC<NuqtaSelectProps> = ({
             style={menuStyle}
           >
             {resolvedOptions.map((opt, i) => {
-              const isSelected = opt.value === value;
+              const isSelected = opt.value === valueStr;
               const isActive = i === activeIndex;
               return (
                 <div

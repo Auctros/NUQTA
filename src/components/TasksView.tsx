@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { PriorityLevel, Task, TaskStatus } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { EmptyState, PageHeader, Surface, TabBar } from './ui';
+import { EmptyState, NuqtaSelect, PageHeader, Surface, TabBar } from './ui';
 import { suggestSmartReschedule } from '../lib/energyAlgorithm';
 
 export const TasksView: React.FC = () => {
@@ -228,17 +228,12 @@ export const TasksView: React.FC = () => {
           )}
         </div>
 
-        <select
-          className="select"
-          style={{ width: 'auto' }}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
-        >
+        <NuqtaSelect style={{ width: 'auto' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
           <option value="all">{isAr ? 'الكل (غير المؤرشفة)' : 'All Active'}</option>
           <option value="active">{isAr ? 'النشطة' : 'Active'}</option>
           <option value="completed">{isAr ? 'المكتملة' : 'Completed'}</option>
           <option value="archived">{isAr ? 'المؤرشفة 🗄️' : 'Archived 🗄️'}</option>
-        </select>
+        </NuqtaSelect>
 
         <button
           onClick={() => setActiveNavTab('archive')}
@@ -249,15 +244,10 @@ export const TasksView: React.FC = () => {
           <span>{isAr ? 'الذاكرة والأرشيف' : 'Archive'}</span>
         </button>
 
-        <select
-          className="select"
-          style={{ width: 'auto' }}
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as any)}
-        >
+        <NuqtaSelect style={{ width: 'auto' }} value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
           <option value="due">{isAr ? 'حسب التاريخ' : 'Sort by Due'}</option>
           <option value="priority">{isAr ? 'حسب الأولوية' : 'Sort by Priority'}</option>
-        </select>
+        </NuqtaSelect>
 
         <TabBar
           items={[
@@ -495,15 +485,11 @@ export const TasksView: React.FC = () => {
                               {priorityMeta(t.priority).label.split(' ')[0]}
                             </span>
                           </div>
-                          <select
-                            className="select mt-2.5 py-1 text-[10px]"
-                            value={t.status}
-                            onChange={(e) => updateTask(t.id, { status: e.target.value as TaskStatus })}
-                          >
+                          <NuqtaSelect value={t.status} onChange={(e) => updateTask(t.id, { status: e.target.value as TaskStatus })} className="text-[10px]">
                             <option value="todo">{isAr ? 'قيد الانتظار' : 'To Do'}</option>
                             <option value="in_progress">{isAr ? 'قيد التنفيذ' : 'In Progress'}</option>
                             <option value="completed">{isAr ? 'مكتملة' : 'Completed'}</option>
-                          </select>
+                          </NuqtaSelect>
                         </div>
                       ))
                     )}
@@ -614,16 +600,12 @@ export const TasksView: React.FC = () => {
               <div className="form-grid">
                 <div className="field">
                   <label>{isAr ? 'مصفوفة أيزنهاور (الأولوية)' : 'Eisenhower Priority'}</label>
-                  <select
-                    className="select"
-                    value={formPriority}
-                    onChange={(e) => setFormPriority(Number(e.target.value) as PriorityLevel)}
-                  >
+                  <NuqtaSelect value={formPriority} onChange={(e) => setFormPriority(Number(e.target.value) as PriorityLevel)}>
                     <option value={1}>{isAr ? 'Q1 — عاجل ومهم (نفذ فوراً)' : 'Q1 — Urgent & Important'}</option>
                     <option value={2}>{isAr ? 'Q2 — مهم وغير عاجل (خطط له)' : 'Q2 — Important & Not Urgent'}</option>
                     <option value={3}>{isAr ? 'Q3 — عاجل وغير مهم (فوّض)' : 'Q3 — Urgent & Not Important'}</option>
                     <option value={4}>{isAr ? 'Q4 — غير مهم وغير عاجل' : 'Q4 — Low / Eliminate'}</option>
-                  </select>
+                  </NuqtaSelect>
                 </div>
 
                 <div className="field">
@@ -662,18 +644,14 @@ export const TasksView: React.FC = () => {
 
               <div className="field">
                 <label>{isAr ? 'الهدف الاستراتيجي المرتبط' : 'Linked Strategic Goal'}</label>
-                <select
-                  className="select"
-                  value={formLinkedGoalId}
-                  onChange={(e) => setFormLinkedGoalId(e.target.value)}
-                >
+                <NuqtaSelect value={formLinkedGoalId} onChange={(e) => setFormLinkedGoalId(e.target.value)}>
                   <option value="">{isAr ? 'بدون هدف استراتيجي (مهمة عامة)' : 'No linked goal (general task)'}</option>
                   {goals.map((g) => (
                     <option key={g.id} value={g.id}>
                       🎯 {g.title} ({g.timeframe})
                     </option>
                   ))}
-                </select>
+                </NuqtaSelect>
               </div>
 
               <div className="field">
