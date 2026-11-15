@@ -86,5 +86,8 @@ if (!python) {
 }
 
 const testStatus = run(python, [join('scripts', 'e2e', 'offline.py')], { env: { ...process.env, OFFLINE_URL: URL } });
+// Browser-level UI audit: every navigable view renders, no horizontal overflow at
+// desktop/tablet/mobile widths, and mobile navigation opens -> navigates -> closes.
+const viewsStatus = run(python, [join('scripts', 'e2e', 'views.py')], { env: { ...process.env, OFFLINE_URL: URL } });
 shutdown();
-process.exit(testStatus);
+process.exit(testStatus || viewsStatus);

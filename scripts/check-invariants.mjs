@@ -132,10 +132,25 @@ const grep = (re, { except = [] } = {}) =>
     fail('ErrorBoundary component is missing', 'expected src/components/ErrorBoundary.tsx');
   }
 }
-// 14. Nothing may be sent off-device: no network primitives, no telemetry endpoints.
+// 14. No obvious network/telemetry primitives in the application source.
+//     This is a *textual* scan of non-comment lines in every .ts/.tsx file under src/.
+//     It flags six literal patterns: fetch(, XMLHttpRequest, navigator.sendBeacon,
+//     new WebSocket, new EventSource, navigator.geolocation.
+//     What it guarantees: none of those six primitives appear in the scanned source.
+//     What it CANNOT guarantee: it does not scan index.html, public/, scripts/, tests/,
+//     CSS url() references, bundled/minified output, or third-party dependencies; and it
+//     cannot see network activity reached indirectly — dynamic import(), a URL assigned
+//     to an <img>/<a>/<script> src, navigator.serviceWorker.register, a same-origin
+//     relative path, or a request made from a dependency. It proves the absence of the
+//     listed primitives in first-party source, not the absence of all network access.
 {
   const hits = grep(/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon|new\s+WebSocket|new\s+EventSource|navigator\.geolocation/);
-  if (hits.length) fail('Local-first promise: no network/telemetry primitives in src', hits.slice(0, 5).join('\n    '));
+  if (hits.length) {
+    fail(
+      'Network/telemetry primitive found in scanned source (fetch/XHR/sendBeacon/WebSocket/EventSource/geolocation)',
+      hits.slice(0, 5).join('\n    ')
+    );
+  }
 }
 
 if (failures.length) {

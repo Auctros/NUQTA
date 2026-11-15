@@ -317,7 +317,7 @@ export const ArchiveHistoryView: React.FC = () => {
 
       {/* Main Tabs Selection */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#233529] pb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           <button
             onClick={() => setActiveTab('archive')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${

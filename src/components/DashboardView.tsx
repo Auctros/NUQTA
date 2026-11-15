@@ -722,7 +722,7 @@ export const DashboardView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="inline-flex items-center p-0.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-deep)]">
+                <div className="inline-flex flex-wrap items-center p-0.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-deep)]">
                   {(
                     [
                       { id: 'all', ar: 'الكل', en: 'All' },

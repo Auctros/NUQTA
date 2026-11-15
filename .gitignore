@@ -11,3 +11,6 @@ coverage/
 # Root-only patterns: nested assets with the same names stay tracked.
 /.backup-*/
 /nuqta-*.png
+
+# Vitest JSON reporter scratch output
+.vitest/

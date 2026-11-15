@@ -112,7 +112,7 @@ export const SundayRitualModal: React.FC = () => {
                 onChange={(e) => setNewWin(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addWin()}
               />
-              <button className="btn primary" onClick={addWin}>
+              <button className="btn primary" onClick={addWin} aria-label={isAr ? 'إضافة إنجاز' : 'Add a win'}>
                 +
               </button>
             </div>
@@ -149,7 +149,7 @@ export const SundayRitualModal: React.FC = () => {
                 onChange={(e) => setNewLesson(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addLesson()}
               />
-              <button className="btn primary" onClick={addLesson}>
+              <button className="btn primary" onClick={addLesson} aria-label={isAr ? 'إضافة درس' : 'Add a lesson'}>
                 +
               </button>
             </div>
@@ -189,7 +189,7 @@ export const SundayRitualModal: React.FC = () => {
                 onChange={(e) => setNewPriority(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addPriority()}
               />
-              <button className="btn primary" onClick={addPriority}>
+              <button className="btn primary" onClick={addPriority} aria-label={isAr ? 'إضافة أولوية' : 'Add a priority'}>
                 +
               </button>
             </div>

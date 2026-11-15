@@ -13,12 +13,14 @@ run, render, and recover the way a real user needs it to?
 | Command | Result |
 |---------|--------|
 | `npm run lint` (`tsc --noEmit`) | Pass |
-| `npm run test` (Vitest, jsdom, `TZ=Africa/Cairo`) | Pass — 16 files / 285 tests |
+| `npm run test` (Vitest, jsdom, `TZ=Africa/Cairo`) | Pass — 16 files / 286 tests |
 | `npm run build` | Pass |
 | `node scripts/check-invariants.mjs` | Pass — 14 rules |
-| `npm run test:e2e` (Playwright, offline shell) | Pass — `OFFLINE PASS` |
+| `npm run test:e2e` (Playwright) | Pass — `OFFLINE PASS` and `VIEWS PASS` |
 
-`npm run verify:full` runs all of the above end to end and is green.
+`npm run test:e2e` runs two browser-level scripts against the production build:
+`scripts/e2e/offline.py` (offline shell) and `scripts/e2e/views.py` (every view +
+responsive + RTL). `npm run verify:full` runs all of the above end to end and is green.
 
 ## 1. PWA / install / manifest / service worker
 
@@ -50,8 +52,8 @@ The precache from the first visit is sufficient on its own — no priming reload
 
 ## 3. Responsive layout
 
-Measured in Chromium at four widths. No horizontal overflow at any of them
-(`scrollWidth <= clientWidth + 2`):
+Measured in Chromium by `scripts/e2e/views.py` at four widths. No horizontal overflow
+at any of them (`scrollWidth <= clientWidth + 2`):
 
 | Width | Horizontal overflow | Notes |
 |-------|--------------------|-------|
@@ -63,6 +65,19 @@ Measured in Chromium at four widths. No horizontal overflow at any of them
 Mobile navigation was exercised end to end at 390 px: the sidebar is off-canvas, the
 header toggle opens it, tapping a destination navigates **and** closes it, and the page
 still does not overflow.
+
+### Fix: page headings overflowed the viewport between 661–1150 px
+
+A committed sweep of every view across 14 widths (360–1440) found **11 horizontal-overflow
+cases** that the earlier manual pass had missed. The dominant cause: `.heading-actions`
+was declared with `flex-shrink: 0` and only wrapped below 660 px, so a wide action row
+(e.g. the Insights view switcher) pushed the document past the viewport edge in the
+661–1150 px band. Two narrower cases were inner flex rows that did not wrap
+(`ArchiveHistoryView` tab group, `DashboardView` agenda segmented control).
+
+Fixed by letting `.page-heading` and `.heading-actions` wrap and shrink, and adding
+`flex-wrap` to the two inner rows. Re-run of the same sweep: **0 overflow cases**. The
+sweep now lives in `scripts/e2e/views.py`, so a regression fails the gate.
 
 ## 4. Performance
 
@@ -80,13 +95,16 @@ optimization with that constraint documented here.
 
 ## 5. Runtime reliability
 
-Every one of the 15 navigable views was opened in the production build:
+Every one of the 15 navigable views is opened in the production build by
+`scripts/e2e/views.py` (plus the 3 command-palette-only destinations reachable in the same
+sidebar markup):
 
 Overview, Tasks, Habits, Goals, Focus, Calendar, Quran Studio, Reading Vault, Home Workout,
 Art Studio, Archive & History, Money, Health, Journal, Insights.
 
-All render real content, and the run produced **zero console errors and zero page errors**.
-The Arabic/RTL context (`locale=ar-EG`, `dir="rtl"`) also renders without errors.
+All render real content, and the run produces **zero console errors and zero page errors**.
+The same script also opens every view under the Arabic/RTL context (`locale=ar-EG`), asserts
+the shell flips to `dir="rtl"`, and confirms **no view overflows or errors** in RTL.
 
 ### Fix: a render crash can no longer white-screen the app
 
@@ -105,8 +123,16 @@ inside a child and asserts the recovery UI appears.
 - `index.html` sets a strict `Content-Security-Policy`: `default-src 'self'`, no
   third-party origins, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`.
 - No `fetch`, `XMLHttpRequest`, `sendBeacon`, `WebSocket`, `EventSource`, or
-  `navigator.geolocation` anywhere in `src/` — nothing can leave the device. This is now
-  invariant 14, so a future change cannot silently add telemetry.
+  `navigator.geolocation` on any non-comment line of any `.ts`/`.tsx` file under `src/`.
+  This is invariant 14, so a future change cannot silently add one of those primitives.
+  **Scope of the guarantee (exact):** the rule is a textual scan of first-party
+  `src/` TypeScript only. It does not scan `index.html`, `public/`, `scripts/`, tests,
+  CSS `url()` references, bundled output, or dependencies, and it cannot see network
+  reached indirectly (dynamic `import()`, a URL assigned to an `<img>`/`<a>`/`<script>`
+  `src`, `navigator.serviceWorker.register`, or a same-origin relative path). It proves
+  the absence of the listed primitives in first-party source — not the absence of all
+  network access. It is the strongest check that is practical without runtime traffic
+  inspection.
 - No `dangerouslySetInnerHTML`, `innerHTML`, `eval`, `new Function`, or `document.write`.
 - No `target="_blank"` links (so no reverse-tabnabbing surface).
 - Storage is namespaced under the `nuqta_` prefix; `localStorage.clear()` is already
@@ -117,8 +143,13 @@ inside a child and asserts the recovery UI appears.
 | ID | Severity | Area | Finding | Action |
 |----|----------|------|---------|--------|
 | R1 | Medium | Runtime reliability | No error boundary: any render crash white-screened the app with no data-export path | Fixed — `ErrorBoundary` + test + invariant 13 |
-| R2 | Low | Privacy hardening | The "no network" guarantee was convention only | Fixed — invariant 14 blocks network primitives in `src/` |
+| R2 | Low | Privacy hardening | The "no network" guarantee was convention only | Fixed — invariant 14 blocks the listed network primitives in first-party `src/` (scope documented) |
 | R3 | Info | Performance | Single 1.04 MB JS chunk (253 KB gzip) | Accepted; code-splitting would break the precache strategy — deferred post-release |
+| R4 | Medium | Responsive layout | Page headings overflowed the viewport in the 661–1150 px band (11 view×width cases) | Fixed — `.page-heading`/`.heading-actions` now wrap; regression swept by `views.py` |
+| R5 | Low | Dead code / deps | `SettingsModal.tsx` was unreferenced and the only consumer of `lucide-react`, masking an unused dependency | Fixed — removed both; invariant 8 stays truthful |
+| R6 | Low | Accessibility | Three icon-only `+` buttons in the Sunday Ritual modal had no accessible name | Fixed — bilingual `aria-label`s added |
+| R7 | Low | Docs accuracy | Release doc said 285 tests (stale) and stated unverifiable responsive/RTL claims | Fixed — count is 286; responsive and RTL claims are now produced by committed scripts |
 
-No release blockers remain. The offline install path, all views, all responsive
-breakpoints, and the privacy boundary are verified against the production build.
+No release blockers remain. The offline install path, all views, the responsive
+breakpoints, the RTL layout, and the privacy boundary are verified against the production
+build by committed, re-runnable scripts.
