@@ -292,7 +292,7 @@ export const ReadingView: React.FC = () => {
   const tabs: StudioTab[] = [
     { id: 'library', label: isAr ? 'المكتبة' : 'Library', icon: 'book', count: readingBooks.length },
     { id: 'reading', label: isAr ? 'أقرأ الآن' : 'Reading', icon: 'book-open' },
-    { id: 'journal', label: isAr ? 'يوميات القراءة' : 'Journal', icon: 'history' },
+    { id: 'journal', label: isAr ? 'يوميات القراءة' : 'Journal', icon: 'notebook' },
     { id: 'insights', label: isAr ? 'الرؤى' : 'Insights', icon: 'chart' }
   ];
 

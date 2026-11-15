@@ -2,3 +2,4 @@ export * from './primitives';
 export * from './layout';
 export * from './forms';
 export * from './overlays';
+export * from './NuqtaSelect';

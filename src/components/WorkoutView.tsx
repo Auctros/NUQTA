@@ -409,7 +409,7 @@ export const WorkoutView: React.FC = () => {
   const tabs: StudioTab[] = [
     { id: 'today', label: isAr ? 'اليوم' : 'Today', icon: 'dumbbell' },
     { id: 'programs', label: isAr ? 'البرامج' : 'Programs', icon: 'list', count: routines.length },
-    { id: 'exercises', label: isAr ? 'مكتبة التمارين' : 'Exercises', icon: 'search' },
+    { id: 'exercises', label: isAr ? 'مكتبة التمارين' : 'Exercises', icon: 'activity' },
     { id: 'history', label: isAr ? 'السجل' : 'History', icon: 'history' },
     { id: 'progress', label: isAr ? 'التقدم' : 'Progress', icon: 'chart' }
   ];

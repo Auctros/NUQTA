@@ -253,17 +253,17 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
         {/* ================= HEADER BAR ================= */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--d-workout-border)] bg-[var(--d-workout-chip)]">
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-[var(--d-workout-accent)] font-bold text-xl shadow-inner">
+            <span className="w-10 h-10 rounded-xl bg-[var(--tone-success-wash)] border border-[var(--tone-success-line)] flex items-center justify-center text-[var(--d-workout-accent)] font-bold text-xl shadow-inner">
               ⚡
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono tracking-widest uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-[var(--d-workout-accent-strong)] font-bold">
+                <span className="text-[10px] font-mono tracking-widest uppercase px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--d-workout-accent-strong)] font-bold">
                   {isAr ? 'نظام اللياقة البدنية والتمارين المنزلية' : 'HOME CALISTHENICS & FITNESS ECOSYSTEM'}
                 </span>
                 <span className="text-xs text-muted">· {habit.name}</span>
               </div>
-              <h2 className="text-lg font-bold text-[#edf2f4] leading-tight">
+              <h2 className="text-lg font-bold text-[var(--text-primary)] leading-tight">
                 {isAr ? 'استوديو اللياقة وتمارين وزن الجسم' : 'Home Performance & Mobility Studio'}
               </h2>
             </div>
@@ -316,7 +316,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-muted hover:text-[var(--text-primary)] hover:bg-white/5 transition-colors"
+              className="p-1.5 rounded-lg text-muted hover:text-[var(--text-primary)] hover:bg-[var(--surface-faint)] transition-colors"
               aria-label="Close"
             >
               <span className="text-lg font-bold px-2">✕</span>
@@ -330,10 +330,10 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               {/* Home Workout Performance Hero Card */}
-              <div className="panel p-5 sm:p-6 border border-emerald-500/25 bg-gradient-to-br from-[var(--d-workout-surface)] via-[var(--d-workout-chip)] to-[var(--d-workout-deep)] rounded-2xl relative overflow-hidden">
+              <div className="panel p-5 sm:p-6 border border-[var(--tone-success-line)] bg-gradient-to-br from-[var(--d-workout-surface)] via-[var(--d-workout-chip)] to-[var(--d-workout-deep)] rounded-2xl relative overflow-hidden">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative z-10">
                   <div className="space-y-2">
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-[var(--d-workout-accent-strong)] font-bold border border-emerald-500/30">
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--d-workout-accent-strong)] font-bold border border-[var(--tone-success-line)]">
                       {isAr ? 'حالة اللياقة المنزلية والالتزام' : 'Calisthenics Cadence'}
                     </span>
                     <h3 className="text-2xl font-bold text-[var(--text-primary)]">
@@ -349,7 +349,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                   <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                     <button
                       onClick={() => setActiveTab('session')}
-                      className="btn primary bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs"
+                      className="btn primary bg-[var(--tone-success)] hover:bg-[var(--tone-success)] text-[var(--accent-ink)] font-bold text-xs"
                     >
                       <span>{isAr ? 'بدء تمرين الآن' : 'Start Workout Session'}</span>
                       <span>⚡</span>
@@ -410,11 +410,11 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
 
                   <div className="space-y-3">
                     {[
-                      { key: 'push', labelAr: 'الدفع والصدر (Push)', color: 'bg-emerald-400' },
-                      { key: 'legs', labelAr: 'الأرجل والقرفصاء (Legs)', color: 'bg-amber-400' },
-                      { key: 'core', labelAr: 'البطن والجذع (Core)', color: 'bg-cyan-400' },
-                      { key: 'mobility', labelAr: 'المرونة والاستطالة (Mobility)', color: 'bg-purple-400' },
-                      { key: 'cardio', labelAr: 'التحمل والكارديو (Cardio)', color: 'bg-rose-400' }
+                      { key: 'push', labelAr: 'الدفع والصدر (Push)', color: 'bg-[var(--tone-success)]' },
+                      { key: 'legs', labelAr: 'الأرجل والقرفصاء (Legs)', color: 'bg-[var(--tone-warning)]' },
+                      { key: 'core', labelAr: 'البطن والجذع (Core)', color: 'bg-[var(--tone-info)]' },
+                      { key: 'mobility', labelAr: 'المرونة والاستطالة (Mobility)', color: 'bg-[var(--tone-purple)]' },
+                      { key: 'cardio', labelAr: 'التحمل والكارديو (Cardio)', color: 'bg-[var(--tone-danger)]' }
                     ].map((pattern) => {
                       const count = movementBreakdown[pattern.key as MuscleMovement] || 0;
                       const maxCount = Math.max(1, ...Object.values(movementBreakdown));
@@ -508,7 +508,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/20 text-xs">
+                      <div className="p-3 rounded-xl bg-gradient-to-r from-[var(--tone-success-line)] to-transparent border border-[var(--tone-success-line)] text-xs">
                         <strong className="text-[var(--text-primary)] block font-bold mb-1">
                           {isAr ? 'قاعدة التدريب المنزلي الذكي' : 'Bodyweight Adaptation'}
                         </strong>
@@ -637,7 +637,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-1 max-w-sm">
-                        <span className="w-6 h-6 rounded-md bg-emerald-500/15 text-[var(--d-workout-accent)] text-xs font-mono font-bold flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-md bg-[var(--tone-success-wash)] text-[var(--d-workout-accent)] text-xs font-mono font-bold flex items-center justify-center">
                           {exIdx + 1}
                         </span>
                         <input
@@ -663,7 +663,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                         <button
                           type="button"
                           onClick={() => removeExercise(exIdx)}
-                          className="text-muted hover:text-red-400 text-xs px-2"
+                          className="text-muted hover:text-[var(--tone-danger)] text-xs px-2"
                           title="Remove exercise"
                         >
                           ✕
@@ -760,7 +760,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                     💾 {isAr ? 'حفظ كروتين مخصص' : 'Save as Routine'}
                   </button>
 
-                  <button type="submit" className="btn primary bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs">
+                  <button type="submit" className="btn primary bg-[var(--tone-success)] hover:bg-[var(--tone-success)] text-[var(--accent-ink)] font-bold text-xs">
                     <span>{isAr ? 'إنهاء وتأكيد التمرين' : 'Complete Workout'}</span>
                     <span>⚡</span>
                   </button>
@@ -816,7 +816,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                     >
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/15 text-[var(--d-workout-accent-strong)]">
+                          <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--d-workout-accent-strong)]">
                             {ex.movement}
                           </span>
                           <span className="text-[10px] font-mono text-muted uppercase">
@@ -836,7 +836,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                         </span>
                         <button
                           onClick={() => handleApplyCatalogExercise(ex)}
-                          className="btn subtle small text-xs text-[var(--d-workout-accent-strong)] hover:bg-emerald-500/15"
+                          className="btn subtle small text-xs text-[var(--d-workout-accent-strong)] hover:bg-[var(--tone-success-wash)]"
                         >
                           + {isAr ? 'إدراج للتمرين' : 'Add to Workout'}
                         </button>
@@ -862,7 +862,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
 
                 <button
                   onClick={() => setIsCreatingRoutine(!isCreatingRoutine)}
-                  className="btn primary small bg-emerald-500 hover:bg-emerald-400 text-black font-bold"
+                  className="btn primary small bg-[var(--tone-success)] hover:bg-[var(--tone-success)] text-[var(--accent-ink)] font-bold"
                 >
                   {isCreatingRoutine ? (isAr ? 'إلغاء' : 'Cancel') : (isAr ? '+ إنشاء روتين مخصص' : '+ Create Routine')}
                 </button>
@@ -941,7 +941,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/15 text-[var(--d-workout-accent-strong)]">
+                            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--d-workout-accent-strong)]">
                               {rt.category}
                             </span>
                             <span className="text-[10px] text-muted font-mono">{rt.targetLevel}</span>
@@ -955,7 +955,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                         {rt.isCustom && (
                           <button
                             onClick={() => deleteWorkoutRoutine(habit.id, rt.id)}
-                            className="text-muted hover:text-red-400 text-xs px-1"
+                            className="text-muted hover:text-[var(--tone-danger)] text-xs px-1"
                             title={isAr ? 'حذف الروتين' : 'Delete routine'}
                           >
                             ✕
@@ -978,7 +978,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                       <span className="text-xs font-mono text-muted">~{rt.estimatedMinutes} {isAr ? 'دقيقة' : 'mins'}</span>
                       <button
                         onClick={() => handleApplyRoutine(rt)}
-                        className="btn primary small bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs"
+                        className="btn primary small bg-[var(--tone-success)] hover:bg-[var(--tone-success)] text-[var(--accent-ink)] font-bold text-xs"
                       >
                         <span>{isAr ? 'تفعيل وبدء هذا الروتين' : 'Launch Routine'}</span>
                         <span>⚡</span>
@@ -1025,7 +1025,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-emerald-500/20 text-[var(--d-workout-accent-strong)]">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[var(--tone-success-wash)] text-[var(--d-workout-accent-strong)]">
                               {s.workoutType}
                             </span>
                             <span className="text-xs text-muted font-mono">{s.date}</span>

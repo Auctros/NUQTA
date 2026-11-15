@@ -278,7 +278,7 @@ export const QuranView: React.FC = () => {
   }
 
   const tabs: StudioTab[] = [
-    { id: 'overview', label: isAr ? 'المتابعة' : 'Overview', icon: 'grid' },
+    { id: 'overview', label: isAr ? 'المتابعة' : 'Overview', icon: 'compass' },
     { id: 'memorize', label: isAr ? 'الحفظ الجديد' : 'Memorize', icon: 'sparkle' },
     { id: 'murajaah', label: isAr ? 'المراجعة والتسميع' : "Muraja'ah", icon: 'repeat', count: attention.length },
     { id: 'map', label: isAr ? 'خريطة المصحف' : 'Quran Map', icon: 'layers' },

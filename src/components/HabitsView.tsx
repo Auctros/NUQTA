@@ -185,7 +185,7 @@ export const HabitsView: React.FC = () => {
             return (
               <div className="flex flex-wrap items-center gap-2">
                 <button
-                  className="btn subtle text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15"
+                  className="btn subtle text-[var(--tone-success)] border-[var(--tone-success-line)] hover:bg-[var(--tone-success-wash)]"
                   onClick={() => openOrCreateStudio('quran')}
                   title={isAr ? 'استوديو حفظ ومراجعة القرآن الكريم' : 'Quran Memorization Studio'}
                 >
@@ -194,7 +194,7 @@ export const HabitsView: React.FC = () => {
                 </button>
 
                 <button
-                  className="btn subtle text-amber-300 border-amber-500/30 hover:bg-amber-500/15"
+                  className="btn subtle text-[var(--tone-warning)] border-[var(--tone-warning-line)] hover:bg-[var(--tone-warning-wash)]"
                   onClick={() => openOrCreateStudio('reading')}
                   title={isAr ? 'استوديو ومكتبة القراءة' : 'Reading Studio & Library'}
                 >
@@ -203,7 +203,7 @@ export const HabitsView: React.FC = () => {
                 </button>
 
                 <button
-                  className="btn subtle text-teal-300 border-teal-500/30 hover:bg-teal-500/15"
+                  className="btn subtle text-[var(--tone-info)] border-[var(--tone-info-line)] hover:bg-[var(--tone-info-wash)]"
                   onClick={() => openOrCreateStudio('workout')}
                   title={isAr ? 'استوديو التمارين واللياقة المنزلية' : 'Home Workout Studio'}
                 >
@@ -212,7 +212,7 @@ export const HabitsView: React.FC = () => {
                 </button>
 
                 <button
-                  className="btn subtle text-purple-300 border-purple-500/30 hover:bg-purple-500/15"
+                  className="btn subtle text-[var(--tone-purple)] border-[var(--tone-purple-line)] hover:bg-[var(--tone-purple-wash)]"
                   onClick={() => openOrCreateStudio('drawing')}
                   title={isAr ? 'مرسم ومعرض الأعمال الفنية' : 'Art Studio & Vault'}
                 >
@@ -346,7 +346,7 @@ export const HabitsView: React.FC = () => {
 
                       {isArchived ? (
                         <button
-                          className="mini-icon text-teal-400 hover:text-white"
+                          className="mini-icon text-[var(--tone-info)] hover:text-[var(--text-primary)]"
                           onClick={() => restoreHabit(habit.id)}
                           title={isAr ? 'استعادة العادة' : 'Restore habit'}
                         >
@@ -354,7 +354,7 @@ export const HabitsView: React.FC = () => {
                         </button>
                       ) : (
                         <button
-                          className="mini-icon hover:text-amber-400"
+                          className="mini-icon hover:text-[var(--tone-warning)]"
                           onClick={() => archiveHabit(habit.id)}
                           title={isAr ? 'أرشفة العادة مع الاحتفاظ بسجلها' : 'Archive habit (keeps history intact)'}
                         >
@@ -375,22 +375,22 @@ export const HabitsView: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <h3>{habit.name}</h3>
                   {habit.specializedType === 'quran' && (
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--tone-success)] border border-[var(--tone-success-line)]">
                       📜 {isAr ? 'استوديو حفظ القرآن' : 'Quran Studio'}
                     </span>
                   )}
                   {habit.specializedType === 'reading' && (
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-warning-wash)] text-[var(--tone-warning)] border border-[var(--tone-warning-line)]">
                       📖 {isAr ? 'استوديو القراءة' : 'Reading Studio'}
                     </span>
                   )}
                   {habit.specializedType === 'workout' && (
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-info-wash)] text-[var(--tone-info)] border border-[var(--tone-info-line)]">
                       ⚡ {isAr ? 'استوديو التدريب' : 'Workout Studio'}
                     </span>
                   )}
                   {habit.specializedType === 'drawing' && (
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-purple-wash)] text-[var(--tone-purple)] border border-[var(--tone-purple-line)]">
                       🎨 {isAr ? 'مرسم الفن' : 'Drawing Studio'}
                     </span>
                   )}
@@ -414,18 +414,18 @@ export const HabitsView: React.FC = () => {
 
                 {/* Specialized Studio Launch Banner */}
                 {habit.specializedType === 'quran' && habit.quranData && (
-                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-xs my-2">
+                  <div className="p-2.5 rounded-lg bg-[var(--tone-success-wash)] border border-[var(--tone-success-line)] flex items-center justify-between text-xs my-2">
                     <div className="min-w-0">
-                      <span className="text-[10px] text-emerald-400 font-mono block">
+                      <span className="text-[10px] text-[var(--tone-success)] font-mono block">
                         {isAr ? 'إنجاز الحفظ المتقن' : 'Quran Memorized'}
                       </span>
-                      <strong className="text-white truncate block text-[11px]">
+                      <strong className="text-[var(--text-primary)] truncate block text-[11px]">
                         {habit.quranData.totalAyahsMemorized} {isAr ? 'آية مثبتة' : 'distinct ayahs'} · {habit.quranData.totalSurahsCompleted}/114 {isAr ? 'سورة' : 'surahs'}
                       </strong>
                     </div>
                     <button
                       onClick={() => useNuqtaStore.getState().setActiveNavTab('quran')}
-                      className="btn subtle small text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20 text-[11px] py-1 px-2.5 flex-shrink-0"
+                      className="btn subtle small text-[var(--tone-success)] border-[var(--tone-success-line)] hover:bg-[var(--tone-success-wash)] text-[11px] py-1 px-2.5 flex-shrink-0"
                     >
                       <span>{isAr ? 'فتح استوديو القرآن ↗' : 'Open Quran Studio ↗'}</span>
                     </button>
@@ -433,18 +433,18 @@ export const HabitsView: React.FC = () => {
                 )}
 
                 {habit.specializedType === 'reading' && habit.readingData && (
-                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs my-2">
+                  <div className="p-2.5 rounded-lg bg-[var(--tone-warning-wash)] border border-[var(--tone-warning-line)] flex items-center justify-between text-xs my-2">
                     <div className="min-w-0">
-                      <span className="text-[10px] text-amber-400 font-mono block">
+                      <span className="text-[10px] text-[var(--tone-warning)] font-mono block">
                         {isAr ? 'الكتاب الحالي' : 'Active Book'}
                       </span>
-                      <strong className="text-white truncate block text-[11px]">
+                      <strong className="text-[var(--text-primary)] truncate block text-[11px]">
                         {habit.readingData.books.find((b) => b.id === habit.readingData?.activeBookId)?.title || habit.readingData.books[0]?.title || 'Reading Vault'}
                       </strong>
                     </div>
                     <button
                       onClick={() => useNuqtaStore.getState().setActiveNavTab('reading')}
-                      className="btn subtle small text-amber-300 border-amber-500/30 hover:bg-amber-500/20 text-[11px] py-1 px-2.5 flex-shrink-0"
+                      className="btn subtle small text-[var(--tone-warning)] border-[var(--tone-warning-line)] hover:bg-[var(--tone-warning-wash)] text-[11px] py-1 px-2.5 flex-shrink-0"
                     >
                       <span>{isAr ? 'فتح استوديو القراءة ↗' : 'Open Reading Studio ↗'}</span>
                     </button>
@@ -452,18 +452,18 @@ export const HabitsView: React.FC = () => {
                 )}
 
                 {habit.specializedType === 'workout' && habit.workoutData && (
-                  <div className="p-2.5 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-between text-xs my-2">
+                  <div className="p-2.5 rounded-lg bg-[var(--tone-info-wash)] border border-[var(--tone-info-line)] flex items-center justify-between text-xs my-2">
                     <div className="min-w-0">
-                      <span className="text-[10px] text-teal-400 font-mono block">
+                      <span className="text-[10px] text-[var(--tone-info)] font-mono block">
                         {isAr ? 'الحمل التراكمي' : 'Total Volume'}
                       </span>
-                      <strong className="text-white truncate block text-[11px]">
+                      <strong className="text-[var(--text-primary)] truncate block text-[11px]">
                         {habit.workoutData.totalVolumeKg.toLocaleString()} kg · {habit.workoutData.totalWorkouts} {isAr ? 'حصص' : 'workouts'}
                       </strong>
                     </div>
                     <button
                       onClick={() => useNuqtaStore.getState().setActiveNavTab('workout')}
-                      className="btn subtle small text-teal-300 border-teal-500/30 hover:bg-teal-500/20 text-[11px] py-1 px-2.5 flex-shrink-0"
+                      className="btn subtle small text-[var(--tone-info)] border-[var(--tone-info-line)] hover:bg-[var(--tone-info-wash)] text-[11px] py-1 px-2.5 flex-shrink-0"
                     >
                       <span>{isAr ? 'فتح استوديو التدريب ↗' : 'Open Workout Studio ↗'}</span>
                     </button>
@@ -471,18 +471,18 @@ export const HabitsView: React.FC = () => {
                 )}
 
                 {habit.specializedType === 'drawing' && habit.drawingData && (
-                  <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-between text-xs my-2">
+                  <div className="p-2.5 rounded-lg bg-[var(--tone-purple-wash)] border border-[var(--tone-purple-line)] flex items-center justify-between text-xs my-2">
                     <div className="min-w-0">
-                      <span className="text-[10px] text-purple-400 font-mono block">
+                      <span className="text-[10px] text-[var(--tone-purple)] font-mono block">
                         {isAr ? 'مرسم الإبداع' : 'Creative Studio'}
                       </span>
-                      <strong className="text-white truncate block text-[11px]">
+                      <strong className="text-[var(--text-primary)] truncate block text-[11px]">
                         {habit.drawingData.totalSketches} {isAr ? 'أعمال فنية' : 'artworks'} · {Math.floor(habit.drawingData.totalDrawingMinutes / 60)}h {habit.drawingData.totalDrawingMinutes % 60}m
                       </strong>
                     </div>
                     <button
                       onClick={() => useNuqtaStore.getState().setActiveNavTab('drawing')}
-                      className="btn subtle small text-purple-300 border-purple-500/30 hover:bg-purple-500/20 text-[11px] py-1 px-2.5 flex-shrink-0"
+                      className="btn subtle small text-[var(--tone-purple)] border-[var(--tone-purple-line)] hover:bg-[var(--tone-purple-wash)] text-[11px] py-1 px-2.5 flex-shrink-0"
                     >
                       <span>{isAr ? 'فتح المرسم ↗' : 'Open Art Studio ↗'}</span>
                     </button>
@@ -696,12 +696,12 @@ export const HabitsView: React.FC = () => {
                     }}
                     className={`p-2.5 rounded-xl border text-start transition-all ${
                       formSpecializedType === 'quran'
-                        ? 'border-emerald-400 bg-emerald-500/15 text-white'
-                        : 'border-[#26372d] bg-[#111914] text-muted hover:border-emerald-400/50'
+                        ? 'border-[var(--tone-success-line)] bg-[var(--tone-success-wash)] text-[var(--text-primary)]'
+                        : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-[var(--tone-success-line)]'
                     }`}
                   >
                     <span className="text-lg block mb-1">📜</span>
-                    <strong className="text-xs block text-white">{isAr ? 'حفظ القرآن' : 'Quran Studio'}</strong>
+                    <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'حفظ القرآن' : 'Quran Studio'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'تثبيت الآيات والمراجعة' : 'Ayahs & revision'}</small>
                   </button>
 
@@ -716,12 +716,12 @@ export const HabitsView: React.FC = () => {
                     }}
                     className={`p-2.5 rounded-xl border text-start transition-all ${
                       formSpecializedType === 'reading'
-                        ? 'border-amber-400 bg-amber-500/15 text-white'
-                        : 'border-[#26372d] bg-[#111914] text-muted hover:border-amber-400/50'
+                        ? 'border-[var(--tone-warning-line)] bg-[var(--tone-warning-wash)] text-[var(--text-primary)]'
+                        : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-[var(--tone-warning-line)]'
                     }`}
                   >
                     <span className="text-lg block mb-1">📖</span>
-                    <strong className="text-xs block text-white">{isAr ? 'عادة القراءة' : 'Reading Habit'}</strong>
+                    <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'عادة القراءة' : 'Reading Habit'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'نظام الكتب والصفحات' : 'Book tracker & speed'}</small>
                   </button>
 
@@ -736,12 +736,12 @@ export const HabitsView: React.FC = () => {
                     }}
                     className={`p-2.5 rounded-xl border text-start transition-all ${
                       formSpecializedType === 'workout'
-                        ? 'border-teal-400 bg-teal-500/15 text-white'
-                        : 'border-[#26372d] bg-[#111914] text-muted hover:border-teal-400/50'
+                        ? 'border-[var(--tone-info-line)] bg-[var(--tone-info-wash)] text-[var(--text-primary)]'
+                        : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-[var(--tone-info-line)]'
                     }`}
                   >
                     <span className="text-lg block mb-1">⚡</span>
-                    <strong className="text-xs block text-white">{isAr ? 'عادة التمرين' : 'Workout Habit'}</strong>
+                    <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'عادة التمرين' : 'Workout Habit'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'تمارين منزلية وحصص' : 'Home workout sets'}</small>
                   </button>
 
@@ -756,12 +756,12 @@ export const HabitsView: React.FC = () => {
                     }}
                     className={`p-2.5 rounded-xl border text-start transition-all ${
                       formSpecializedType === 'drawing'
-                        ? 'border-purple-400 bg-purple-500/15 text-white'
-                        : 'border-[#26372d] bg-[#111914] text-muted hover:border-purple-400/50'
+                        ? 'border-[var(--tone-purple-line)] bg-[var(--tone-purple-wash)] text-[var(--text-primary)]'
+                        : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-[var(--tone-purple-line)]'
                     }`}
                   >
                     <span className="text-lg block mb-1">🎨</span>
-                    <strong className="text-xs block text-white">{isAr ? 'عادة الرسم' : 'Drawing Habit'}</strong>
+                    <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'عادة الرسم' : 'Drawing Habit'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'استوديو الإبداع' : 'Sketch & art studio'}</small>
                   </button>
 
@@ -772,12 +772,12 @@ export const HabitsView: React.FC = () => {
                     }}
                     className={`p-2.5 rounded-xl border text-start transition-all ${
                       formSpecializedType === 'standard'
-                        ? 'border-accent bg-accent/15 text-white'
-                        : 'border-[#26372d] bg-[#111914] text-muted hover:border-accent/50'
+                        ? 'border-accent bg-accent/15 text-[var(--text-primary)]'
+                        : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-accent/50'
                     }`}
                   >
                     <span className="text-lg block mb-1">✓</span>
-                    <strong className="text-xs block text-white">{isAr ? 'عادة يومية مخصصة' : 'Custom Habit'}</strong>
+                    <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'عادة يومية مخصصة' : 'Custom Habit'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'تتبع يومي وسلاسل' : 'Standard daily streak'}</small>
                   </button>
                 </div>

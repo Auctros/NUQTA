@@ -138,6 +138,52 @@
   --z-modal: 60;
   --z-toast: 80;
 
+  /* ========================================================
+     ACCENT TONE TOKENS (theme-aware hues)
+     --------------------------------------------------------
+     Components used to hardcode Tailwind palette shades
+     (text-emerald-300, bg-amber-500/15, border-rose-500/30 …)
+     which are tuned for a dark canvas and go invisible on the
+     light one. These roles carry the *foreground* hue for each
+     semantic tone and flip to darker, saturated values in light
+     mode (see the .light-mode block). Wash/line variants derive
+     from the same hue with color-mix so a tone needs one
+     declaration, not three.
+     ======================================================== */
+  --tone-success: #6ee7b7;
+  --tone-warning: #fcd34d;
+  --tone-danger: #fda4af;
+  --tone-info: #5eead4;
+  --tone-purple: #d8b4fe;
+  --tone-accent: var(--accent-strong);
+  --tone-neutral: var(--muted);
+
+  --tone-success-wash: color-mix(in srgb, var(--tone-success) 15%, transparent);
+  --tone-warning-wash: color-mix(in srgb, var(--tone-warning) 15%, transparent);
+  --tone-danger-wash: color-mix(in srgb, var(--tone-danger) 15%, transparent);
+  --tone-info-wash: color-mix(in srgb, var(--tone-info) 15%, transparent);
+  --tone-purple-wash: color-mix(in srgb, var(--tone-purple) 15%, transparent);
+
+  --tone-success-line: color-mix(in srgb, var(--tone-success) 40%, transparent);
+  --tone-warning-line: color-mix(in srgb, var(--tone-warning) 40%, transparent);
+  --tone-danger-line: color-mix(in srgb, var(--tone-danger) 40%, transparent);
+  --tone-info-line: color-mix(in srgb, var(--tone-info) 40%, transparent);
+  --tone-purple-line: color-mix(in srgb, var(--tone-purple) 40%, transparent);
+
+  /* Intensity ramp for heatmaps / calendars — five steps from the
+     neutral surface up to full accent saturation. Declared once so
+     dark and light both read as an ascending scale. */
+  --heat-0-bg: var(--surface-inset);
+  --heat-0-line: var(--border-subtle);
+  --heat-1-bg: color-mix(in srgb, var(--brand-strong) 22%, var(--surface-inset));
+  --heat-1-line: color-mix(in srgb, var(--brand-strong) 34%, var(--surface-inset));
+  --heat-2-bg: color-mix(in srgb, var(--brand-strong) 45%, var(--surface-inset));
+  --heat-2-line: color-mix(in srgb, var(--brand-strong) 55%, var(--surface-inset));
+  --heat-3-bg: color-mix(in srgb, var(--brand-strong) 72%, var(--surface-inset));
+  --heat-3-line: var(--brand-strong);
+  --heat-4-bg: var(--brand-strong);
+  --heat-4-line: var(--brand);
+
   /* Breakpoints are documented, not variable-driven (CSS vars do not
      work in media queries): sm 640 · md 768 · lg 1024 · xl 1280. */
 
@@ -491,6 +537,75 @@ body.light-mode {
   --d-drawing-accent: #6b3fbf;
   --d-drawing-accent-strong: #5a32a3;
   --d-drawing-accent-bright: #4a2787;
+
+  /* Accent tone roles — darker, saturated so they read on white.
+     Wash/line variants re-derive from these automatically because
+     they were declared with color-mix against the base role. */
+  --tone-success: #0f6b43;
+  --tone-warning: #8a5a10;
+  --tone-danger: #b4232f;
+  --tone-info: #0f766e;
+  --tone-purple: #6d28d9;
+  --tone-neutral: var(--muted);
+}
+
+/* Light-mode repairs for the few remaining dark-only utility classes
+   (defined in nuqta-theme.css) that have no token and were never
+   re-styled for light mode. Kept here beside the other light rules so
+   every light override lives in one place. */
+.light-mode .mood-button {
+  background: #ffffff;
+  border-color: var(--border-default);
+  color: var(--muted);
+}
+.light-mode .mood-button.active {
+  border-color: var(--accent);
+  background: #e5f4e9;
+  color: var(--accent);
+}
+.light-mode .empty-icon {
+  background: #e5f3e9;
+}
+.light-mode .empty-state {
+  background: #f7faf8;
+  border-color: var(--border-default);
+}
+.light-mode .session-stat {
+  background: #f7faf8;
+}
+.light-mode .review-metric {
+  background: #f7faf8;
+}
+.light-mode .achievement {
+  background: #f7faf8;
+}
+.light-mode .achievement.unlocked {
+  border-color: var(--accent);
+  background: #eaf6ee;
+}
+.light-mode .health-goal {
+  color: var(--muted);
+}
+.light-mode .field-label,
+.light-mode .field label {
+  color: var(--muted);
+}
+.light-mode .energy-chip {
+  color: var(--muted);
+}
+/* Footer note was left at a low-contrast grey in light mode; darken it
+   to meet the 4.5:1 bar for small text. */
+.light-mode .footer-privacy,
+.light-mode .app-footer {
+  color: #62726a;
+}
+/* Pastel accent tokens are tuned for the dark canvas; on white they
+   fall below readable contrast, so darken them in light mode. */
+.light-mode {
+  --blue: #1d4ed8;
+  --purple: #6d28d9;
+  --orange: #b45309;
+  --red: #b91c1c;
 }
 
 .light-mode {

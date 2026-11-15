@@ -48,8 +48,8 @@ export const InsightsView: React.FC = () => {
       <span
         className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border flex items-center gap-0.5 ${
           isUp
-            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-            : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+            ? 'bg-[var(--tone-success-wash)] text-[var(--tone-success)] border-[var(--tone-success-line)]'
+            : 'bg-[var(--tone-danger-wash)] text-[var(--tone-danger)] border-[var(--tone-danger-line)]'
         }`}
       >
         <span>{isUp ? '↗ +' : '↘ '}</span>
@@ -176,14 +176,14 @@ export const InsightsView: React.FC = () => {
       </div>
 
       {/* Time Horizon Selector Ribbon (Today / Week / Month / All) */}
-      <div className="panel p-3 border border-[#23352b] bg-[#111914] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="panel p-3 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted font-medium">{isAr ? 'النافذة التحليلية:' : 'Analysis Window:'}</span>
-          <div className="flex p-0.5 rounded-lg bg-[#0c120f] border border-[#26372d] text-xs">
+          <div className="flex p-0.5 rounded-lg bg-[var(--surface-deep)] border border-[var(--border-default)] text-xs">
             <button
               onClick={() => setHorizon('today')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                horizon === 'today' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                horizon === 'today' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               {isAr ? 'اليوم' : 'Today'}
@@ -191,7 +191,7 @@ export const InsightsView: React.FC = () => {
             <button
               onClick={() => setHorizon('week')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                horizon === 'week' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                horizon === 'week' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               {isAr ? 'هذا الأسبوع' : 'This Week'}
@@ -199,7 +199,7 @@ export const InsightsView: React.FC = () => {
             <button
               onClick={() => setHorizon('month')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                horizon === 'month' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                horizon === 'month' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               {isAr ? 'هذا الشهر' : 'This Month'}
@@ -207,7 +207,7 @@ export const InsightsView: React.FC = () => {
             <button
               onClick={() => setHorizon('all')}
               className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                horizon === 'all' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                horizon === 'all' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               {isAr ? 'المدى الشامل' : 'All-Time'}
@@ -233,7 +233,7 @@ export const InsightsView: React.FC = () => {
           {/* 4 Core Domain Hero Metric Cards with Deltas */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* 1. Tasks & Execution */}
-            <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl flex flex-col justify-between space-y-2">
+            <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted flex items-center gap-1.5">
                   <span>✓</span>
@@ -242,20 +242,20 @@ export const InsightsView: React.FC = () => {
                 {renderDelta(report.productivity.tasksCompleted.deltaPercent)}
               </div>
               <div>
-                <strong className="text-2xl font-mono text-white font-bold block">
+                <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold block">
                   {report.productivity.tasksCompleted.currentValue}
                 </strong>
                 <span className="text-[11px] text-muted">
                   {isAr ? `معدل الإنجاز: ${report.productivity.completionRate}%` : `Completion rate: ${report.productivity.completionRate}%`}
                 </span>
               </div>
-              <div className="text-[10px] text-muted font-mono pt-1 border-t border-[#1a2820]">
+              <div className="text-[10px] text-muted font-mono pt-1 border-t border-[var(--border-subtle)]">
                 {report.productivity.topThreeDone} {isAr ? 'مهام بوصلة منجزة' : 'compass tasks done'}
               </div>
             </div>
 
             {/* 2. Habit Cadence */}
-            <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl flex flex-col justify-between space-y-2">
+            <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted flex items-center gap-1.5">
                   <span>↻</span>
@@ -267,20 +267,20 @@ export const InsightsView: React.FC = () => {
                 <strong className="text-2xl font-mono text-accent font-bold block">
                   {report.habits.consistencyRate.currentValue}%
                 </strong>
-                <div className="w-full bg-[#16231c] rounded-full h-1.5 overflow-hidden border border-[#23382c] mt-1.5">
+                <div className="w-full bg-[var(--surface-chip)] rounded-full h-1.5 overflow-hidden border border-[var(--border-default)] mt-1.5">
                   <div
                     className="bg-accent h-full rounded-full transition-all duration-300"
                     style={{ width: `${report.habits.consistencyRate.currentValue}%` }}
                   />
                 </div>
               </div>
-              <div className="text-[10px] text-muted font-mono pt-1 border-t border-[#1a2820]">
+              <div className="text-[10px] text-muted font-mono pt-1 border-t border-[var(--border-subtle)]">
                 {isAr ? `أطول سلسلة: ${report.habits.longestActiveStreak} يوم` : `Longest streak: ${report.habits.longestActiveStreak}d`}
               </div>
             </div>
 
             {/* 3. Reading Studio */}
-            <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl flex flex-col justify-between space-y-2">
+            <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted flex items-center gap-1.5">
                   <span>📖</span>
@@ -289,14 +289,14 @@ export const InsightsView: React.FC = () => {
                 {renderDelta(report.reading.pagesRead.deltaPercent)}
               </div>
               <div>
-                <strong className="text-2xl font-mono text-amber-300 font-bold block">
+                <strong className="text-2xl font-mono text-[var(--tone-warning)] font-bold block">
                   {report.reading.pagesRead.currentValue}
                 </strong>
                 <span className="text-[11px] text-muted">
                   ~{report.reading.readingHours.currentValue}h {isAr ? 'قراءة مركزة' : 'read'}
                 </span>
               </div>
-              <div className="text-[10px] text-muted font-mono pt-1 border-t border-[#1a2820]">
+              <div className="text-[10px] text-muted font-mono pt-1 border-t border-[var(--border-subtle)]">
                 {report.reading.averageSpeedPagesPerHour > 0
                   ? `${report.reading.averageSpeedPagesPerHour} ${isAr ? 'صفحة/ساعة' : 'pages/hr'}`
                   : (isAr ? 'حساب السرعة نشط' : 'tracking speed')}
@@ -304,7 +304,7 @@ export const InsightsView: React.FC = () => {
             </div>
 
             {/* 4. Home Fitness */}
-            <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl flex flex-col justify-between space-y-2">
+            <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted flex items-center gap-1.5">
                   <span>⚡</span>
@@ -313,24 +313,24 @@ export const InsightsView: React.FC = () => {
                 {renderDelta(report.fitness.workoutReps.deltaPercent)}
               </div>
               <div>
-                <strong className="text-2xl font-mono text-emerald-400 font-bold block">
+                <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold block">
                   {report.fitness.workoutReps.currentValue}
                 </strong>
                 <span className="text-[11px] text-muted">
                   {report.fitness.sessionsCount} {isAr ? 'حصص تدريبية منزلية' : 'sessions'} · {report.fitness.workoutMinutes.currentValue}m
                 </span>
               </div>
-              <div className="text-[10px] text-emerald-400 font-mono pt-1 border-t border-[#1a2820]">
+              <div className="text-[10px] text-[var(--tone-success)] font-mono pt-1 border-t border-[var(--border-subtle)]">
                 {report.fitness.workoutMinutes.currentValue} {isAr ? 'دقيقة تدريب منجزة' : 'active mins'}
               </div>
             </div>
           </div>
 
           {/* Time & Effort Allocation Across Spheres (Cross-Domain) */}
-          <section className="panel p-5 border border-[#23352b] bg-[#111914] rounded-2xl space-y-4">
+          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
                   <span>⚖️</span>
                   <span>{isAr ? 'توزيع الوقت والمجهود بين مجالات الحياة' : 'Life Spheres Time & Effort Allocation'}</span>
                 </h3>
@@ -356,13 +356,13 @@ export const InsightsView: React.FC = () => {
 
             {/* Highest Momentum vs Area Needing Attention Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-              <div className="p-3.5 rounded-xl bg-[#14221a] border border-[#223d2d] flex items-start gap-3">
+              <div className="p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] flex items-start gap-3">
                 <span className="text-xl">🚀</span>
                 <div className="space-y-1 min-w-0">
                   <span className="text-[10px] uppercase font-mono tracking-wider text-accent font-semibold block">
                     {isAr ? 'المجال الأكثر نشاطاً وزخماً' : 'HIGHEST MOMENTUM SPHERE'}
                   </span>
-                  <strong className="text-sm text-white block">
+                  <strong className="text-sm text-[var(--text-primary)] block">
                     {isAr ? report.highestMomentumDomain.nameAr : report.highestMomentumDomain.nameEn}
                   </strong>
                   <p className="text-xs text-muted">
@@ -372,13 +372,13 @@ export const InsightsView: React.FC = () => {
               </div>
 
               {report.areaNeedingAttention ? (
-                <div className="p-3.5 rounded-xl bg-[#221815] border border-[#3e2720] flex items-start gap-3">
+                <div className="p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] flex items-start gap-3">
                   <span className="text-xl">⚠️</span>
                   <div className="space-y-1 min-w-0">
-                    <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-semibold block">
+                    <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--tone-warning)] font-semibold block">
                       {isAr ? 'مجال يحتاج انتباهاً وتنشيطاً' : 'SPHERE NEEDING MOMENTUM'}
                     </span>
-                    <strong className="text-sm text-white block">
+                    <strong className="text-sm text-[var(--text-primary)] block">
                       {isAr ? report.areaNeedingAttention.nameAr : report.areaNeedingAttention.nameEn}
                     </strong>
                     <p className="text-xs text-muted">
@@ -387,13 +387,13 @@ export const InsightsView: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="p-3.5 rounded-xl bg-[#14221a] border border-[#223d2d] flex items-start gap-3">
+                <div className="p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] flex items-start gap-3">
                   <span className="text-xl">🌱</span>
                   <div className="space-y-1 min-w-0">
-                    <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-semibold block">
+                    <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--tone-success)] font-semibold block">
                       {isAr ? 'توازن مستقر بين المجالات' : 'BALANCED SPHERE DISTRIBUTION'}
                     </span>
-                    <strong className="text-sm text-white block">
+                    <strong className="text-sm text-[var(--text-primary)] block">
                       {isAr ? 'جميع المجالات سجلت نشاطاً' : 'All domains engaged'}
                     </strong>
                     <p className="text-xs text-muted">
@@ -406,10 +406,10 @@ export const InsightsView: React.FC = () => {
           </section>
 
           {/* Interactive Trend Chart Section */}
-          <section className="panel p-5 border border-[#23352b] bg-[#111914] rounded-2xl space-y-4">
+          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
                   <span>📈</span>
                   <span>{isAr ? 'منحنى الاتجاه والوتيرة اليومية (Daily Momentum Curve)' : 'Daily Momentum Trend Line'}</span>
                 </h3>
@@ -419,11 +419,11 @@ export const InsightsView: React.FC = () => {
               </div>
 
               {/* Metric Selector Switcher */}
-              <div className="flex p-0.5 rounded-lg bg-[#0c120f] border border-[#26372d] text-xs self-start sm:self-auto">
+              <div className="flex p-0.5 rounded-lg bg-[var(--surface-deep)] border border-[var(--border-default)] text-xs self-start sm:self-auto">
                 <button
                   onClick={() => setTrendMetric('totalActiveMinutes')}
                   className={`px-2.5 py-1 rounded-md transition-colors ${
-                    trendMetric === 'totalActiveMinutes' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                    trendMetric === 'totalActiveMinutes' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {isAr ? 'الدقائق النشطة' : 'Active Mins'}
@@ -431,7 +431,7 @@ export const InsightsView: React.FC = () => {
                 <button
                   onClick={() => setTrendMetric('tasksDone')}
                   className={`px-2.5 py-1 rounded-md transition-colors ${
-                    trendMetric === 'tasksDone' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                    trendMetric === 'tasksDone' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {isAr ? 'المهام' : 'Tasks'}
@@ -439,7 +439,7 @@ export const InsightsView: React.FC = () => {
                 <button
                   onClick={() => setTrendMetric('readingPages')}
                   className={`px-2.5 py-1 rounded-md transition-colors ${
-                    trendMetric === 'readingPages' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                    trendMetric === 'readingPages' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {isAr ? 'صفحات القراءة' : 'Pages'}
@@ -447,7 +447,7 @@ export const InsightsView: React.FC = () => {
                 <button
                   onClick={() => setTrendMetric('workoutReps')}
                   className={`px-2.5 py-1 rounded-md transition-colors ${
-                    trendMetric === 'workoutReps' ? 'bg-[#1e2e25] text-accent font-bold' : 'text-muted hover:text-white'
+                    trendMetric === 'workoutReps' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {isAr ? 'تكرارات التمارين' : 'Reps'}
@@ -461,12 +461,12 @@ export const InsightsView: React.FC = () => {
               metricKey={trendMetric}
               color={
                 trendMetric === 'totalActiveMinutes'
-                  ? '#34d399'
+                  ? 'var(--tone-success)'
                   : trendMetric === 'readingPages'
-                  ? '#f59e0b'
+                  ? 'var(--tone-warning)'
                   : trendMetric === 'workoutReps'
-                  ? '#10b981'
-                  : '#38bdf8'
+                  ? 'var(--tone-success)'
+                  : 'var(--tone-info)'
               }
               unit={
                 trendMetric === 'totalActiveMinutes'
@@ -482,10 +482,10 @@ export const InsightsView: React.FC = () => {
           </section>
 
           {/* Calendar Activity Heatmap Matrix (GitHub Style - 56 Days) */}
-          <section className="panel p-5 border border-[#23352b] bg-[#111914] rounded-2xl space-y-4">
+          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
                   <span>🧱</span>
                   <span>{isAr ? 'مصفوفة النشاط التراكمي (8 أسابيع / 56 يوماً)' : 'Continuous Momentum Matrix (8 Weeks)'}</span>
                 </h3>
@@ -501,10 +501,10 @@ export const InsightsView: React.FC = () => {
           </section>
 
           {/* Goals Contribution Matrix */}
-          <section className="panel p-5 border border-[#23352b] bg-[#111914] rounded-2xl space-y-4">
+          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
                   <span>🎯</span>
                   <span>{isAr ? 'مساهمة الأنشطة في الأهداف الاستراتيجية' : 'Activity Contribution to Strategic Goals'}</span>
                 </h3>
@@ -523,7 +523,7 @@ export const InsightsView: React.FC = () => {
             </div>
 
             {report.goals.goalSummaries.length === 0 ? (
-              <div className="p-6 text-center text-xs text-muted border border-dashed border-[#23352b] rounded-xl">
+              <div className="p-6 text-center text-xs text-muted border border-dashed border-[var(--border-default)] rounded-xl">
                 {isAr ? 'لا توجد أهداف نشطة مرتبطة بأنشطة حالياً.' : 'No active goals linked yet.'}
               </div>
             ) : (
@@ -531,36 +531,36 @@ export const InsightsView: React.FC = () => {
                 {report.goals.goalSummaries.map((g) => (
                   <div
                     key={g.goalId}
-                    className="p-3.5 rounded-xl border border-[#1e2c24] bg-[#131b17] flex flex-col justify-between space-y-2.5"
+                    className="p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] flex flex-col justify-between space-y-2.5"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#18261e] text-accent font-semibold">
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent font-semibold">
                           {g.category}
                         </span>
                         <span className="font-mono text-accent font-bold text-sm">
                           {g.progressPercent}%
                         </span>
                       </div>
-                      <h4 className="font-bold text-white text-xs truncate">{g.title}</h4>
+                      <h4 className="font-bold text-[var(--text-primary)] text-xs truncate">{g.title}</h4>
                     </div>
 
-                    <div className="w-full bg-[#18261e] rounded-full h-1.5 overflow-hidden border border-[#23382c]">
+                    <div className="w-full bg-[var(--surface-chip)] rounded-full h-1.5 overflow-hidden border border-[var(--border-default)]">
                       <div
                         className="bg-accent h-full rounded-full transition-all duration-300"
                         style={{ width: `${g.progressPercent}%` }}
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-muted pt-1 border-t border-[#1a2820]">
+                    <div className="flex items-center justify-between text-[11px] text-muted pt-1 border-t border-[var(--border-subtle)]">
                       <span>
                         {g.recentEventsCount > 0
                           ? `${g.recentEventsCount} ${isAr ? 'مساهمات مسجلة في الفترة' : 'contributions'}`
                           : (isAr ? 'بانتظار أنشطة' : 'no activity in period')}
                       </span>
                       <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                        g.activeStatus === 'ahead' ? 'text-emerald-300 bg-emerald-500/10' :
-                        g.activeStatus === 'dormant' ? 'text-amber-300 bg-amber-500/10' : 'text-teal-300 bg-teal-500/10'
+                        g.activeStatus === 'ahead' ? 'text-[var(--tone-success)] bg-[var(--tone-success-wash)]' :
+                        g.activeStatus === 'dormant' ? 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)]' : 'text-[var(--tone-info)] bg-[var(--tone-info-wash)]'
                       }`}>
                         {g.activeStatus}
                       </span>
@@ -579,11 +579,11 @@ export const InsightsView: React.FC = () => {
       {activeTab === 'domains' && (
         <div className="space-y-6">
           {/* Domain Picker Pills */}
-          <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl bg-[#0e1612] border border-[#23352b] text-xs">
+          <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl bg-[var(--surface-deep)] border border-[var(--border-default)] text-xs">
             <button
               onClick={() => setDomainDetailTab('productivity')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'productivity' ? 'bg-[#1e2e25] text-accent font-bold shadow' : 'text-muted hover:text-white'
+                domainDetailTab === 'productivity' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               <span>✓</span>
@@ -592,7 +592,7 @@ export const InsightsView: React.FC = () => {
             <button
               onClick={() => setDomainDetailTab('habits')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'habits' ? 'bg-[#1e2e25] text-accent font-bold shadow' : 'text-muted hover:text-white'
+                domainDetailTab === 'habits' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               <span>↻</span>
@@ -601,7 +601,7 @@ export const InsightsView: React.FC = () => {
             <button
               onClick={() => setDomainDetailTab('reading')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'reading' ? 'bg-[#1e2e25] text-accent font-bold shadow' : 'text-muted hover:text-white'
+                domainDetailTab === 'reading' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               <span>📖</span>
@@ -610,7 +610,7 @@ export const InsightsView: React.FC = () => {
             <button
               onClick={() => setDomainDetailTab('fitness')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'fitness' ? 'bg-[#1e2e25] text-accent font-bold shadow' : 'text-muted hover:text-white'
+                domainDetailTab === 'fitness' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               <span>⚡</span>
@@ -619,7 +619,7 @@ export const InsightsView: React.FC = () => {
             <button
               onClick={() => setDomainDetailTab('drawing')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'drawing' ? 'bg-[#1e2e25] text-accent font-bold shadow' : 'text-muted hover:text-white'
+                domainDetailTab === 'drawing' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               <span>🎨</span>
@@ -628,7 +628,7 @@ export const InsightsView: React.FC = () => {
             <button
               onClick={() => setDomainDetailTab('focus')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'focus' ? 'bg-[#1e2e25] text-accent font-bold shadow' : 'text-muted hover:text-white'
+                domainDetailTab === 'focus' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
               <span>◷</span>
@@ -640,9 +640,9 @@ export const InsightsView: React.FC = () => {
           {domainDetailTab === 'productivity' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'المهام المكتملة' : 'Completed Tasks'}</span>
-                  <strong className="text-2xl font-mono text-white font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
                     {report.productivity.tasksCompleted.currentValue}
                   </strong>
                   <div className="mt-1">
@@ -650,7 +650,7 @@ export const InsightsView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'معدل إنجاز المهام المجدولة' : 'Schedule Completion Rate'}</span>
                   <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
                     {report.productivity.completionRate}%
@@ -660,9 +660,9 @@ export const InsightsView: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'مهام البوصلة الثلاث المنجزة' : 'Compass Focus Tasks Hit'}</span>
-                  <strong className="text-2xl font-mono text-emerald-400 font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
                     {report.productivity.topThreeDone}
                   </strong>
                   <span className="text-[11px] text-muted">{isAr ? 'مهام عالية التأثير والأولوية' : 'high-leverage focus anchors'}</span>
@@ -670,14 +670,14 @@ export const InsightsView: React.FC = () => {
               </div>
 
               {/* Daily Task Breakdown Bar Chart */}
-              <div className="panel p-5 border border-[#23352b] bg-[#111914] rounded-2xl space-y-3">
-                <h4 className="text-sm font-bold text-white">
+              <div className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <h4 className="text-sm font-bold text-[var(--text-primary)]">
                   {isAr ? 'توزيع إنجاز المهام اليومية (Daily Tasks Bar Chart)' : 'Daily Task Completion Distribution'}
                 </h4>
                 <ActivityBarChart
                   data={report.dailyTrend}
                   metricKey="tasksDone"
-                  color="#34d399"
+                  color="var(--tone-success)"
                   unit={isAr ? 'مهمة' : 'tasks'}
                   isAr={isAr}
                 />
@@ -689,7 +689,7 @@ export const InsightsView: React.FC = () => {
           {domainDetailTab === 'habits' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'معدل انتظام العادات' : 'Habit Consistency Rate'}</span>
                   <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
                     {report.habits.consistencyRate.currentValue}%
@@ -699,17 +699,17 @@ export const InsightsView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'أطول سلسلة متواصلة' : 'Longest Unbroken Streak'}</span>
-                  <strong className="text-2xl font-mono text-white font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
                     {report.habits.longestActiveStreak} {isAr ? 'يوم' : 'days'}
                   </strong>
                   <span className="text-[11px] text-muted">{isAr ? 'استمرارية راسخة' : 'unbroken momentum'}</span>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'إجمالي علامات الإنجاز' : 'Total Check-ins'}</span>
-                  <strong className="text-2xl font-mono text-emerald-400 font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
                     {report.habits.totalChecks}
                   </strong>
                   <span className="text-[11px] text-muted">{isAr ? 'تكرار عادة في الفترة' : 'habit executions'}</span>
@@ -717,18 +717,18 @@ export const InsightsView: React.FC = () => {
               </div>
 
               {/* Habit Breakdown list */}
-              <div className="panel p-5 border border-[#23352b] bg-[#111914] rounded-2xl space-y-3">
-                <h4 className="text-sm font-bold text-white">
+              <div className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <h4 className="text-sm font-bold text-[var(--text-primary)]">
                   {isAr ? 'حالة العادات الفردية والسلاسل النشطة' : 'Active Habits & Current Streaks'}
                 </h4>
                 <div className="space-y-2">
                   {habits.map((h) => (
                     <div
                       key={h.id}
-                      className="p-3 rounded-xl bg-[#141e18] border border-[#203326] flex items-center justify-between text-xs"
+                      className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] flex items-center justify-between text-xs"
                     >
                       <div>
-                        <strong className="text-white block font-semibold">{h.name}</strong>
+                        <strong className="text-[var(--text-primary)] block font-semibold">{h.name}</strong>
                         <span className="text-[11px] text-muted">{h.anchor || (isAr ? 'عادة يومية' : 'Daily anchor')}</span>
                       </div>
                       <div className="text-end font-mono">
@@ -746,9 +746,9 @@ export const InsightsView: React.FC = () => {
           {domainDetailTab === 'reading' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'الصفحات المقروءة' : 'Pages Read'}</span>
-                  <strong className="text-2xl font-mono text-amber-300 font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--tone-warning)] font-bold mt-1 block">
                     {report.reading.pagesRead.currentValue}
                   </strong>
                   <div className="mt-1">
@@ -756,15 +756,15 @@ export const InsightsView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'ساعات القراءة' : 'Reading Hours'}</span>
-                  <strong className="text-2xl font-mono text-white font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
                     {report.reading.readingHours.currentValue}h
                   </strong>
                   <span className="text-[11px] text-muted">{isAr ? 'وقت تدفق معرفي' : 'focus reading'}</span>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'سرعة القراءة' : 'Average Pace'}</span>
                   <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
                     {report.reading.averageSpeedPagesPerHour}
@@ -772,9 +772,9 @@ export const InsightsView: React.FC = () => {
                   <span className="text-[11px] text-muted">{isAr ? 'صفحة لكل ساعة' : 'pages / hr'}</span>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'الكتب المكتملة' : 'Books Finished'}</span>
-                  <strong className="text-2xl font-mono text-emerald-400 font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
                     {report.reading.booksFinished}
                   </strong>
                   <span className="text-[11px] text-muted">{isAr ? 'كتاب منجز' : 'completed'}</span>
@@ -782,14 +782,14 @@ export const InsightsView: React.FC = () => {
               </div>
 
               {/* Reading Trend Bar Chart */}
-              <div className="panel p-5 border border-[#23352b] bg-[#111914] rounded-2xl space-y-3">
-                <h4 className="text-sm font-bold text-white">
+              <div className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <h4 className="text-sm font-bold text-[var(--text-primary)]">
                   {isAr ? 'وتيرة قراءة الصفحات اليومية' : 'Daily Pages Read Velocity'}
                 </h4>
                 <ActivityBarChart
                   data={report.dailyTrend}
                   metricKey="readingPages"
-                  color="#f59e0b"
+                  color="var(--tone-warning)"
                   unit={isAr ? 'صفحة' : 'pages'}
                   isAr={isAr}
                 />
@@ -801,9 +801,9 @@ export const InsightsView: React.FC = () => {
           {domainDetailTab === 'fitness' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'مجموع التكرارات المنجزة' : 'Total Calisthenics Reps'}</span>
-                  <strong className="text-2xl font-mono text-emerald-400 font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
                     {report.fitness.workoutReps.currentValue}
                   </strong>
                   <div className="mt-1">
@@ -811,9 +811,9 @@ export const InsightsView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'دقائق التدريب المنزلي' : 'Active Training Minutes'}</span>
-                  <strong className="text-2xl font-mono text-white font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
                     {report.fitness.workoutMinutes.currentValue}m
                   </strong>
                   <span className="text-[11px] text-muted">
@@ -821,7 +821,7 @@ export const InsightsView: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'معدل الحصة' : 'Avg Session Length'}</span>
                   <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
                     {report.fitness.sessionsCount > 0
@@ -833,10 +833,10 @@ export const InsightsView: React.FC = () => {
               </div>
 
               {/* Movement Pattern Balance Distribution */}
-              <div className="panel p-5 border border-[#23352b] bg-[#111914] rounded-2xl space-y-3">
+              <div className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-bold text-white">
+                    <h4 className="text-sm font-bold text-[var(--text-primary)]">
                       {isAr ? 'ميزان الأنماط الحركية (Movement Pattern Balance)' : 'Movement Pattern Balance Distribution'}
                     </h4>
                     <p className="text-xs text-muted">
@@ -856,9 +856,9 @@ export const InsightsView: React.FC = () => {
           {domainDetailTab === 'drawing' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'ساعات التدفق الإبداعي' : 'Flow Hours'}</span>
-                  <strong className="text-2xl font-mono text-purple-300 font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--tone-purple)] font-bold mt-1 block">
                     {report.drawing.flowHours.currentValue}h
                   </strong>
                   <div className="mt-1">
@@ -866,15 +866,15 @@ export const InsightsView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'الأعمال والسكتشات' : 'Artworks Logged'}</span>
-                  <strong className="text-2xl font-mono text-white font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
                     {report.drawing.artworksLogged}
                   </strong>
                   <span className="text-[11px] text-muted">{isAr ? 'قطعة في المعرض' : 'pieces preserved'}</span>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'المشاريع المنجزة' : 'Projects Completed'}</span>
                   <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
                     {report.drawing.projectsCompleted}
@@ -882,9 +882,9 @@ export const InsightsView: React.FC = () => {
                   <span className="text-[11px] text-muted">{isAr ? 'مشروع مكتمل 🏆' : 'completed projects'}</span>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'الوسيط الأبرز' : 'Top Medium'}</span>
-                  <strong className="text-sm font-bold text-teal-300 mt-1 block truncate capitalize">
+                  <strong className="text-sm font-bold text-[var(--tone-info)] mt-1 block truncate capitalize">
                     {report.drawing.favoriteMedium}
                   </strong>
                   <span className="text-[11px] text-muted">{isAr ? 'الأسلوب الأكثر استخداماً' : 'highest cadence'}</span>
@@ -897,9 +897,9 @@ export const InsightsView: React.FC = () => {
           {domainDetailTab === 'focus' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'ساعات العمل العميق' : 'Deep Work Hours'}</span>
-                  <strong className="text-2xl font-mono text-blue-400 font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--tone-info)] font-bold mt-1 block">
                     {report.focus.deepWorkHours.currentValue}h
                   </strong>
                   <div className="mt-1">
@@ -907,9 +907,9 @@ export const InsightsView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'جلسات الانتباه المركزة' : 'Focus Sprints'}</span>
-                  <strong className="text-2xl font-mono text-white font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
                     {report.focus.sessionsCount}
                   </strong>
                   <span className="text-[11px] text-muted">
@@ -917,9 +917,9 @@ export const InsightsView: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="panel p-4 border border-[#23352b] bg-[#111914] rounded-xl">
+                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
                   <span className="text-xs text-muted block">{isAr ? 'معدل مقاطعة الجلسات' : 'Interruption Rate'}</span>
-                  <strong className="text-2xl font-mono text-emerald-400 font-bold mt-1 block">
+                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
                     {report.focus.interruptionRate}
                   </strong>
                   <span className="text-[11px] text-muted">{isAr ? 'مقاطعة / جلسة' : 'interruptions / session'}</span>
@@ -939,7 +939,7 @@ export const InsightsView: React.FC = () => {
       {/* VIEW 4: MEANINGFUL MILESTONES & ACHIEVEMENTS */}
       {/* ==================================================== */}
       {activeTab === 'milestones' && (
-        <section className="panel insight-card p-5 border border-[#23352b] bg-[#111914] rounded-2xl space-y-4">
+        <section className="panel insight-card p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
           <div className="panel-heading">
             <div>
               <h2>{isAr ? 'محطات وشواهد الإتقان التراكمي (Milestones)' : 'Calm Milestones of Mastery'}</h2>

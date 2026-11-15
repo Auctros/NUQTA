@@ -386,7 +386,7 @@ export const TasksView: React.FC = () => {
 
                         {task.isArchived || task.status === 'archived' ? (
                           <button
-                            className="mini-icon text-teal-400 hover:text-white"
+                            className="mini-icon text-[var(--tone-info)] hover:text-[var(--text-primary)]"
                             onClick={() => restoreTask(task.id)}
                             title={isAr ? 'استعادة من الأرشيف' : 'Restore from archive'}
                           >
@@ -394,7 +394,7 @@ export const TasksView: React.FC = () => {
                           </button>
                         ) : (
                           <button
-                            className="mini-icon hover:text-amber-400"
+                            className="mini-icon hover:text-[var(--tone-warning)]"
                             onClick={() => archiveTask(task.id)}
                             title={isAr ? 'أرشفة المهمة' : 'Archive task'}
                           >

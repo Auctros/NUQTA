@@ -164,9 +164,9 @@ export const GoalsView: React.FC = () => {
   };
 
   const priorityLabels: Record<string, { ar: string; en: string; badge: string }> = {
-    urgent: { ar: 'عاجل', en: 'Urgent', badge: 'bg-red-500/15 text-red-300 border-red-500/30' },
-    high: { ar: 'مرتفع', en: 'High', badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
-    medium: { ar: 'متوسط', en: 'Medium', badge: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
+    urgent: { ar: 'عاجل', en: 'Urgent', badge: 'bg-[var(--tone-danger-wash)] text-[var(--tone-danger)] border-[var(--tone-danger-line)]' },
+    high: { ar: 'مرتفع', en: 'High', badge: 'bg-[var(--tone-warning-wash)] text-[var(--tone-warning)] border-[var(--tone-warning-line)]' },
+    medium: { ar: 'متوسط', en: 'Medium', badge: 'bg-[var(--tone-info-wash)] text-[var(--tone-info)] border-[var(--tone-info-line)]' },
     low: { ar: 'عادي', en: 'Low', badge: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30' }
   };
 
@@ -214,7 +214,7 @@ export const GoalsView: React.FC = () => {
 
         <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
           <span className="text-muted text-xs block">{isAr ? 'المراحل المنجزة' : 'Milestones Hit'}</span>
-          <strong className="text-2xl font-mono text-emerald-400 font-bold mt-1 block">
+          <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
             {totalCompletedMilestones}
           </strong>
           <span className="text-[11px] text-muted">{isAr ? 'محطة زمنية مكتملة' : 'milestones completed'}</span>
@@ -222,7 +222,7 @@ export const GoalsView: React.FC = () => {
 
         <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
           <span className="text-muted text-xs block">{isAr ? 'يحتاج تنشيطاً' : 'Needs Momentum'}</span>
-          <strong className={`text-2xl font-mono font-bold mt-1 block ${dormantCount > 0 ? 'text-amber-400' : 'text-muted'}`}>
+          <strong className={`text-2xl font-mono font-bold mt-1 block ${dormantCount > 0 ? 'text-[var(--tone-warning)]' : 'text-muted'}`}>
             {dormantCount}
           </strong>
           <span className="text-[11px] text-muted">{isAr ? 'ركود ٧ أيام دون نشاط' : 'no activity > 7d'}</span>
@@ -359,12 +359,12 @@ export const GoalsView: React.FC = () => {
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold border ${
                           intel.pacingStatus === 'ahead'
-                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                            ? 'bg-[var(--tone-success-wash)] text-[var(--tone-success)] border-[var(--tone-success-line)]'
                             : intel.pacingStatus === 'dormant'
-                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 animate-pulse'
+                            ? 'bg-[var(--tone-warning-wash)] text-[var(--tone-warning)] border-[var(--tone-warning-line)] animate-pulse'
                             : intel.pacingStatus === 'behind'
-                            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                            : 'bg-teal-500/15 text-teal-300 border-teal-500/30'
+                            ? 'bg-[var(--tone-danger-wash)] text-[var(--tone-danger)] border-[var(--tone-danger-line)]'
+                            : 'bg-[var(--tone-info-wash)] text-[var(--tone-info)] border-[var(--tone-info-line)]'
                         }`}
                       >
                         {isAr ? intel.pacingLabelAr : intel.pacingLabelEn}
@@ -391,11 +391,11 @@ export const GoalsView: React.FC = () => {
                   {/* Progress Bars: Outcome vs Execution */}
                   <div className="space-y-1.5 pt-1">
                     <div className="flex items-center justify-between text-[11px] font-mono">
-                      <span className="text-emerald-400 font-medium flex items-center gap-1">
+                      <span className="text-[var(--tone-success)] font-medium flex items-center gap-1">
                         <span>🎯</span>
                         <span>{isAr ? 'النتائج:' : 'Outcome:'} {intel.outcomeProgressPercent}%</span>
                       </span>
-                      <span className="text-teal-400 font-medium flex items-center gap-1">
+                      <span className="text-[var(--tone-info)] font-medium flex items-center gap-1">
                         <span>⚡</span>
                         <span>{isAr ? 'التنفيذ:' : 'Execution:'} {intel.executionProgressPercent}%</span>
                       </span>
@@ -404,13 +404,13 @@ export const GoalsView: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="w-full bg-[var(--surface-chip)] rounded-full h-2 overflow-hidden border border-[var(--border-subtle)]" title={isAr ? 'نسبة النتائج الرئيسية' : 'Outcome Key Results Progress'}>
                         <div
-                          className="bg-emerald-400 h-full rounded-full transition-all duration-500"
+                          className="bg-[var(--tone-success)] h-full rounded-full transition-all duration-500"
                           style={{ width: `${intel.outcomeProgressPercent}%` }}
                         />
                       </div>
                       <div className="w-full bg-[var(--surface-chip)] rounded-full h-2 overflow-hidden border border-[var(--border-subtle)]" title={isAr ? 'نسبة تنفيذ المهام وانتظام العادات' : 'Execution (Tasks & Habits) Progress'}>
                         <div
-                          className="bg-teal-400 h-full rounded-full transition-all duration-500"
+                          className="bg-[var(--tone-info)] h-full rounded-full transition-all duration-500"
                           style={{ width: `${intel.executionProgressPercent}%` }}
                         />
                       </div>
@@ -461,12 +461,12 @@ export const GoalsView: React.FC = () => {
                       </span>
                     )}
                     {intel.linkedBooksCount > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-amber-300 border border-[var(--border-strong)]">
+                      <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-[var(--tone-warning)] border border-[var(--border-strong)]">
                         📖 {intel.linkedBooksCount} {isAr ? 'كتب' : 'books'}
                       </span>
                     )}
                     {intel.linkedArtProjectsCount > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-purple-300 border border-[var(--border-strong)]">
+                      <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-[var(--tone-purple)] border border-[var(--border-strong)]">
                         🎨 {intel.linkedArtProjectsCount} {isAr ? 'مشاريع فنية' : 'art projects'}
                       </span>
                     )}
@@ -499,7 +499,7 @@ export const GoalsView: React.FC = () => {
                       ✏️
                     </button>
                     <button
-                      className="mini-icon text-muted hover:text-red-400"
+                      className="mini-icon text-muted hover:text-[var(--tone-danger)]"
                       onClick={() => deleteGoal(goal.id)}
                       title={isAr ? 'حذف' : 'Delete'}
                     >

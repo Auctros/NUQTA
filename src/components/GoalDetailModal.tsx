@@ -208,9 +208,9 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
   const unlinkedProjects = allArtProjects.filter((p) => !linkedProjectIdsSet.has(p.id));
 
   const priorityLabels: Record<string, { ar: string; en: string; badge: string }> = {
-    urgent: { ar: 'عاجل جداً', en: 'Urgent', badge: 'bg-red-500/15 text-red-300 border-red-500/30' },
-    high: { ar: 'أولوية كبرى', en: 'High', badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
-    medium: { ar: 'متوسط الأهمية', en: 'Medium', badge: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
+    urgent: { ar: 'عاجل جداً', en: 'Urgent', badge: 'bg-[var(--tone-danger-wash)] text-[var(--tone-danger)] border-[var(--tone-danger-line)]' },
+    high: { ar: 'أولوية كبرى', en: 'High', badge: 'bg-[var(--tone-warning-wash)] text-[var(--tone-warning)] border-[var(--tone-warning-line)]' },
+    medium: { ar: 'متوسط الأهمية', en: 'Medium', badge: 'bg-[var(--tone-info-wash)] text-[var(--tone-info)] border-[var(--tone-info-line)]' },
     low: { ar: 'أولوية عادية', en: 'Low', badge: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30' }
   };
 
@@ -244,14 +244,14 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md">
       <div
-        className="panel max-w-4xl w-full max-h-[94vh] flex flex-col overflow-hidden border border-[#26372d] shadow-2xl bg-[#0b0f13]"
+        className="panel max-w-4xl w-full max-h-[94vh] flex flex-col overflow-hidden border border-[var(--border-default)] shadow-2xl bg-[var(--surface-deep)]"
         dir={isAr ? 'rtl' : 'ltr'}
       >
         {/* Header Bar */}
-        <div className="p-5 border-b border-[#1c2921] bg-[#10171a] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-5 border-b border-[var(--border-subtle)] bg-[var(--surface-deep)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5 flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs px-2 py-0.5 rounded-md bg-[#16231c] text-accent border border-[#23382c] font-semibold flex items-center gap-1">
+              <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--surface-chip)] text-accent border border-[var(--border-default)] font-semibold flex items-center gap-1">
                 <span>{categoryLabels[goal.category]?.icon || '🎯'}</span>
                 <span>{isAr ? categoryLabels[goal.category]?.ar : categoryLabels[goal.category]?.en}</span>
               </span>
@@ -266,12 +266,12 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
               <span
                 className={`text-[11px] px-2.5 py-0.5 rounded font-mono font-semibold border ${
                   intel.pacingStatus === 'ahead'
-                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    ? 'bg-[var(--tone-success-wash)] text-[var(--tone-success)] border-[var(--tone-success-line)]'
                     : intel.pacingStatus === 'dormant'
-                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 animate-pulse'
+                    ? 'bg-[var(--tone-warning-wash)] text-[var(--tone-warning)] border-[var(--tone-warning-line)] animate-pulse'
                     : intel.pacingStatus === 'behind'
-                    ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                    : 'bg-teal-500/15 text-teal-300 border-teal-500/30'
+                    ? 'bg-[var(--tone-danger-wash)] text-[var(--tone-danger)] border-[var(--tone-danger-line)]'
+                    : 'bg-[var(--tone-info-wash)] text-[var(--tone-info)] border-[var(--tone-info-line)]'
                 }`}
               >
                 {isAr ? intel.pacingLabelAr : intel.pacingLabelEn}
@@ -281,7 +281,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                 <span className="text-xs text-muted font-mono">
                   {isAr ? 'الموعد:' : 'Due:'} {goal.deadline}{' '}
                   {intel.daysRemaining !== null && (
-                    <span className={intel.daysRemaining < 0 ? 'text-red-400 font-bold' : 'text-accent'}>
+                    <span className={intel.daysRemaining < 0 ? 'text-[var(--tone-danger)] font-bold' : 'text-accent'}>
                       ({intel.daysRemaining >= 0 ? `${intel.daysRemaining}d left` : `${Math.abs(intel.daysRemaining)}d overdue`})
                     </span>
                   )}
@@ -289,14 +289,14 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
               )}
             </div>
 
-            <h2 className="text-xl sm:text-2xl font-bold text-white truncate">{goal.title}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] truncate">{goal.title}</h2>
             {goal.description && <p className="text-xs text-muted max-w-2xl">{goal.description}</p>}
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-center">
             <button
               onClick={() => onEditGoal(goal)}
-              className="btn subtle small text-xs border-[#23382c] text-white hover:bg-white/5"
+              className="btn subtle small text-xs border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--surface-faint)]"
             >
               <span>✏️</span>
               <span>{isAr ? 'تعديل الهدف' : 'Edit Goal'}</span>
@@ -308,7 +308,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                   restoreGoal(goal.id);
                   onClose();
                 }}
-                className="btn subtle small text-xs border-teal-500/30 text-teal-300 hover:bg-teal-500/15"
+                className="btn subtle small text-xs border-[var(--tone-info-line)] text-[var(--tone-info)] hover:bg-[var(--tone-info-wash)]"
                 title={isAr ? 'استعادة الهدف إلى الأهداف النشطة' : 'Restore Goal'}
               >
                 <span>↩</span>
@@ -330,7 +330,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-muted hover:text-white hover:bg-white/5 text-lg font-bold"
+              className="p-1.5 rounded-lg text-muted hover:text-[var(--text-primary)] hover:bg-[var(--surface-faint)] text-lg font-bold"
               aria-label="Close"
             >
               ✕
@@ -339,19 +339,19 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
         </div>
 
         {/* Dual Progress Engine Banner: Outcome vs Execution */}
-        <div className="px-5 py-3.5 bg-[#0d1414] border-b border-[#1c2921] grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="px-5 py-3.5 bg-[var(--surface-deep)] border-b border-[var(--border-subtle)] grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 1. Outcome Progress (Key Results & Measurable End State) */}
-          <div className="space-y-1.5 p-3 rounded-xl bg-[#11191d] border border-[#1e2e26]">
+          <div className="space-y-1.5 p-3 rounded-xl bg-[var(--surface-raised)] border border-[var(--border-subtle)]">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span className="font-bold text-white text-xs">{isAr ? 'النتيجة المحققة (Outcome Progress)' : 'Outcome Progress'}</span>
+                <span className="w-2 h-2 rounded-full bg-[var(--tone-success)]"></span>
+                <span className="font-bold text-[var(--text-primary)] text-xs">{isAr ? 'النتيجة المحققة (Outcome Progress)' : 'Outcome Progress'}</span>
               </div>
-              <span className="text-emerald-400 font-bold font-mono text-sm">{intel.outcomeProgressPercent}%</span>
+              <span className="text-[var(--tone-success)] font-bold font-mono text-sm">{intel.outcomeProgressPercent}%</span>
             </div>
-            <div className="w-full bg-[#16231c] rounded-full h-2 overflow-hidden border border-[#23382c]">
+            <div className="w-full bg-[var(--surface-chip)] rounded-full h-2 overflow-hidden border border-[var(--border-default)]">
               <div
-                className="bg-emerald-400 h-full rounded-full transition-all duration-500"
+                className="bg-[var(--tone-success)] h-full rounded-full transition-all duration-500"
                 style={{ width: `${intel.outcomeProgressPercent}%` }}
               />
             </div>
@@ -362,15 +362,15 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
           </div>
 
           {/* 2. Execution Progress (Tasks Done & Habits Consistency) */}
-          <div className="space-y-1.5 p-3 rounded-xl bg-[#11191d] border border-[#1e2e26]">
+          <div className="space-y-1.5 p-3 rounded-xl bg-[var(--surface-raised)] border border-[var(--border-subtle)]">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-accent"></span>
-                <span className="font-bold text-white text-xs">{isAr ? 'التقدم التنفيذي (Execution Progress)' : 'Execution Progress'}</span>
+                <span className="font-bold text-[var(--text-primary)] text-xs">{isAr ? 'التقدم التنفيذي (Execution Progress)' : 'Execution Progress'}</span>
               </div>
               <span className="text-accent font-bold font-mono text-sm">{intel.executionProgressPercent}%</span>
             </div>
-            <div className="w-full bg-[#16231c] rounded-full h-2 overflow-hidden border border-[#23382c]">
+            <div className="w-full bg-[var(--surface-chip)] rounded-full h-2 overflow-hidden border border-[var(--border-default)]">
               <div
                 className="bg-accent h-full rounded-full transition-all duration-500"
                 style={{ width: `${intel.executionProgressPercent}%` }}
@@ -388,13 +388,13 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-[#1c2921] px-5 bg-[#0e1619] text-xs">
+        <div className="flex border-b border-[var(--border-subtle)] px-5 bg-[var(--surface-deep)] text-xs">
           <button
             onClick={() => setActiveTab('krs')}
             className={`py-3 px-3.5 border-b-2 font-medium transition-colors ${
               activeTab === 'krs'
                 ? 'border-accent text-accent font-bold'
-                : 'border-transparent text-muted hover:text-white'
+                : 'border-transparent text-muted hover:text-[var(--text-primary)]'
             }`}
           >
             {isAr ? `النتائج الرئيسية (${intel.evaluatedKrs.length})` : `Key Results (${intel.evaluatedKrs.length})`}
@@ -404,7 +404,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
             className={`py-3 px-3.5 border-b-2 font-medium transition-colors ${
               activeTab === 'milestones'
                 ? 'border-accent text-accent font-bold'
-                : 'border-transparent text-muted hover:text-white'
+                : 'border-transparent text-muted hover:text-[var(--text-primary)]'
             }`}
           >
             {isAr ? `المراحل الزمنية (${intel.milestonesTotal})` : `Milestones (${intel.milestonesTotal})`}
@@ -414,7 +414,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
             className={`py-3 px-3.5 border-b-2 font-medium transition-colors ${
               activeTab === 'links'
                 ? 'border-accent text-accent font-bold'
-                : 'border-transparent text-muted hover:text-white'
+                : 'border-transparent text-muted hover:text-[var(--text-primary)]'
             }`}
           >
             {isAr ? 'إدارة الأنشطة المرتبطة' : 'Linked Activities'}
@@ -424,7 +424,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
             className={`py-3 px-3.5 border-b-2 font-medium transition-colors ${
               activeTab === 'timeline'
                 ? 'border-accent text-accent font-bold'
-                : 'border-transparent text-muted hover:text-white'
+                : 'border-transparent text-muted hover:text-[var(--text-primary)]'
             }`}
           >
             {isAr ? `سجل المساهمات والخط الزمني (${intel.contributions.length})` : `Timeline & History (${intel.contributions.length})`}
@@ -432,13 +432,13 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
         </div>
 
         {/* Modal Scrollable Content */}
-        <div className="p-5 overflow-y-auto flex-1 space-y-6 text-sm bg-gradient-to-b from-[#0e1518] to-[#0a0e11]">
+        <div className="p-5 overflow-y-auto flex-1 space-y-6 text-sm bg-gradient-to-b from-[var(--surface-deep)] to-[var(--surface-deep)]">
           {/* TAB 1: KEY RESULTS (النتائج الرئيسية) */}
           {activeTab === 'krs' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-white text-base">
+                  <h3 className="font-bold text-[var(--text-primary)] text-base">
                     {isAr ? 'النتائج الرئيسية ومصادر البيانات الحية' : 'Key Results & Live Data Sources'}
                   </h3>
                   <p className="text-xs text-muted">
@@ -457,8 +457,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
               {/* Form to add new KR */}
               {isAddingKr && (
-                <form onSubmit={handleCreateKr} className="p-4 rounded-xl border border-accent/40 bg-[#121c18] space-y-4 shadow-lg">
-                  <h4 className="font-bold text-white text-sm">
+                <form onSubmit={handleCreateKr} className="p-4 rounded-xl border border-accent/40 bg-[var(--surface-inset)] space-y-4 shadow-lg">
+                  <h4 className="font-bold text-[var(--text-primary)] text-sm">
                     {isAr ? 'تعريف نتيجة رئيسية قابلة للقياس' : 'Define Measurable Key Result'}
                   </h4>
 
@@ -534,7 +534,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-[#1c2921]">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-subtle)]">
                     <button type="button" onClick={() => setIsAddingKr(false)} className="btn subtle small">
                       {isAr ? 'إلغاء' : 'Cancel'}
                     </button>
@@ -547,9 +547,9 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
               {/* KR List */}
               {intel.evaluatedKrs.length === 0 ? (
-                <div className="p-8 text-center panel border border-[#1c2921] bg-[#0c1214] rounded-xl space-y-2">
+                <div className="p-8 text-center panel border border-[var(--border-subtle)] bg-[var(--surface-deep)] rounded-xl space-y-2">
                   <span className="text-2xl">🎯</span>
-                  <p className="text-white font-semibold">{isAr ? 'لم يتم تعريف نتائج رئيسية بعد' : 'No Key Results defined'}</p>
+                  <p className="text-[var(--text-primary)] font-semibold">{isAr ? 'لم يتم تعريف نتائج رئيسية بعد' : 'No Key Results defined'}</p>
                   <p className="text-xs text-muted">{isAr ? 'أضف مؤشرات واضحة مستمدة من المهام أو القراءة أو التمارين لقياس تقدمك.' : 'Add measurable metrics to anchor execution.'}</p>
                   <button onClick={() => setIsAddingKr(true)} className="btn primary small mt-2">
                     + {isAr ? 'إضافة أول نتيجة' : 'Add First Key Result'}
@@ -564,16 +564,16 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     return (
                       <div
                         key={kr.id}
-                        className="panel p-4 border border-[#1c2921] bg-[#11191d] rounded-xl space-y-3 hover:border-[#2b4134] transition-all"
+                        className="panel p-4 border border-[var(--border-subtle)] bg-[var(--surface-raised)] rounded-xl space-y-3 hover:border-[var(--border-strong)] transition-all"
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="space-y-1 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#182620] text-accent border border-[#263e32] flex items-center gap-1 font-semibold">
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-default)] flex items-center gap-1 font-semibold">
                                 <span>{sourceInfo.icon}</span>
                                 <span>{isAr ? sourceInfo.ar : sourceInfo.en}</span>
                               </span>
-                              <h4 className="font-bold text-white text-sm">{kr.title}</h4>
+                              <h4 className="font-bold text-[var(--text-primary)] text-sm">{kr.title}</h4>
                             </div>
                             <span className="text-[11px] text-muted block">
                               {kr.dataExplanation}
@@ -582,7 +582,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                           <div className="flex items-center gap-3 self-end sm:self-center">
                             <div className="text-end font-mono">
-                              <span className="text-sm font-bold text-white">
+                              <span className="text-sm font-bold text-[var(--text-primary)]">
                                 {kr.evaluatedCurrentValue} <span className="text-xs text-muted font-normal">/ {kr.targetValue} {kr.unit}</span>
                               </span>
                               <span className="block text-xs text-accent font-bold">
@@ -592,7 +592,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                             <button
                               onClick={() => deleteKeyResult(goal.id, kr.id)}
-                              className="text-muted hover:text-red-400 text-xs p-1"
+                              className="text-muted hover:text-[var(--tone-danger)] text-xs p-1"
                               title={isAr ? 'حذف النتيجة' : 'Delete'}
                             >
                               ✕
@@ -601,7 +601,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="w-full bg-[#182620] rounded-full h-2 overflow-hidden border border-[#23382c]">
+                        <div className="w-full bg-[var(--surface-chip)] rounded-full h-2 overflow-hidden border border-[var(--border-default)]">
                           <div
                             className="bg-accent h-full rounded-full transition-all duration-300"
                             style={{ width: `${kr.progressPercent}%` }}
@@ -610,7 +610,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                         {/* Manual entry updater input */}
                         {isManual && (
-                          <div className="pt-2 border-t border-[#1a2822] flex items-center gap-3">
+                          <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center gap-3">
                             <span className="text-[11px] text-muted">{isAr ? 'تحديث القيمة يدوياً:' : 'Update Value:'}</span>
                             <input
                               type="number"
@@ -646,7 +646,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-white text-base">
+                  <h3 className="font-bold text-[var(--text-primary)] text-base">
                     {isAr ? 'المراحل الزمنية المحورية (Milestones)' : 'Strategic Goal Milestones'}
                   </h3>
                   <p className="text-xs text-muted">
@@ -662,7 +662,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
               </div>
 
               {isAddingMs && (
-                <form onSubmit={handleCreateMilestone} className="p-4 rounded-xl border border-accent/40 bg-[#121c18] space-y-3">
+                <form onSubmit={handleCreateMilestone} className="p-4 rounded-xl border border-accent/40 bg-[var(--surface-inset)] space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="sm:col-span-2 field">
                       <label className="text-xs text-muted mb-1 block">{isAr ? 'عنوان المرحلة' : 'Milestone Title'} *</label>
@@ -687,7 +687,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-[#1c2921]">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-subtle)]">
                     <button type="button" onClick={() => setIsAddingMs(false)} className="btn subtle small">
                       {isAr ? 'إلغاء' : 'Cancel'}
                     </button>
@@ -699,9 +699,9 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
               )}
 
               {intel.milestonesTotal === 0 ? (
-                <div className="p-8 text-center panel border border-[#1c2921] bg-[#0c1214] rounded-xl space-y-2">
+                <div className="p-8 text-center panel border border-[var(--border-subtle)] bg-[var(--surface-deep)] rounded-xl space-y-2">
                   <span className="text-2xl">🚩</span>
-                  <p className="text-white font-semibold">{isAr ? 'لا توجد مراحل محددة بعد' : 'No milestones defined'}</p>
+                  <p className="text-[var(--text-primary)] font-semibold">{isAr ? 'لا توجد مراحل محددة بعد' : 'No milestones defined'}</p>
                   <p className="text-xs text-muted">{isAr ? 'قسّم هدفك إلى 3-5 مراحل رئيسية لضمان الاستمرارية.' : 'Break down your goal into actionable checkpoints.'}</p>
                   <button onClick={() => setIsAddingMs(true)} className="btn primary small mt-2">
                     + {isAr ? 'إضافة أول مرحلة' : 'Add First Milestone'}
@@ -714,8 +714,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                       key={ms.id}
                       className={`panel p-3.5 border rounded-xl flex items-center justify-between transition-all ${
                         ms.isCompleted
-                          ? 'border-emerald-500/30 bg-emerald-950/15'
-                          : 'border-[#1c2921] bg-[#11191d]'
+                          ? 'border-[var(--tone-success-line)] bg-[var(--tone-success-wash)]'
+                          : 'border-[var(--border-subtle)] bg-[var(--surface-raised)]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -724,8 +724,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                           onClick={() => toggleGoalMilestone(goal.id, ms.id)}
                           className={`w-5 h-5 rounded-md border flex items-center justify-center font-bold text-xs transition-colors ${
                             ms.isCompleted
-                              ? 'bg-emerald-500 border-emerald-400 text-black'
-                              : 'border-[#2c4033] hover:border-emerald-400 bg-transparent'
+                              ? 'bg-[var(--tone-success)] border-[var(--tone-success-line)] text-[var(--accent-ink)]'
+                              : 'border-[var(--border-strong)] hover:border-[var(--tone-success-line)] bg-transparent'
                           }`}
                         >
                           {ms.isCompleted && '✓'}
@@ -733,7 +733,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         <div>
                           <span
                             className={`text-sm font-semibold block ${
-                              ms.isCompleted ? 'line-through text-muted' : 'text-white'
+                              ms.isCompleted ? 'line-through text-muted' : 'text-[var(--text-primary)]'
                             }`}
                           >
                             {ms.title}
@@ -749,7 +749,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                       <button
                         onClick={() => deleteGoalMilestone(goal.id, ms.id)}
-                        className="text-muted hover:text-red-400 text-xs px-2"
+                        className="text-muted hover:text-[var(--tone-danger)] text-xs px-2"
                         title={isAr ? 'حذف' : 'Delete'}
                       >
                         ✕
@@ -764,17 +764,17 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
           {/* TAB 3: LINKED ACTIVITIES (إدارة الأنشطة المرتبطة) */}
           {activeTab === 'links' && (
             <div className="space-y-6">
-              <div className="p-3 bg-[#111c16] rounded-xl border border-accent/20 text-xs text-accent">
+              <div className="p-3 bg-[var(--surface-raised)] rounded-xl border border-accent/20 text-xs text-accent">
                 ℹ️ {isAr
                   ? 'إلغاء ربط أي نشاط يزيل صلته الإحصائية بالهدف فقط، ولا يحذف المهمة أو العادة أو بياناتها الأصلية إطلاقاً.'
                   : 'Unlinking an activity safely removes its statistical reference without deleting original tasks, habits, books, or art projects.'}
               </div>
 
               {/* 1. Linked Tasks */}
-              <div className="space-y-3 panel p-4 border border-[#1c2921] bg-[#11191d] rounded-xl">
+              <div className="space-y-3 panel p-4 border border-[var(--border-subtle)] bg-[var(--surface-raised)] rounded-xl">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                    <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-2">
                       <span>✓</span>
                       <span>{isAr ? 'المهام التنفيذية المرتبطة' : 'Linked Tasks'}</span>
                       <span className="text-xs text-muted font-mono">({intel.linkedTasksCount})</span>
@@ -824,12 +824,12 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                 {/* Inline Quick Task Creator */}
                 {isCreatingTask && (
-                  <form onSubmit={handleCreateLinkedTask} className="p-3 rounded-xl bg-[#0d1417] border border-accent/30 space-y-2 mt-2">
+                  <form onSubmit={handleCreateLinkedTask} className="p-3 rounded-xl bg-[var(--surface-deep)] border border-accent/30 space-y-2 mt-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white">
+                      <span className="text-xs font-bold text-[var(--text-primary)]">
                         {isAr ? 'إنشاء مهمة جديدة مرتبطة بالهدف تلقائياً' : 'Create New Task Linked to Goal'}
                       </span>
-                      <button type="button" onClick={() => setIsCreatingTask(false)} className="text-muted hover:text-white text-xs">✕</button>
+                      <button type="button" onClick={() => setIsCreatingTask(false)} className="text-muted hover:text-[var(--text-primary)] text-xs">✕</button>
                     </div>
                     <input
                       className="input text-xs"
@@ -876,17 +876,17 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     .map((t) => (
                       <div
                         key={t.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-[#162126] border border-[#23353c] text-xs"
+                        className="flex items-center justify-between p-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)] text-xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className={`w-2 h-2 rounded-full ${t.status === 'completed' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                          <span className={`truncate ${t.status === 'completed' ? 'line-through text-muted' : 'text-white font-medium'}`}>
+                          <span className={`w-2 h-2 rounded-full ${t.status === 'completed' ? 'bg-[var(--tone-success)]' : 'bg-[var(--tone-warning)]'}`} />
+                          <span className={`truncate ${t.status === 'completed' ? 'line-through text-muted' : 'text-[var(--text-primary)] font-medium'}`}>
                             {t.title}
                           </span>
                         </div>
                         <button
                           onClick={() => unlinkActivityFromGoal(goal.id, 'task', t.id)}
-                          className="text-muted hover:text-red-400 text-xs px-2 py-0.5"
+                          className="text-muted hover:text-[var(--tone-danger)] text-xs px-2 py-0.5"
                           title={isAr ? 'إلغاء الربط' : 'Unlink'}
                         >
                           {isAr ? 'إلغاء الربط' : 'Unlink'}
@@ -900,10 +900,10 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
               </div>
 
               {/* 2. Linked Habits */}
-              <div className="space-y-3 panel p-4 border border-[#1c2921] bg-[#11191d] rounded-xl">
+              <div className="space-y-3 panel p-4 border border-[var(--border-subtle)] bg-[var(--surface-raised)] rounded-xl">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                    <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-2">
                       <span>↻</span>
                       <span>{isAr ? 'العادات الروتينية المرتبطة' : 'Linked Habits'}</span>
                       <span className="text-xs text-muted font-mono">({intel.linkedHabitsCount})</span>
@@ -953,12 +953,12 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                 {/* Inline Quick Habit Creator */}
                 {isCreatingHabit && (
-                  <form onSubmit={handleCreateLinkedHabit} className="p-3 rounded-xl bg-[#0d1417] border border-accent/30 space-y-2.5 mt-2">
+                  <form onSubmit={handleCreateLinkedHabit} className="p-3 rounded-xl bg-[var(--surface-deep)] border border-accent/30 space-y-2.5 mt-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white">
+                      <span className="text-xs font-bold text-[var(--text-primary)]">
                         {isAr ? 'إنشاء عادة جديدة مرتبطة بالهدف تلقائياً' : 'Create New Habit Linked to Goal'}
                       </span>
-                      <button type="button" onClick={() => setIsCreatingHabit(false)} className="text-muted hover:text-white text-xs">✕</button>
+                      <button type="button" onClick={() => setIsCreatingHabit(false)} className="text-muted hover:text-[var(--text-primary)] text-xs">✕</button>
                     </div>
                     <input
                       className="input text-xs"
@@ -978,8 +978,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         }}
                         className={`p-1.5 rounded-lg border text-start transition-all ${
                           quickHabitType === 'quran'
-                            ? 'border-emerald-400 bg-emerald-500/20 text-white'
-                            : 'border-[#23353c] bg-[#11191d] text-muted'
+                            ? 'border-[var(--tone-success-line)] bg-[var(--tone-success-wash)] text-[var(--text-primary)]'
+                            : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
                         <span className="block text-sm">📜</span>
@@ -994,8 +994,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         }}
                         className={`p-1.5 rounded-lg border text-start transition-all ${
                           quickHabitType === 'reading'
-                            ? 'border-amber-400 bg-amber-500/20 text-white'
-                            : 'border-[#23353c] bg-[#11191d] text-muted'
+                            ? 'border-[var(--tone-warning-line)] bg-[var(--tone-warning-wash)] text-[var(--text-primary)]'
+                            : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
                         <span className="block text-sm">📖</span>
@@ -1010,8 +1010,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         }}
                         className={`p-1.5 rounded-lg border text-start transition-all ${
                           quickHabitType === 'workout'
-                            ? 'border-teal-400 bg-teal-500/20 text-white'
-                            : 'border-[#23353c] bg-[#11191d] text-muted'
+                            ? 'border-[var(--tone-info-line)] bg-[var(--tone-info-wash)] text-[var(--text-primary)]'
+                            : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
                         <span className="block text-sm">⚡</span>
@@ -1026,8 +1026,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         }}
                         className={`p-1.5 rounded-lg border text-start transition-all ${
                           quickHabitType === 'drawing'
-                            ? 'border-purple-400 bg-purple-500/20 text-white'
-                            : 'border-[#23353c] bg-[#11191d] text-muted'
+                            ? 'border-[var(--tone-purple-line)] bg-[var(--tone-purple-wash)] text-[var(--text-primary)]'
+                            : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
                         <span className="block text-sm">🎨</span>
@@ -1038,8 +1038,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         onClick={() => setQuickHabitType('standard')}
                         className={`p-1.5 rounded-lg border text-start transition-all ${
                           quickHabitType === 'standard'
-                            ? 'border-accent bg-accent/20 text-white'
-                            : 'border-[#23353c] bg-[#11191d] text-muted'
+                            ? 'border-accent bg-accent/20 text-[var(--text-primary)]'
+                            : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
                         <span className="block text-sm">✓</span>
@@ -1069,16 +1069,16 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     .map((h) => (
                       <div
                         key={h.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-[#162126] border border-[#23353c] text-xs"
+                        className="flex items-center justify-between p-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)] text-xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-accent">↻</span>
-                          <span className="text-white font-medium truncate">{h.name}</span>
+                          <span className="text-[var(--text-primary)] font-medium truncate">{h.name}</span>
                           <span className="text-[11px] text-muted font-mono">({h.currentStreak} {isAr ? 'يوم' : 'd'})</span>
                         </div>
                         <button
                           onClick={() => unlinkActivityFromGoal(goal.id, 'habit', h.id)}
-                          className="text-muted hover:text-red-400 text-xs px-2 py-0.5"
+                          className="text-muted hover:text-[var(--tone-danger)] text-xs px-2 py-0.5"
                           title={isAr ? 'إلغاء الربط' : 'Unlink'}
                         >
                           {isAr ? 'إلغاء الربط' : 'Unlink'}
@@ -1092,10 +1092,10 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
               </div>
 
               {/* 3. Linked Books from Reading Studio */}
-              <div className="space-y-3 panel p-4 border border-[#1c2921] bg-[#11191d] rounded-xl">
+              <div className="space-y-3 panel p-4 border border-[var(--border-subtle)] bg-[var(--surface-raised)] rounded-xl">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                    <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-2">
                       <span>📖</span>
                       <span>{isAr ? 'الكتب المرتبطة (نظام القراءة)' : 'Linked Books (Reading Studio)'}</span>
                       <span className="text-xs text-muted font-mono">({intel.linkedBooksCount})</span>
@@ -1139,16 +1139,16 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     .map((b) => (
                       <div
                         key={b.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-[#162126] border border-[#23353c] text-xs"
+                        className="flex items-center justify-between p-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)] text-xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-amber-300">📖</span>
-                          <span className="text-white font-medium truncate">{b.title}</span>
+                          <span className="text-[var(--tone-warning)]">📖</span>
+                          <span className="text-[var(--text-primary)] font-medium truncate">{b.title}</span>
                           <span className="text-[11px] text-muted font-mono">({b.currentPage}/{b.totalPages} ص · {b.status})</span>
                         </div>
                         <button
                           onClick={() => unlinkActivityFromGoal(goal.id, 'book', b.id)}
-                          className="text-muted hover:text-red-400 text-xs px-2 py-0.5"
+                          className="text-muted hover:text-[var(--tone-danger)] text-xs px-2 py-0.5"
                           title={isAr ? 'إلغاء الربط' : 'Unlink'}
                         >
                           {isAr ? 'إلغاء الربط' : 'Unlink'}
@@ -1162,10 +1162,10 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
               </div>
 
               {/* 4. Linked Art Projects from Drawing Studio */}
-              <div className="space-y-3 panel p-4 border border-[#1c2921] bg-[#11191d] rounded-xl">
+              <div className="space-y-3 panel p-4 border border-[var(--border-subtle)] bg-[var(--surface-raised)] rounded-xl">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                    <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-2">
                       <span>🎨</span>
                       <span>{isAr ? 'المشاريع الفنية المرتبطة (مرسم الفن)' : 'Linked Art Projects (Creative Studio)'}</span>
                       <span className="text-xs text-muted font-mono">({intel.linkedArtProjectsCount})</span>
@@ -1209,16 +1209,16 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     .map((p) => (
                       <div
                         key={p.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-[#162126] border border-[#23353c] text-xs"
+                        className="flex items-center justify-between p-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)] text-xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-purple-300">🎨</span>
-                          <span className="text-white font-medium truncate">{p.title}</span>
+                          <span className="text-[var(--tone-purple)]">🎨</span>
+                          <span className="text-[var(--text-primary)] font-medium truncate">{p.title}</span>
                           <span className="text-[11px] text-muted font-mono">({p.stage} · {p.sessionsCount} sessions)</span>
                         </div>
                         <button
                           onClick={() => unlinkActivityFromGoal(goal.id, 'artProject', p.id)}
-                          className="text-muted hover:text-red-400 text-xs px-2 py-0.5"
+                          className="text-muted hover:text-[var(--tone-danger)] text-xs px-2 py-0.5"
                           title={isAr ? 'إلغاء الربط' : 'Unlink'}
                         >
                           {isAr ? 'إلغاء الربط' : 'Unlink'}
@@ -1237,20 +1237,20 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
           {activeTab === 'timeline' && (
             <div className="space-y-5">
               {/* Schedule Pacing Comparison Card */}
-              <div className="panel p-4 border border-[#1c2921] bg-[#11191d] rounded-xl space-y-3">
-                <h4 className="font-bold text-white text-sm">
+              <div className="panel p-4 border border-[var(--border-subtle)] bg-[var(--surface-raised)] rounded-xl space-y-3">
+                <h4 className="font-bold text-[var(--text-primary)] text-sm">
                   {isAr ? 'مقارنة وتيرة الإنجاز بالجدول الزمني (Timeline Pacing)' : 'Timeline & Execution Velocity'}
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 rounded-lg bg-[#162126] border border-[#23353c]">
+                  <div className="p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)]">
                     <span className="text-muted block text-[11px]">{isAr ? 'المدة الزمنية المنقضية' : 'Time Elapsed'}</span>
-                    <strong className="text-lg font-mono text-white font-bold block mt-1">
+                    <strong className="text-lg font-mono text-[var(--text-primary)] font-bold block mt-1">
                       {intel.timeElapsedPercent !== null ? `${intel.timeElapsedPercent}%` : (isAr ? 'غير محدد' : 'N/A')}
                     </strong>
                     <span className="text-[10px] text-muted">{isAr ? 'من تاريخ البداية حتى الموعد' : 'start to deadline'}</span>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-[#162126] border border-[#23353c]">
+                  <div className="p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)]">
                     <span className="text-muted block text-[11px]">{isAr ? 'نسبة التقدم المحرز' : 'Actual Progress'}</span>
                     <strong className="text-lg font-mono text-accent font-bold block mt-1">
                       {intel.overallProgressPercent}%
@@ -1258,9 +1258,9 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     <span className="text-[10px] text-muted">{isAr ? 'متوسط النتائج والمراحل' : 'aggregated velocity'}</span>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-[#162126] border border-[#23353c]">
+                  <div className="p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)]">
                     <span className="text-muted block text-[11px]">{isAr ? 'تقييم الوتيرة والإيقاع' : 'Pacing Status'}</span>
-                    <strong className="text-sm font-semibold text-emerald-300 block mt-1">
+                    <strong className="text-sm font-semibold text-[var(--tone-success)] block mt-1">
                       {isAr ? intel.pacingLabelAr : intel.pacingLabelEn}
                     </strong>
                     <span className="text-[10px] text-muted">
@@ -1274,14 +1274,14 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
               {/* Contribution Activity Log Feed */}
               <div className="space-y-3">
-                <h4 className="font-bold text-white text-sm">
+                <h4 className="font-bold text-[var(--text-primary)] text-sm">
                   {isAr ? 'سجل المساهمات والأنشطة الفعلية (Contribution Audit)' : 'Activity Contribution Audit Trail'}
                 </h4>
 
                 {intel.contributions.length === 0 ? (
-                  <div className="p-8 text-center panel border border-[#1c2921] bg-[#0c1214] rounded-xl space-y-2">
+                  <div className="p-8 text-center panel border border-[var(--border-subtle)] bg-[var(--surface-deep)] rounded-xl space-y-2">
                     <span className="text-2xl">⏳</span>
-                    <p className="text-white font-semibold">{isAr ? 'لا توجد مساهمات مسجلة بعد' : 'No contribution records yet'}</p>
+                    <p className="text-[var(--text-primary)] font-semibold">{isAr ? 'لا توجد مساهمات مسجلة بعد' : 'No contribution records yet'}</p>
                     <p className="text-xs text-muted">
                       {isAr
                         ? 'عند إنجاز مهامك أو تسجيل جلسات قراءة أو تمارين أو رسم مرتبطة، ستظهر هنا تلقائياً في الخط الزمني.'
@@ -1293,14 +1293,14 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     {intel.contributions.map((item) => (
                       <div
                         key={item.id}
-                        className="p-3 rounded-xl border border-[#1c2921] bg-[#11191d] flex items-center justify-between gap-3 text-xs"
+                        className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] flex items-center justify-between gap-3 text-xs"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className="w-7 h-7 rounded-lg bg-[#182620] text-accent flex items-center justify-center font-bold text-sm shrink-0 border border-[#263e32]">
+                          <span className="w-7 h-7 rounded-lg bg-[var(--surface-chip)] text-accent flex items-center justify-center font-bold text-sm shrink-0 border border-[var(--border-default)]">
                             {item.icon}
                           </span>
                           <div className="min-w-0">
-                            <h5 className="font-bold text-white truncate text-xs">{item.title}</h5>
+                            <h5 className="font-bold text-[var(--text-primary)] truncate text-xs">{item.title}</h5>
                             <span className="text-[11px] text-muted block">{item.contributionNote}</span>
                           </div>
                         </div>

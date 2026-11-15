@@ -78,7 +78,7 @@ export const CalendarView: React.FC = () => {
           title: `${qs.surahName} (${qs.ayahStart}-${qs.ayahEnd})`,
           meta: `${qs.durationMinutes} دقيقة • ${qs.type === 'new_memorization' ? 'حفظ' : 'مراجعة'}`,
           icon: '📖',
-          color: 'text-emerald-400 bg-emerald-950/30 border-emerald-800/30'
+          color: 'text-[var(--tone-success)] bg-[var(--tone-success-wash)] border-[var(--tone-success-line)]'
         });
       }
     });
@@ -91,7 +91,7 @@ export const CalendarView: React.FC = () => {
           title: rs.bookTitle,
           meta: `${rs.pagesRead} صفحة • ${rs.durationMinutes} دقيقة`,
           icon: '📚',
-          color: 'text-sky-400 bg-sky-950/30 border-sky-800/30'
+          color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]'
         });
       }
     });
@@ -104,7 +104,7 @@ export const CalendarView: React.FC = () => {
           title: ws.title,
           meta: `${ws.durationMinutes} دقيقة • حجم ${ws.volumeKg} كغ`,
           icon: '⚡',
-          color: 'text-orange-400 bg-orange-950/30 border-orange-800/30'
+          color: 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)] border-[var(--tone-warning-line)]'
         });
       }
     });
@@ -117,7 +117,7 @@ export const CalendarView: React.FC = () => {
           title: ap.title,
           meta: `${ap.durationMinutes} دقيقة • وسيط ${ap.medium}`,
           icon: '🎨',
-          color: 'text-purple-400 bg-purple-950/30 border-purple-800/30'
+          color: 'text-[var(--tone-purple)] bg-[var(--tone-purple-wash)] border-[var(--tone-purple-line)]'
         });
       }
     });
@@ -131,7 +131,7 @@ export const CalendarView: React.FC = () => {
         title: fs.taskTitle ? `جلسة تركيز: ${fs.taskTitle}` : 'جلسة عمل عميق',
         meta: `${fs.durationMinutes} دقيقة • إنتاجية ${fs.productivityScore}/5`,
         icon: '⏱️',
-        color: 'text-indigo-400 bg-indigo-950/30 border-indigo-800/30'
+        color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]'
       });
     }
   });
@@ -145,7 +145,7 @@ export const CalendarView: React.FC = () => {
           title: `مرحلة منجزة: ${m.title}`,
           meta: `ضمن هدف: ${g.title}`,
           icon: '🚩',
-          color: 'text-amber-400 bg-amber-950/30 border-amber-800/30'
+          color: 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)] border-[var(--tone-warning-line)]'
         });
       }
     });
@@ -317,7 +317,7 @@ export const CalendarView: React.FC = () => {
 
           {/* Historical Life Events Logged on this day */}
           {dayHistoricalEvents.length > 0 && (
-            <div className="pt-4 border-t border-[#1e2e24] space-y-2">
+            <div className="pt-4 border-t border-[var(--border-subtle)] space-y-2">
               <span className="text-[11px] font-mono font-bold text-accent uppercase tracking-wider block">
                 {isAr ? `سجل الحياة والأنشطة لهذا اليوم (${dayHistoricalEvents.length})` : `Logged Life History (${dayHistoricalEvents.length})`}
               </span>

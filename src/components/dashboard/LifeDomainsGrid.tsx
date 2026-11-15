@@ -71,7 +71,7 @@ export const LifeDomainsGrid: React.FC<LifeDomainsGridProps> = ({
                   borderColor: 'color-mix(in srgb, var(--d-quran-accent) 28%, transparent)'
                 }}
               >
-                <NuqtaIcon name="book-open" className="w-4 h-4" />
+                <NuqtaIcon name="mosque" className="w-4 h-4" />
               </span>
               <div className="min-w-0">
                 <div className="text-sm font-bold text-[var(--text-primary)] truncate">

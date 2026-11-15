@@ -79,7 +79,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
           y1={paddingY}
           x2={width - paddingX}
           y2={paddingY}
-          stroke="#1c2822"
+          stroke="var(--border-subtle)"
           strokeDasharray="3 3"
         />
         <line
@@ -87,7 +87,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
           y1={height / 2}
           x2={width - paddingX}
           y2={height / 2}
-          stroke="#1c2822"
+          stroke="var(--border-subtle)"
           strokeDasharray="3 3"
         />
         <line
@@ -95,7 +95,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
           y1={height - paddingY}
           x2={width - paddingX}
           y2={height - paddingY}
-          stroke="#24362d"
+          stroke="var(--border-default)"
         />
 
         {/* Area fill */}
@@ -118,7 +118,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
               cx={p.x}
               cy={p.y}
               r={hoveredIndex === i ? 5 : 3.5}
-              fill="#0b0f13"
+              fill="var(--surface-page)"
               stroke={color}
               strokeWidth={hoveredIndex === i ? 2.5 : 1.5}
               className="cursor-pointer transition-all duration-150"
@@ -132,14 +132,14 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
       {/* Floating Tooltip */}
       {hoveredPoint && (
         <div
-          className="absolute z-20 pointer-events-none transform -translate-x-1/2 px-2.5 py-1.5 rounded-lg bg-[#141e19] border border-[#263e32] shadow-xl text-xs"
+          className="absolute z-20 pointer-events-none transform -translate-x-1/2 px-2.5 py-1.5 rounded-lg bg-[var(--surface-inset)] border border-[var(--border-default)] shadow-xl text-xs"
           style={{
             left: `${(hoveredPoint.x / width) * 100}%`,
             top: `${Math.max(0, (hoveredPoint.y / height) * 100 - 32)}%`
           }}
           dir={isAr ? 'rtl' : 'ltr'}
         >
-          <span className="font-mono text-white font-bold block">
+          <span className="font-mono text-[var(--text-primary)] font-bold block">
             {hoveredPoint.val} {unit}
           </span>
           <span className="text-[10px] text-muted block">
@@ -186,7 +186,7 @@ export const ActivityBarChart: React.FC<ActivityBarChartProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className="h-36 flex items-end justify-between gap-1 sm:gap-2 pt-4 px-2 bg-[#0c1214] rounded-xl border border-[#1c2921]">
+      <div className="h-36 flex items-end justify-between gap-1 sm:gap-2 pt-4 px-2 bg-[var(--surface-deep)] rounded-xl border border-[var(--border-subtle)]">
         {data.map((item, idx) => {
           const val = item[metricKey];
           const heightPercent = Math.max(8, Math.round((val / maxVal) * 88));
@@ -202,7 +202,7 @@ export const ActivityBarChart: React.FC<ActivityBarChartProps> = ({
               {/* Tooltip on hover */}
               {isHovered && (
                 <div
-                  className="absolute -top-10 z-20 pointer-events-none px-2 py-1 rounded bg-[#16231c] border border-accent/40 shadow-lg text-[10px] text-white font-mono whitespace-nowrap"
+                  className="absolute -top-10 z-20 pointer-events-none px-2 py-1 rounded bg-[var(--surface-chip)] border border-accent/40 shadow-lg text-[10px] text-[var(--text-primary)] font-mono whitespace-nowrap"
                   dir={isAr ? 'rtl' : 'ltr'}
                 >
                   <strong className="text-accent">{val}</strong> {unit} · {item.dayLabel}
@@ -217,7 +217,7 @@ export const ActivityBarChart: React.FC<ActivityBarChartProps> = ({
                 className="w-full max-w-[28px] rounded-t-md transition-all duration-300"
                 style={{
                   height: `${heightPercent}%`,
-                  backgroundColor: isHovered ? '#ffffff' : color,
+                  backgroundColor: isHovered ? 'var(--text-primary)' : color,
                   boxShadow: isHovered ? `0 0 12px ${color}` : 'none'
                 }}
               />
@@ -245,11 +245,11 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({ weeks, isAr })
   const [hoveredCell, setHoveredCell] = useState<DayMetricPoint | null>(null);
 
   const intensityColors = [
-    'bg-[#131b17] border-[#1d2b24]',       // 0: none
-    'bg-[#064e3b]/50 border-[#065f46]/60',  // 1: low
-    'bg-[#047857]/70 border-[#059669]',     // 2: medium
-    'bg-[#10b981] border-[#34d399]',        // 3: high
-    'bg-[#34d399] border-[#6ee7b7]'         // 4: peak
+    'bg-[var(--heat-0-bg)] border-[var(--heat-0-line)]',   // 0: none
+    'bg-[var(--heat-1-bg)] border-[var(--heat-1-line)]',   // 1: low
+    'bg-[var(--heat-2-bg)] border-[var(--heat-2-line)]',   // 2: medium
+    'bg-[var(--heat-3-bg)] border-[var(--heat-3-line)]',   // 3: high
+    'bg-[var(--heat-4-bg)] border-[var(--heat-4-line)]'    // 4: peak
   ];
 
   return (
@@ -276,11 +276,11 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({ weeks, isAr })
       </div>
 
       {/* Legend & Hovered Detail Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs pt-2 border-t border-[#1c2921]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs pt-2 border-t border-[var(--border-subtle)]">
         {/* Cell Inspection Detail */}
         <div className="text-[11px] text-muted min-h-[20px] flex items-center gap-2">
           {hoveredCell ? (
-            <span className="text-white flex items-center gap-2">
+            <span className="text-[var(--text-primary)] flex items-center gap-2">
               <span className="font-mono text-accent font-bold">{hoveredCell.dateStr}</span>
               <span>· {hoveredCell.tasksDone} {isAr ? 'مهام' : 'tasks'}</span>
               <span>· {hoveredCell.habitChecks} {isAr ? 'عادات' : 'habits'}</span>
@@ -319,7 +319,7 @@ export const SphereAllocationBar: React.FC<SphereAllocationBarProps> = ({ alloca
   return (
     <div className="space-y-3">
       {/* Segmented Bar */}
-      <div className="w-full h-3 rounded-full overflow-hidden flex bg-[#16231c] border border-[#23382c]">
+      <div className="w-full h-3 rounded-full overflow-hidden flex bg-[var(--surface-chip)] border border-[var(--border-default)]">
         {allocations.map((item) => (
           <div
             key={item.sphere}
@@ -338,17 +338,17 @@ export const SphereAllocationBar: React.FC<SphereAllocationBarProps> = ({ alloca
         {allocations.map((item) => (
           <div
             key={item.sphere}
-            className="p-2.5 rounded-xl border border-[#1c2921] bg-[#11191d] flex flex-col justify-between"
+            className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] flex flex-col justify-between"
           >
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-              <span className="text-[11px] text-white/90 truncate font-semibold">
+              <span className="text-[11px] text-[var(--text-secondary)] truncate font-semibold">
                 {isAr ? item.labelAr : item.labelEn}
               </span>
             </div>
 
             <div className="flex items-baseline justify-between mt-2 font-mono">
-              <span className="text-sm font-bold text-white">
+              <span className="text-sm font-bold text-[var(--text-primary)]">
                 {item.hours}h
               </span>
               <span className="text-[10px] text-muted">
@@ -373,7 +373,7 @@ interface MovementDistributionBarProps {
 export const MovementDistributionBar: React.FC<MovementDistributionBarProps> = ({ distribution, isAr }) => {
   return (
     <div className="space-y-3">
-      <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-[#16231c] border border-[#23382c]">
+      <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-[var(--surface-chip)] border border-[var(--border-default)]">
         {distribution.map((m) => (
           <div
             key={m.movement}
@@ -391,13 +391,13 @@ export const MovementDistributionBar: React.FC<MovementDistributionBarProps> = (
         {distribution.map((m) => (
           <div
             key={m.movement}
-            className="p-2 rounded-lg bg-[#141d18] border border-[#223329] flex items-center justify-between"
+            className="p-2 rounded-lg bg-[var(--surface-inset)] border border-[var(--border-subtle)] flex items-center justify-between"
           >
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
               <span className="text-[11px] text-muted truncate">{isAr ? m.labelAr : m.labelEn}</span>
             </div>
-            <span className="font-mono text-white text-[11px] font-bold shrink-0">
+            <span className="font-mono text-[var(--text-primary)] text-[11px] font-bold shrink-0">
               {m.reps} <span className="text-[10px] text-muted font-normal">({m.percent}%)</span>
             </span>
           </div>

@@ -26,6 +26,7 @@ export type IconName =
   | 'check'
   | 'chevronLeft'
   | 'chevronRight'
+  | 'chevronDown'
   | 'coffee'
   | 'flame'
   | 'leaf'
@@ -48,7 +49,9 @@ export type IconName =
   | 'star'
   | 'flag'
   | 'quote'
-  | 'history';
+  | 'history'
+  | 'mosque'
+  | 'notebook';
 
 const iconPaths: Record<IconName, React.ReactNode> = {
   grid: (
@@ -153,6 +156,7 @@ const iconPaths: Record<IconName, React.ReactNode> = {
   check: <path d="m5 12 4 4L19 6" />,
   chevronLeft: <path d="m15 18-6-6 6-6" />,
   chevronRight: <path d="m9 18 6-6-6-6" />,
+  chevronDown: <path d="m6 9 6 6 6-6" />,
   coffee: (
     <>
       <path d="M10 2v2M14 2v2M4 8h14v7a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM18 10h1a3 3 0 0 1 0 6h-2" />
@@ -264,6 +268,21 @@ const iconPaths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
       <path d="M3 3v5h5M12 8v4l3 2" />
+    </>
+  ),
+  mosque: (
+    <>
+      <path d="M4 21V11a8 8 0 0 1 16 0v10" />
+      <path d="M4 21h16M12 3V6" />
+      <path d="M12 3a1.5 1.5 0 0 1 1.5 1.5A1.5 1.5 0 0 1 12 6a1.5 1.5 0 0 1-1.5-1.5A1.5 1.5 0 0 1 12 3Z" />
+      <path d="M9 21v-4a3 3 0 0 1 6 0v4" />
+    </>
+  ),
+  notebook: (
+    <>
+      <rect x="5" y="3" width="15" height="18" rx="2.5" />
+      <path d="M9 3v18M13 8h4M13 12h4" />
+      <path d="M5 7H3M5 12H3M5 17H3" />
     </>
   )
 };

@@ -191,15 +191,15 @@ export const ArchiveHistoryView: React.FC = () => {
   // Event Type labels helper
   function getEventTypeLabel(type: UniversalHistoryEventType, arabic: boolean) {
     const labels: Record<UniversalHistoryEventType, { ar: string; en: string; color: string }> = {
-      created: { ar: 'إنشاء وتأسيس', en: 'Created', color: 'text-sky-400 bg-sky-950/40 border-sky-800/40' },
-      completed: { ar: 'إنجاز واكتمال', en: 'Completed', color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/40' },
+      created: { ar: 'إنشاء وتأسيس', en: 'Created', color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]' },
+      completed: { ar: 'إنجاز واكتمال', en: 'Completed', color: 'text-[var(--tone-success)] bg-[var(--tone-success-wash)] border-[var(--tone-success-line)]' },
       archived: { ar: 'أرشفة وحفظ', en: 'Archived', color: 'text-zinc-400 bg-zinc-900 border-zinc-700/50' },
-      restored: { ar: 'استعادة نشطة', en: 'Restored', color: 'text-teal-300 bg-teal-950/40 border-teal-700/40' },
-      milestone: { ar: 'محطة فارقة', en: 'Milestone', color: 'text-amber-400 bg-amber-950/40 border-amber-800/40' },
-      session: { ar: 'جلسة متخصصة', en: 'Session Log', color: 'text-indigo-400 bg-indigo-950/40 border-indigo-800/40' },
-      streak_freeze: { ar: 'تجميد سلسلة', en: 'Freeze Used', color: 'text-blue-400 bg-blue-950/40 border-blue-800/40' },
-      note: { ar: 'تأمل وتدوين', en: 'Note / Reflection', color: 'text-fuchsia-400 bg-fuchsia-950/40 border-fuchsia-800/40' },
-      status_change: { ar: 'تعديل حالة', en: 'Status Change', color: 'text-amber-300 bg-amber-950/40 border-amber-800/40' }
+      restored: { ar: 'استعادة نشطة', en: 'Restored', color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]' },
+      milestone: { ar: 'محطة فارقة', en: 'Milestone', color: 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)] border-[var(--tone-warning-line)]' },
+      session: { ar: 'جلسة متخصصة', en: 'Session Log', color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]' },
+      streak_freeze: { ar: 'تجميد سلسلة', en: 'Freeze Used', color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]' },
+      note: { ar: 'تأمل وتدوين', en: 'Note / Reflection', color: 'text-[var(--tone-purple)] bg-[var(--tone-purple-wash)] border-[var(--tone-purple-line)]' },
+      status_change: { ar: 'تعديل حالة', en: 'Status Change', color: 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)] border-[var(--tone-warning-line)]' }
     };
     return arabic ? labels[type]?.ar || type : labels[type]?.en || type;
   }
@@ -241,7 +241,7 @@ export const ArchiveHistoryView: React.FC = () => {
     <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Toast Notification */}
       {restoreFeedback && (
-        <div className="fixed bottom-6 start-6 z-50 p-4 rounded-xl bg-[#1e3a2b] border border-accent text-white shadow-2xl flex items-center gap-3 animate-fade-in">
+        <div className="fixed bottom-6 start-6 z-50 p-4 rounded-xl bg-[var(--surface-active)] border border-accent text-[var(--text-primary)] shadow-2xl flex items-center gap-3 animate-fade-in">
           <span className="text-xl">✨</span>
           <span className="text-sm font-medium">{restoreFeedback}</span>
         </div>
@@ -264,66 +264,66 @@ export const ArchiveHistoryView: React.FC = () => {
 
         {/* Global Stats Badges */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="px-3 py-1.5 rounded-xl bg-[#152019] border border-[#233529] text-xs font-mono text-muted flex items-center gap-1.5">
+          <div className="px-3 py-1.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-default)] text-xs font-mono text-muted flex items-center gap-1.5">
             <span className="text-accent font-bold">{stats.totalHistoryEventsCount}</span>
             <span>{isAr ? 'حدث مسجل' : 'events'}</span>
           </div>
-          <div className="px-3 py-1.5 rounded-xl bg-[#152019] border border-[#233529] text-xs font-mono text-muted flex items-center gap-1.5">
-            <span className="text-amber-400 font-bold">{stats.totalArchivedItemsCount}</span>
+          <div className="px-3 py-1.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-default)] text-xs font-mono text-muted flex items-center gap-1.5">
+            <span className="text-[var(--tone-warning)] font-bold">{stats.totalArchivedItemsCount}</span>
             <span>{isAr ? 'عنصر محفوظ في الأرشيف' : 'archived'}</span>
           </div>
-          <div className="px-3 py-1.5 rounded-xl bg-[#152019] border border-[#233529] text-xs font-mono text-muted flex items-center gap-1.5">
-            <span className="text-teal-400 font-bold">{stats.totalDedicatedHours}</span>
+          <div className="px-3 py-1.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-default)] text-xs font-mono text-muted flex items-center gap-1.5">
+            <span className="text-[var(--tone-info)] font-bold">{stats.totalDedicatedHours}</span>
             <span>{isAr ? 'ساعة حياة مستثمرة' : 'hours invested'}</span>
           </div>
         </div>
       </div>
 
       {/* Lifetime Accomplishments Banner */}
-      <div className="panel p-5 rounded-2xl bg-gradient-to-r from-[#111c15] via-[#14231b] to-[#121d17] border border-[#233d2e] shadow-lg">
+      <div className="panel p-5 rounded-2xl bg-gradient-to-r from-[var(--surface-raised)] via-[var(--surface-inset)] to-[var(--surface-inset)] border border-[var(--border-default)] shadow-lg">
         <div className="text-xs font-mono text-accent font-bold tracking-wider mb-3">
           {isAr ? 'خلاصة الإنجاز التراكمي الشامل' : 'LIFETIME ACHIEVEMENT AGGREGATE'}
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          <div className="p-3 rounded-xl bg-[#0d1510] border border-[#1f3326]">
+          <div className="p-3 rounded-xl bg-[var(--surface-deep)] border border-[var(--border-subtle)]">
             <div className="text-[11px] text-muted">{isAr ? 'المهام المكتملة' : 'Tasks Done'}</div>
-            <div className="text-xl font-bold font-mono text-emerald-400 mt-1">{stats.completedTasks}</div>
+            <div className="text-xl font-bold font-mono text-[var(--tone-success)] mt-1">{stats.completedTasks}</div>
           </div>
-          <div className="p-3 rounded-xl bg-[#0d1510] border border-[#1f3326]">
+          <div className="p-3 rounded-xl bg-[var(--surface-deep)] border border-[var(--border-subtle)]">
             <div className="text-[11px] text-muted">{isAr ? 'الكتب المقروءة' : 'Books Read'}</div>
-            <div className="text-xl font-bold font-mono text-sky-400 mt-1">{stats.completedBooks}</div>
+            <div className="text-xl font-bold font-mono text-[var(--tone-info)] mt-1">{stats.completedBooks}</div>
             <div className="text-[10px] text-muted font-mono">{stats.totalPagesRead} {isAr ? 'صفحة' : 'pages'}</div>
           </div>
-          <div className="p-3 rounded-xl bg-[#0d1510] border border-[#1f3326]">
+          <div className="p-3 rounded-xl bg-[var(--surface-deep)] border border-[var(--border-subtle)]">
             <div className="text-[11px] text-muted">{isAr ? 'آيات القرآن المحفوظة' : 'Ayahs Memorized'}</div>
-            <div className="text-xl font-bold font-mono text-teal-400 mt-1">{stats.totalAyahsMemorized}</div>
+            <div className="text-xl font-bold font-mono text-[var(--tone-info)] mt-1">{stats.totalAyahsMemorized}</div>
             <div className="text-[10px] text-muted font-mono">{stats.totalSurahsCompleted} {isAr ? 'سور مكتملة' : 'surahs'}</div>
           </div>
-          <div className="p-3 rounded-xl bg-[#0d1510] border border-[#1f3326]">
+          <div className="p-3 rounded-xl bg-[var(--surface-deep)] border border-[var(--border-subtle)]">
             <div className="text-[11px] text-muted">{isAr ? 'الحصص الرياضية' : 'Workouts Done'}</div>
-            <div className="text-xl font-bold font-mono text-orange-400 mt-1">{stats.totalWorkouts}</div>
+            <div className="text-xl font-bold font-mono text-[var(--tone-warning)] mt-1">{stats.totalWorkouts}</div>
           </div>
-          <div className="p-3 rounded-xl bg-[#0d1510] border border-[#1f3326]">
+          <div className="p-3 rounded-xl bg-[var(--surface-deep)] border border-[var(--border-subtle)]">
             <div className="text-[11px] text-muted">{isAr ? 'الأعمال الإبداعية' : 'Artworks'}</div>
-            <div className="text-xl font-bold font-mono text-purple-400 mt-1">{stats.totalArtPieces}</div>
+            <div className="text-xl font-bold font-mono text-[var(--tone-purple)] mt-1">{stats.totalArtPieces}</div>
           </div>
-          <div className="p-3 rounded-xl bg-[#0d1510] border border-[#1f3326]">
+          <div className="p-3 rounded-xl bg-[var(--surface-deep)] border border-[var(--border-subtle)]">
             <div className="text-[11px] text-muted">{isAr ? 'جلسات التركيز' : 'Focus Sessions'}</div>
-            <div className="text-xl font-bold font-mono text-indigo-400 mt-1">{stats.totalFocusSessions}</div>
+            <div className="text-xl font-bold font-mono text-[var(--tone-info)] mt-1">{stats.totalFocusSessions}</div>
             <div className="text-[10px] text-muted font-mono">{Math.round(stats.totalFocusMinutes / 60)} {isAr ? 'ساعة' : 'hrs'}</div>
           </div>
         </div>
       </div>
 
       {/* Main Tabs Selection */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#233529] pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-default)] pb-3">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <button
             onClick={() => setActiveTab('archive')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'archive'
-                ? 'bg-accent text-black font-bold shadow-md shadow-accent/20'
-                : 'bg-[#152019] text-muted hover:text-white border border-[#233529]'
+                ? 'bg-accent text-[var(--accent-ink)] font-bold shadow-md shadow-accent/20'
+                : 'bg-[var(--surface-inset)] text-muted hover:text-[var(--text-primary)] border border-[var(--border-default)]'
             }`}
           >
             <span>🗄️</span>
@@ -337,8 +337,8 @@ export const ArchiveHistoryView: React.FC = () => {
             onClick={() => setActiveTab('timeline')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'timeline'
-                ? 'bg-accent text-black font-bold shadow-md shadow-accent/20'
-                : 'bg-[#152019] text-muted hover:text-white border border-[#233529]'
+                ? 'bg-accent text-[var(--accent-ink)] font-bold shadow-md shadow-accent/20'
+                : 'bg-[var(--surface-inset)] text-muted hover:text-[var(--text-primary)] border border-[var(--border-default)]'
             }`}
           >
             <span>📜</span>
@@ -352,8 +352,8 @@ export const ArchiveHistoryView: React.FC = () => {
             onClick={() => setActiveTab('studios_logs')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'studios_logs'
-                ? 'bg-accent text-black font-bold shadow-md shadow-accent/20'
-                : 'bg-[#152019] text-muted hover:text-white border border-[#233529]'
+                ? 'bg-accent text-[var(--accent-ink)] font-bold shadow-md shadow-accent/20'
+                : 'bg-[var(--surface-inset)] text-muted hover:text-[var(--text-primary)] border border-[var(--border-default)]'
             }`}
           >
             <span>📊</span>
@@ -384,7 +384,7 @@ export const ArchiveHistoryView: React.FC = () => {
           {dateQuery && (
             <button
               onClick={() => setDateQuery('')}
-              className="px-2 py-1 text-xs text-muted hover:text-white"
+              className="px-2 py-1 text-xs text-muted hover:text-[var(--text-primary)]"
               title={isAr ? 'إلغاء تصفية التاريخ' : 'Clear date'}
             >
               ✕
@@ -394,7 +394,7 @@ export const ArchiveHistoryView: React.FC = () => {
       </div>
 
       {/* Filter Row */}
-      <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-[#111914] border border-[#203126]">
+      <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-[var(--surface-raised)] border border-[var(--border-subtle)]">
         {/* Domain Filter Pills */}
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <span className="text-muted pe-1 font-mono text-[11px]">{isAr ? 'المجال:' : 'Domain:'}</span>
@@ -405,8 +405,8 @@ export const ArchiveHistoryView: React.FC = () => {
                 onClick={() => setDomainFilter(dom)}
                 className={`px-2.5 py-1 rounded-lg transition-colors font-medium ${
                   domainFilter === dom
-                    ? 'bg-[#1f3326] text-accent font-bold border border-accent/40'
-                    : 'text-muted hover:text-white bg-[#152019] border border-transparent'
+                    ? 'bg-[var(--surface-active)] text-accent font-bold border border-accent/40'
+                    : 'text-muted hover:text-[var(--text-primary)] bg-[var(--surface-inset)] border border-transparent'
                 }`}
               >
                 {dom === 'all' ? (isAr ? 'الكل' : 'All') : getDomainLabel(dom, isAr)}
@@ -480,12 +480,12 @@ export const ArchiveHistoryView: React.FC = () => {
               {filteredArchived.map((item) => (
                 <article
                   key={item.id}
-                  className="panel p-4 rounded-2xl bg-[#111914] border border-[#233529] hover:border-[#344d3d] transition-all flex flex-col justify-between space-y-3 group shadow-md"
+                  className="panel p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-default)] hover:border-[var(--border-strong)] transition-all flex flex-col justify-between space-y-3 group shadow-md"
                 >
                   <div className="space-y-2.5">
                     {/* Card Header */}
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#18261e] border border-[#283e30] text-accent font-semibold flex items-center gap-1.5">
+                      <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[var(--surface-chip)] border border-[var(--border-default)] text-accent font-semibold flex items-center gap-1.5">
                         <span>{getDomainLabel(item.domain, isAr)}</span>
                       </span>
 
@@ -498,7 +498,7 @@ export const ArchiveHistoryView: React.FC = () => {
                     <div>
                       <h3
                         onClick={() => setInspectingItem({ archivedItem: item })}
-                        className="text-base font-bold text-white group-hover:text-accent transition-colors cursor-pointer leading-snug"
+                        className="text-base font-bold text-[var(--text-primary)] group-hover:text-accent transition-colors cursor-pointer leading-snug"
                       >
                         {item.title}
                       </h3>
@@ -509,7 +509,7 @@ export const ArchiveHistoryView: React.FC = () => {
 
                     {/* Linked Goal Badge */}
                     {item.linkedGoalTitle && (
-                      <div className="text-[11px] px-2 py-0.5 rounded bg-emerald-950/30 text-emerald-300 border border-emerald-800/30 w-fit flex items-center gap-1">
+                      <div className="text-[11px] px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--tone-success)] border border-[var(--tone-success-line)] w-fit flex items-center gap-1">
                         <span>🎯</span>
                         <span className="truncate max-w-[200px]">{item.linkedGoalTitle}</span>
                       </div>
@@ -517,17 +517,17 @@ export const ArchiveHistoryView: React.FC = () => {
 
                     {/* Metrics Summary */}
                     {item.metricsSummary && (
-                      <div className="text-xs text-white/80 bg-[#16231b] p-2 rounded-lg border border-[#213529] font-mono">
+                      <div className="text-xs text-[var(--text-secondary)] bg-[var(--surface-chip)] p-2 rounded-lg border border-[var(--border-subtle)] font-mono">
                         {item.metricsSummary}
                       </div>
                     )}
                   </div>
 
                   {/* Actions: Details & Restore */}
-                  <div className="pt-2 border-t border-[#1e2e24] flex items-center justify-between gap-2">
+                  <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
                     <button
                       onClick={() => setInspectingItem({ archivedItem: item })}
-                      className="text-xs text-muted hover:text-white py-1 px-2.5 rounded-lg hover:bg-[#1a2920] transition-colors"
+                      className="text-xs text-muted hover:text-[var(--text-primary)] py-1 px-2.5 rounded-lg hover:bg-[var(--surface-chip)] transition-colors"
                     >
                       {isAr ? 'عرض الرحلة' : 'Inspect Journey'}
                     </button>
@@ -570,13 +570,13 @@ export const ArchiveHistoryView: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="relative ps-6 border-s-2 border-[#203126] space-y-8">
+            <div className="relative ps-6 border-s-2 border-[var(--border-subtle)] space-y-8">
               {groupedHistory.map((group) => (
                 <div key={group.date} className="space-y-3 relative">
                   {/* Date Badge Node */}
                   <div className="flex items-center gap-2">
-                    <span className="absolute -start-[31px] w-3 h-3 rounded-full bg-accent border-4 border-[#0c130f]"></span>
-                    <span className="text-xs font-mono font-bold text-accent bg-[#14231a] px-2.5 py-0.5 rounded-md border border-[#233a2c]">
+                    <span className="absolute -start-[31px] w-3 h-3 rounded-full bg-accent border-4 border-[var(--border-subtle)]"></span>
+                    <span className="text-xs font-mono font-bold text-accent bg-[var(--surface-inset)] px-2.5 py-0.5 rounded-md border border-[var(--border-default)]">
                       {group.label}
                     </span>
                     <span className="text-[11px] font-mono text-muted">
@@ -590,30 +590,30 @@ export const ArchiveHistoryView: React.FC = () => {
                       <div
                         key={item.id}
                         onClick={() => setInspectingItem({ historyItem: item })}
-                        className="p-3.5 rounded-xl bg-[#111914] border border-[#213328] hover:border-accent/40 transition-all cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md"
+                        className="p-3.5 rounded-xl bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-accent/40 transition-all cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md"
                       >
                         <div className="space-y-1.5 flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {/* Domain Tag */}
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-[#18261e] text-accent border border-[#283e30] font-semibold">
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-default)] font-semibold">
                               {getDomainLabel(item.domain, isAr)}
                             </span>
 
                             {/* Event Type Pill */}
-                            <span className="text-[10px] px-2 py-0.5 rounded border font-semibold text-muted bg-[#152019] border-[#25392d]">
+                            <span className="text-[10px] px-2 py-0.5 rounded border font-semibold text-muted bg-[var(--surface-inset)] border-[var(--border-default)]">
                               {getEventTypeLabel(item.eventType, isAr)}
                             </span>
 
                             {/* Extra Badge if any */}
                             {item.badge && (
-                              <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-300 border border-emerald-800/40 font-semibold">
+                              <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--tone-success)] border border-[var(--tone-success-line)] font-semibold">
                                 {item.badge}
                               </span>
                             )}
                           </div>
 
                           {/* Event Title */}
-                          <h4 className="text-sm font-bold text-white group-hover:text-accent transition-colors leading-snug truncate">
+                          <h4 className="text-sm font-bold text-[var(--text-primary)] group-hover:text-accent transition-colors leading-snug truncate">
                             {item.title}
                           </h4>
 
@@ -632,7 +632,7 @@ export const ArchiveHistoryView: React.FC = () => {
                           )}
 
                           {item.linkedGoalTitle && (
-                            <span className="text-[10px] text-emerald-400/90 flex items-center gap-1 mt-0.5">
+                            <span className="text-[10px] text-[var(--tone-success)] flex items-center gap-1 mt-0.5">
                               <span>🎯</span>
                               <span className="truncate max-w-[140px]">{item.linkedGoalTitle}</span>
                             </span>
@@ -659,11 +659,11 @@ export const ArchiveHistoryView: React.FC = () => {
         <section className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 1. Quran Logs Box */}
-            <div className="panel p-4 rounded-2xl bg-[#111914] border border-[#233529] space-y-3">
-              <div className="flex items-center justify-between border-b border-[#213328] pb-2">
+            <div className="panel p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-default)] space-y-3">
+              <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">📖</span>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-base font-bold text-[var(--text-primary)]">
                     {isAr ? 'سجل جلسات حفظ وتسميع القرآن' : 'Quran Memorization History'}
                   </h3>
                 </div>
@@ -689,10 +689,10 @@ export const ArchiveHistoryView: React.FC = () => {
                   return sessions.map((qs) => (
                     <div
                       key={qs.id}
-                      className="p-2.5 rounded-xl bg-[#152019] border border-[#203125] flex items-center justify-between text-xs"
+                      className="p-2.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] flex items-center justify-between text-xs"
                     >
                       <div>
-                        <div className="font-bold text-white">
+                        <div className="font-bold text-[var(--text-primary)]">
                           {qs.surahName} ({qs.ayahStart}-{qs.ayahEnd})
                         </div>
                         <div className="text-[11px] text-muted">
@@ -709,11 +709,11 @@ export const ArchiveHistoryView: React.FC = () => {
             </div>
 
             {/* 2. Reading Logs Box */}
-            <div className="panel p-4 rounded-2xl bg-[#111914] border border-[#233529] space-y-3">
-              <div className="flex items-center justify-between border-b border-[#213328] pb-2">
+            <div className="panel p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-default)] space-y-3">
+              <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">📚</span>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-base font-bold text-[var(--text-primary)]">
                     {isAr ? 'سجل جلسات وخزانة القراءة' : 'Reading Sessions & Vault'}
                   </h3>
                 </div>
@@ -739,15 +739,15 @@ export const ArchiveHistoryView: React.FC = () => {
                   return sessions.map((rs) => (
                     <div
                       key={rs.id}
-                      className="p-2.5 rounded-xl bg-[#152019] border border-[#203125] flex items-center justify-between text-xs"
+                      className="p-2.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] flex items-center justify-between text-xs"
                     >
                       <div>
-                        <div className="font-bold text-white">{rs.bookTitle}</div>
+                        <div className="font-bold text-[var(--text-primary)]">{rs.bookTitle}</div>
                         <div className="text-[11px] text-muted">
                           {rs.date} • {rs.pagesRead} {isAr ? 'صفحة' : 'pages'}
                         </div>
                       </div>
-                      <span className="font-mono text-sky-400 text-xs font-semibold">
+                      <span className="font-mono text-[var(--tone-info)] text-xs font-semibold">
                         {rs.durationMinutes} {isAr ? 'دقيقة' : 'min'}
                       </span>
                     </div>
@@ -757,11 +757,11 @@ export const ArchiveHistoryView: React.FC = () => {
             </div>
 
             {/* 3. Workout Sessions Box */}
-            <div className="panel p-4 rounded-2xl bg-[#111914] border border-[#233529] space-y-3">
-              <div className="flex items-center justify-between border-b border-[#213328] pb-2">
+            <div className="panel p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-default)] space-y-3">
+              <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">⚡</span>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-base font-bold text-[var(--text-primary)]">
                     {isAr ? 'سجل حصص اللياقة البدنية' : 'Workout Sessions History'}
                   </h3>
                 </div>
@@ -787,15 +787,15 @@ export const ArchiveHistoryView: React.FC = () => {
                   return sessions.map((ws) => (
                     <div
                       key={ws.id}
-                      className="p-2.5 rounded-xl bg-[#152019] border border-[#203125] flex items-center justify-between text-xs"
+                      className="p-2.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] flex items-center justify-between text-xs"
                     >
                       <div>
-                        <div className="font-bold text-white">{ws.title}</div>
+                        <div className="font-bold text-[var(--text-primary)]">{ws.title}</div>
                         <div className="text-[11px] text-muted">
                           {ws.date} • {ws.workoutType} • حجم {ws.volumeKg} كغ
                         </div>
                       </div>
-                      <span className="font-mono text-orange-400 text-xs font-semibold">
+                      <span className="font-mono text-[var(--tone-warning)] text-xs font-semibold">
                         {ws.durationMinutes} {isAr ? 'دقيقة' : 'min'}
                       </span>
                     </div>
@@ -805,11 +805,11 @@ export const ArchiveHistoryView: React.FC = () => {
             </div>
 
             {/* 4. Creative Art Pieces Box */}
-            <div className="panel p-4 rounded-2xl bg-[#111914] border border-[#233529] space-y-3">
-              <div className="flex items-center justify-between border-b border-[#213328] pb-2">
+            <div className="panel p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-default)] space-y-3">
+              <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">🎨</span>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-base font-bold text-[var(--text-primary)]">
                     {isAr ? 'معرض الأعمال والمشاريع الفنية' : 'Art Studio Gallery & Pieces'}
                   </h3>
                 </div>
@@ -835,15 +835,15 @@ export const ArchiveHistoryView: React.FC = () => {
                   return pieces.map((piece) => (
                     <div
                       key={piece.id}
-                      className="p-2.5 rounded-xl bg-[#152019] border border-[#203125] flex items-center justify-between text-xs"
+                      className="p-2.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] flex items-center justify-between text-xs"
                     >
                       <div>
-                        <div className="font-bold text-white">{piece.title}</div>
+                        <div className="font-bold text-[var(--text-primary)]">{piece.title}</div>
                         <div className="text-[11px] text-muted">
                           {piece.completedDate} • وسيط {piece.medium}
                         </div>
                       </div>
-                      <span className="font-mono text-purple-400 text-xs font-semibold">
+                      <span className="font-mono text-[var(--tone-purple)] text-xs font-semibold">
                         {piece.durationMinutes} {isAr ? 'دقيقة' : 'min'}
                       </span>
                     </div>
@@ -861,34 +861,34 @@ export const ArchiveHistoryView: React.FC = () => {
       {inspectingItem && (
         <div className="modal-backdrop" onClick={() => setInspectingItem(null)}>
           <div
-            className="modal-content max-w-xl p-6 bg-[#0f1712] border border-[#25392d] rounded-2xl shadow-2xl space-y-5"
+            className="modal-content max-w-xl p-6 bg-[var(--surface-deep)] border border-[var(--border-default)] rounded-2xl shadow-2xl space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#18261e] text-accent border border-[#283e30] font-semibold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-default)] font-semibold">
                   {inspectingItem.archivedItem
                     ? isAr ? inspectingItem.archivedItem.typeLabelAr : inspectingItem.archivedItem.typeLabelEn
                     : getDomainLabel(inspectingItem.historyItem!.domain, isAr)}
                 </span>
-                <h2 className="text-lg font-bold text-white mt-1.5">
+                <h2 className="text-lg font-bold text-[var(--text-primary)] mt-1.5">
                   {inspectingItem.archivedItem?.title || inspectingItem.historyItem?.title}
                 </h2>
               </div>
               <button
                 onClick={() => setInspectingItem(null)}
-                className="text-muted hover:text-white text-lg p-1"
+                className="text-muted hover:text-[var(--text-primary)] text-lg p-1"
               >
                 ✕
               </button>
             </div>
 
             {/* Journey Meta Grid */}
-            <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-[#142018] border border-[#213528] text-xs font-mono">
+            <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] text-xs font-mono">
               <div>
                 <span className="text-muted block text-[11px]">{isAr ? 'المجال الأصلي:' : 'Domain:'}</span>
-                <span className="text-white font-medium">
+                <span className="text-[var(--text-primary)] font-medium">
                   {getDomainLabel((inspectingItem.archivedItem?.domain || inspectingItem.historyItem?.domain)!, isAr)}
                 </span>
               </div>
@@ -902,7 +902,7 @@ export const ArchiveHistoryView: React.FC = () => {
 
               <div>
                 <span className="text-muted block text-[11px]">{isAr ? 'تاريخ التسجيل/الإنشاء:' : 'Date:'}</span>
-                <span className="text-white">
+                <span className="text-[var(--text-primary)]">
                   {inspectingItem.archivedItem?.createdAt || inspectingItem.historyItem?.date}
                 </span>
               </div>
@@ -910,7 +910,7 @@ export const ArchiveHistoryView: React.FC = () => {
               {inspectingItem.archivedItem?.archivedAt && (
                 <div>
                   <span className="text-muted block text-[11px]">{isAr ? 'تاريخ الأرشفة:' : 'Archived At:'}</span>
-                  <span className="text-amber-400">
+                  <span className="text-[var(--tone-warning)]">
                     {localDayFrom(inspectingItem.archivedItem.archivedAt)}
                   </span>
                 </div>
@@ -921,7 +921,7 @@ export const ArchiveHistoryView: React.FC = () => {
             {(inspectingItem.historyItem?.description || inspectingItem.archivedItem?.metricsSummary) && (
               <div className="space-y-1.5">
                 <div className="text-xs font-mono text-muted">{isAr ? 'تفاصيل السجل والتراكم:' : 'Details & Metrics:'}</div>
-                <div className="p-3 rounded-xl bg-[#121c15] border border-[#203125] text-xs text-white/90 leading-relaxed font-mono">
+                <div className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] leading-relaxed font-mono">
                   {inspectingItem.historyItem?.description || inspectingItem.archivedItem?.metricsSummary}
                 </div>
               </div>
@@ -929,8 +929,8 @@ export const ArchiveHistoryView: React.FC = () => {
 
             {/* Linked Goal Context */}
             {(inspectingItem.historyItem?.linkedGoalTitle || inspectingItem.archivedItem?.linkedGoalTitle) && (
-              <div className="p-3 rounded-xl bg-[#102217] border border-emerald-800/40 text-xs flex items-center justify-between">
-                <div className="flex items-center gap-2 text-emerald-300">
+              <div className="p-3 rounded-xl bg-[var(--surface-deep)] border border-[var(--tone-success-line)] text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[var(--tone-success)]">
                   <span>🎯</span>
                   <span>
                     {isAr ? 'مرتبط بالهدف الاستراتيجي:' : 'Linked Goal:'}{' '}
@@ -941,7 +941,7 @@ export const ArchiveHistoryView: React.FC = () => {
             )}
 
             {/* Modal Bottom Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-[#1e2e24]">
+            <div className="flex items-center justify-between pt-3 border-t border-[var(--border-subtle)]">
               {inspectingItem.archivedItem ? (
                 <button
                   onClick={() => handleRestore(inspectingItem.archivedItem!)}
