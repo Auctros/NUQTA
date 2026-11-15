@@ -153,8 +153,38 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 15. Theme consistency: no hardcoded colour literals inside className strings.
+//     Arbitrary-value utilities like `bg-[#141e19]` or `text-[#edf2f4]` freeze a
+//     surface to one theme and are the exact regression this gate prevents: a
+//     component stays dark while light mode is active. Colours must come from the
+//     semantic tokens (var(--surface-*), var(--text-*), var(--tone-*), var(--heat-*)).
+//     Inline `style={{ background: '#…' }}` is deliberately NOT scanned — user data
+//     (book covers, artwork colours) legitimately stores raw hexes.
+{
+  const hits = [];
+  const classAttr = /className=(?:"([^"]*)"|\{`([^`]*)`\}|\{'([^']*)'\}|\{"([^"]*)"\})/g;
+  for (const f of srcFiles) {
+    let m;
+    classAttr.lastIndex = 0;
+    while ((m = classAttr.exec(f.text))) {
+      const value = m[1] ?? m[2] ?? m[3] ?? m[4] ?? '';
+      const hex = value.match(/#[0-9a-fA-F]{3,8}\b/);
+      if (hex) {
+        const line = f.text.slice(0, m.index).split('\n').length;
+        hits.push(`${f.path}:${line}: ${hex[0]}`);
+      }
+    }
+  }
+  if (hits.length) {
+    fail(
+      'Hardcoded colour in className (breaks light/dark) — use a semantic token instead',
+      hits.slice(0, 8).join('\n    ')
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (14 rules).');
+console.log('Invariant check passed (15 rules).');

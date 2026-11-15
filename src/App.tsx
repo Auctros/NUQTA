@@ -223,17 +223,17 @@ export default function App() {
   ];
 
   const studiosNav: NavDef[] = [
-    { id: 'quran', label: isAr ? 'حفظ القرآن' : 'Quran Studio', shortLabel: isAr ? 'القرآن' : 'Quran', icon: 'book-open' },
+    { id: 'quran', label: isAr ? 'حفظ القرآن' : 'Quran Studio', shortLabel: isAr ? 'القرآن' : 'Quran', icon: 'mosque' },
     { id: 'reading', label: isAr ? 'استوديو القراءة' : 'Reading Vault', shortLabel: isAr ? 'القراءة' : 'Reading', icon: 'book-open' },
-    { id: 'workout', label: isAr ? 'اللياقة البدنية' : 'Home Workout', shortLabel: isAr ? 'اللياقة' : 'Workout', icon: 'activity' },
-    { id: 'drawing', label: isAr ? 'مرسم الإبداع' : 'Art Studio', shortLabel: isAr ? 'المرسم' : 'Studio', icon: 'grid' }
+    { id: 'workout', label: isAr ? 'اللياقة البدنية' : 'Home Workout', shortLabel: isAr ? 'اللياقة' : 'Workout', icon: 'dumbbell' },
+    { id: 'drawing', label: isAr ? 'مرسم الإبداع' : 'Art Studio', shortLabel: isAr ? 'المرسم' : 'Studio', icon: 'brush' }
   ];
 
   const lifeNav: NavDef[] = [
     { id: 'archive', label: isAr ? 'الذاكرة والأرشيف' : 'Archive & History', shortLabel: isAr ? 'الأرشيف' : 'Archive', icon: 'archive' },
     { id: 'finance', label: isAr ? 'المال' : 'Money', icon: 'wallet' },
     { id: 'health', label: isAr ? 'الصحة' : 'Health', icon: 'activity' },
-    { id: 'journal', label: isAr ? 'اليوميات' : 'Journal', icon: 'book-open' },
+    { id: 'journal', label: isAr ? 'اليوميات' : 'Journal', icon: 'notebook' },
     { id: 'insights', label: isAr ? 'الرؤى' : 'Insights', icon: 'chart' }
   ];
 

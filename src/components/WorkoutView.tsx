@@ -2,7 +2,7 @@ import { localDateKey, parseDateKey } from '../lib/dateKey';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { WorkoutRoutine, ExerciseEntry, ExerciseSet, MuscleMovement } from '../types';
-import { Button } from './ui';
+import { Button, NuqtaSelect } from './ui';
 import {
   StudioFrame,
   StudioSection,
@@ -409,7 +409,7 @@ export const WorkoutView: React.FC = () => {
   const tabs: StudioTab[] = [
     { id: 'today', label: isAr ? 'اليوم' : 'Today', icon: 'dumbbell' },
     { id: 'programs', label: isAr ? 'البرامج' : 'Programs', icon: 'list', count: routines.length },
-    { id: 'exercises', label: isAr ? 'مكتبة التمارين' : 'Exercises', icon: 'search' },
+    { id: 'exercises', label: isAr ? 'مكتبة التمارين' : 'Exercises', icon: 'activity' },
     { id: 'history', label: isAr ? 'السجل' : 'History', icon: 'history' },
     { id: 'progress', label: isAr ? 'التقدم' : 'Progress', icon: 'chart' }
   ];
@@ -1015,43 +1015,28 @@ export const WorkoutView: React.FC = () => {
                 placeholder={isAr ? 'ابحث عن تمرين…' : 'Search exercises…'}
                 className="input flex-1 min-w-[160px] text-[var(--fs-xs)]"
               />
-              <select
-                className="select text-[var(--fs-xs)]"
-                value={libMovement}
-                onChange={(e) => setLibMovement(e.target.value as typeof libMovement)}
-                aria-label={isAr ? 'الحركة' : 'Movement'}
-              >
+              <NuqtaSelect value={libMovement} onChange={(e) => setLibMovement(e.target.value as typeof libMovement)} aria-label={isAr ? 'الحركة' : 'Movement'} className="text-[var(--fs-xs)]">
                 <option value="all">{isAr ? 'كل الحركات' : 'All movements'}</option>
                 {(['push', 'legs', 'core', 'back_pull', 'mobility', 'cardio'] as MuscleMovement[]).map((m) => (
                   <option key={m} value={m}>
                     {movementLabel(m, isAr)}
                   </option>
                 ))}
-              </select>
-              <select
-                className="select text-[var(--fs-xs)]"
-                value={libEquipment}
-                onChange={(e) => setLibEquipment(e.target.value)}
-                aria-label={isAr ? 'الأدوات' : 'Equipment'}
-              >
+              </NuqtaSelect>
+              <NuqtaSelect value={libEquipment} onChange={(e) => setLibEquipment(e.target.value)} aria-label={isAr ? 'الأدوات' : 'Equipment'} className="text-[var(--fs-xs)]">
                 <option value="all">{isAr ? 'كل الأدوات' : 'All equipment'}</option>
                 {['bodyweight_only', 'mat', 'chair_elevated', 'light_dumbbells', 'resistance_band', 'pullup_bar'].map((eq) => (
                   <option key={eq} value={eq}>
                     {equipmentLabel(eq as never, isAr)}
                   </option>
                 ))}
-              </select>
-              <select
-                className="select text-[var(--fs-xs)]"
-                value={libDifficulty}
-                onChange={(e) => setLibDifficulty(e.target.value)}
-                aria-label={isAr ? 'المستوى' : 'Difficulty'}
-              >
+              </NuqtaSelect>
+              <NuqtaSelect value={libDifficulty} onChange={(e) => setLibDifficulty(e.target.value)} aria-label={isAr ? 'المستوى' : 'Difficulty'} className="text-[var(--fs-xs)]">
                 <option value="all">{isAr ? 'كل المستويات' : 'All levels'}</option>
                 <option value="beginner">{isAr ? 'مبتدئ' : 'Beginner'}</option>
                 <option value="intermediate">{isAr ? 'متوسط' : 'Intermediate'}</option>
                 <option value="advanced">{isAr ? 'متقدم' : 'Advanced'}</option>
-              </select>
+              </NuqtaSelect>
             </div>
           </StudioSection>
 
@@ -1174,28 +1159,19 @@ export const WorkoutView: React.FC = () => {
             title={isAr ? 'أداء التمرين عبر الزمن' : 'Exercise performance over time'}
             action={
               <div className="flex gap-2">
-                <select
-                  className="select text-[var(--fs-xs)]"
-                  value={selectedExercise}
-                  onChange={(e) => setSelectedExercise(e.target.value)}
-                  aria-label={isAr ? 'التمرين' : 'Exercise'}
-                >
+                <NuqtaSelect value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} aria-label={isAr ? 'التمرين' : 'Exercise'} className="text-[var(--fs-xs)]">
+
                   {exerciseNames.map((n) => (
                     <option key={n} value={n}>
                       {n}
                     </option>
                   ))}
-                </select>
-                <select
-                  className="select text-[var(--fs-xs)]"
-                  value={progressMetric}
-                  onChange={(e) => setProgressMetric(e.target.value as typeof progressMetric)}
-                  aria-label={isAr ? 'المقياس' : 'Metric'}
-                >
+                </NuqtaSelect>
+                <NuqtaSelect value={progressMetric} onChange={(e) => setProgressMetric(e.target.value as typeof progressMetric)} aria-label={isAr ? 'المقياس' : 'Metric'} className="text-[var(--fs-xs)]">
                   <option value="reps">{isAr ? 'تكرارات' : 'Reps'}</option>
                   <option value="volume">{isAr ? 'حجم' : 'Volume'}</option>
                   <option value="minutes">{isAr ? 'دقائق' : 'Minutes'}</option>
-                </select>
+                </NuqtaSelect>
               </div>
             }
           >

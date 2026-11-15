@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { ExpenseRecord } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
+import { NuqtaSelect } from './ui';
 
 export const FinanceView: React.FC = () => {
   const {
@@ -345,31 +346,23 @@ export const FinanceView: React.FC = () => {
 
                 <div className="field">
                   <label>{isAr ? 'النوع' : 'Type'}</label>
-                  <select
-                    className="select"
-                    value={formType}
-                    onChange={(e) => setFormType(e.target.value as any)}
-                  >
+                  <NuqtaSelect value={formType} onChange={(e) => setFormType(e.target.value as any)}>
                     <option value="expense">{isAr ? 'مصروف (إنفاق)' : 'Expense'}</option>
                     <option value="income">{isAr ? 'دخل (وارد)' : 'Income'}</option>
-                  </select>
+                  </NuqtaSelect>
                 </div>
               </div>
 
               <div className="field">
                 <label>{isAr ? 'التصنيف' : 'Category'}</label>
-                <select
-                  className="select"
-                  value={formCategory}
-                  onChange={(e) => setFormCategory(e.target.value as any)}
-                >
+                <NuqtaSelect value={formCategory} onChange={(e) => setFormCategory(e.target.value as any)}>
                   <option value="food">{isAr ? 'طعام وغذاء' : 'Food & Dining'}</option>
                   <option value="transport">{isAr ? 'مواصلات وتنقل' : 'Transport'}</option>
                   <option value="housing">{isAr ? 'سكن وفواتير' : 'Housing & Utilities'}</option>
                   <option value="tech">{isAr ? 'أدوات وتقنية' : 'Tech & Subscriptions'}</option>
                   <option value="leisure">{isAr ? 'ترفيه' : 'Leisure'}</option>
                   <option value="health">{isAr ? 'صحة' : 'Health'}</option>
-                </select>
+                </NuqtaSelect>
               </div>
 
               <div className="form-actions">

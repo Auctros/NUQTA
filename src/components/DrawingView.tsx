@@ -2,7 +2,7 @@ import { localDateKey, parseDateKey, addDaysToKey } from '../lib/dateKey';
 import React, { useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { ArtMedium, ArtProject, ProjectStage } from '../types';
-import { Button, Field, Input, Modal, Select, Textarea, Toast } from './ui';
+import { Button, Field, Input, Modal, NuqtaSelect, Textarea, Toast } from './ui';
 import { StudioFrame, StudioSection, StudioStat, StudioBars, StudioEmpty, StudioTab } from './studios/StudioKit';
 
 type DTab = 'workspace' | 'projects' | 'practice' | 'gallery' | 'progress';
@@ -511,13 +511,14 @@ export const DrawingView: React.FC = () => {
               </label>
               <label className="field">
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">{isAr ? 'الوسيط' : 'Medium'}</span>
-                <select className="select w-full text-[var(--fs-xs)]" value={pieceMedium} onChange={(e) => setPieceMedium(e.target.value as ArtMedium)}>
+                <NuqtaSelect value={pieceMedium} onChange={(e) => setPieceMedium(e.target.value as ArtMedium)} className="text-[var(--fs-xs)]">
+
                   {(Object.keys(MEDIUM_LABEL) as ArtMedium[]).map((m) => (
                     <option key={m} value={m}>
                       {mediumLabel(m, isAr)}
                     </option>
                   ))}
-                </select>
+                </NuqtaSelect>
               </label>
               <label className="field">
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">{isAr ? 'المدة (دقائق)' : 'Minutes'}</span>
@@ -525,24 +526,25 @@ export const DrawingView: React.FC = () => {
               </label>
               <label className="field">
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">{isAr ? 'المشروع المرتبط' : 'Linked project'}</span>
-                <select className="select w-full text-[var(--fs-xs)]" value={pieceProject} onChange={(e) => setPieceProject(e.target.value)}>
+                <NuqtaSelect value={pieceProject} onChange={(e) => setPieceProject(e.target.value)} className="text-[var(--fs-xs)]">
                   <option value="">{isAr ? 'عمل حر مستقل' : 'Standalone piece'}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.title}
                     </option>
                   ))}
-                </select>
+                </NuqtaSelect>
               </label>
               <label className="field">
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">{isAr ? 'المرحلة' : 'Stage'}</span>
-                <select className="select w-full text-[var(--fs-xs)]" value={pieceStage} onChange={(e) => setPieceStage(e.target.value as ProjectStage)}>
+                <NuqtaSelect value={pieceStage} onChange={(e) => setPieceStage(e.target.value as ProjectStage)} className="text-[var(--fs-xs)]">
+
                   {(['ideation', 'sketching', 'inking', 'coloring', 'polishing', 'completed'] as ProjectStage[]).map((s) => (
                     <option key={s} value={s}>
                       {stageLabel(s, isAr)}
                     </option>
                   ))}
-                </select>
+                </NuqtaSelect>
               </label>
               <label className="field sm:col-span-2">
                 <span className="text-[var(--fs-xs)] text-[var(--text-secondary)] block mb-1">{isAr ? 'ملاحظات وتقنيات' : 'Notes / techniques'}</span>
@@ -751,22 +753,22 @@ export const DrawingView: React.FC = () => {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={isAr ? 'الوسيط' : 'Medium'} htmlFor="pr-medium">
-              <Select id="pr-medium" value={projMedium} onChange={(e) => setProjMedium(e.target.value as ArtMedium)}>
+              <NuqtaSelect id="pr-medium" value={projMedium} onChange={(e) => setProjMedium(e.target.value as ArtMedium)}>
                 {(Object.keys(MEDIUM_LABEL) as ArtMedium[]).map((m) => (
                   <option key={m} value={m}>
                     {mediumLabel(m, isAr)}
                   </option>
                 ))}
-              </Select>
+              </NuqtaSelect>
             </Field>
             <Field label={isAr ? 'المرحلة' : 'Stage'} htmlFor="pr-stage">
-              <Select id="pr-stage" value={projStage} onChange={(e) => setProjStage(e.target.value as ProjectStage)}>
+              <NuqtaSelect id="pr-stage" value={projStage} onChange={(e) => setProjStage(e.target.value as ProjectStage)}>
                 {(['ideation', 'sketching', 'inking', 'coloring', 'polishing', 'completed', 'archived'] as ProjectStage[]).map((s) => (
                   <option key={s} value={s}>
                     {stageLabel(s, isAr)}
                   </option>
                 ))}
-              </Select>
+              </NuqtaSelect>
             </Field>
           </div>
           <Field label={isAr ? 'لون المشروع' : 'Project colour'} htmlFor="pr-color">

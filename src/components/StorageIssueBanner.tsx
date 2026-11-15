@@ -25,14 +25,14 @@ export const StorageIssueBanner: React.FC<{ isAr: boolean }> = ({ isAr }) => {
       role="alert"
       style={{
         position: 'fixed', top: 0, insetInline: 0, zIndex: 100, padding: '10px 16px',
-        background: '#7a1f1f', color: '#fff', fontSize: 13, display: 'flex',
+        background: 'var(--state-danger)', color: 'var(--text-on-state)', fontSize: 13, display: 'flex',
         justifyContent: 'space-between', gap: 12, alignItems: 'center'
       }}
     >
       <span>{message}</span>
       <button
         onClick={() => { clearStorageIssues(); setIssues([]); }}
-        style={{ background: 'transparent', color: '#fff', border: '1px solid #fff8', borderRadius: 6, padding: '2px 10px' }}
+        style={{ background: 'transparent', color: 'var(--text-on-state)', border: '1px solid color-mix(in srgb, var(--text-on-state) 50%, transparent)', borderRadius: 6, padding: '2px 10px' }}
       >
         {isAr ? 'إخفاء' : 'Dismiss'}
       </button>

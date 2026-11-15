@@ -2,6 +2,7 @@ import { localDateKey, parseDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { Habit, BookItem, BookCategory } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { NuqtaSelect } from './ui';
 
 interface ReadingAppModalProps {
   habit: Habit;
@@ -245,17 +246,17 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
         {/* ================= HEADER BAR ================= */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--d-reading-border)] bg-[var(--d-reading-raised)]">
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-[var(--d-reading-accent)] font-bold text-xl shadow-inner">
+            <span className="w-10 h-10 rounded-xl bg-[var(--tone-warning-wash)] border border-[var(--tone-warning-line)] flex items-center justify-center text-[var(--d-reading-accent)] font-bold text-xl shadow-inner">
               📖
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono tracking-widest uppercase px-2 py-0.5 rounded bg-amber-500/20 text-[var(--d-reading-accent-strong)] font-bold">
+                <span className="text-[10px] font-mono tracking-widest uppercase px-2 py-0.5 rounded bg-[var(--tone-warning-wash)] text-[var(--d-reading-accent-strong)] font-bold">
                   {isAr ? 'نظام القراءة والكتب المستقل' : 'READING ECOSYSTEM & VAULT'}
                 </span>
                 <span className="text-xs text-muted">· {habit.name}</span>
               </div>
-              <h2 className="text-lg font-bold text-[#edf2f4] leading-tight">
+              <h2 className="text-lg font-bold text-[var(--text-primary)] leading-tight">
                 {isAr ? 'واحة القراءة والمكتبة الذكية' : 'Intelligent Reading Sanctuary'}
               </h2>
             </div>
@@ -300,7 +301,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-muted hover:text-[var(--text-primary)] hover:bg-white/5 transition-colors"
+              className="p-1.5 rounded-lg text-muted hover:text-[var(--text-primary)] hover:bg-[var(--surface-faint)] transition-colors"
               aria-label="Close"
             >
               <span className="text-lg font-bold px-2">✕</span>
@@ -315,7 +316,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
             <div className="space-y-6">
               {/* Active Book Spotlight Hero */}
               {activeBook ? (
-                <div className="panel p-5 sm:p-6 border border-amber-500/25 bg-gradient-to-br from-[var(--d-reading-chip)] via-[var(--d-reading-raised)] to-[var(--d-reading-raised)] rounded-2xl relative overflow-hidden">
+                <div className="panel p-5 sm:p-6 border border-[var(--tone-warning-line)] bg-gradient-to-br from-[var(--d-reading-chip)] via-[var(--d-reading-raised)] to-[var(--d-reading-raised)] rounded-2xl relative overflow-hidden">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
                     <div className="flex gap-4 items-start">
                       <div
@@ -330,7 +331,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
 
                       <div className="space-y-1.5 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/20 text-[var(--d-reading-accent-strong)] border border-amber-500/30">
+                          <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-warning-wash)] text-[var(--d-reading-accent-strong)] border border-[var(--tone-warning-line)]">
                             {isAr ? 'الكتاب النشط حالياً' : 'Currently Reading'}
                           </span>
                           <span className="text-[11px] text-muted">
@@ -345,7 +346,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                             {activeBook.currentPage}
                           </span>
                           <span className="text-xs text-muted">/ {activeBook.totalPages} {isAr ? 'صفحة' : 'pages'}</span>
-                          <span className="text-xs font-mono px-2 py-0.5 rounded bg-white/5 text-accent font-semibold">
+                          <span className="text-xs font-mono px-2 py-0.5 rounded bg-[var(--surface-faint)] text-accent font-semibold">
                             {activeProgress}%
                           </span>
                         </div>
@@ -366,7 +367,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                           setSessionBookId(activeBook.id);
                           setActiveTab('session');
                         }}
-                        className="btn primary small bg-amber-500 hover:bg-amber-400 text-black font-bold"
+                        className="btn primary small bg-[var(--tone-warning)] hover:bg-[var(--tone-warning)] text-[var(--accent-ink)] font-bold"
                       >
                         <span>{isAr ? 'تسجيل جلسة قراءة الآن' : 'Start Reading Session'}</span>
                         <span>⚡</span>
@@ -377,7 +378,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                   {/* Progress Line */}
                   <div className="mt-5 progress-line h-2.5 rounded-full bg-[var(--d-reading-chip)] overflow-hidden">
                     <span
-                      className="bg-gradient-to-r from-amber-500 to-emerald-400 h-full block rounded-full transition-all duration-700"
+                      className="bg-gradient-to-r from-[var(--tone-warning-line)] to-[var(--tone-success-line)] h-full block rounded-full transition-all duration-700"
                       style={{ width: `${activeProgress}%` }}
                     />
                   </div>
@@ -468,7 +469,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       </div>
                       <div className="progress-line h-2 rounded-full bg-[var(--d-reading-chip)]">
                         <span
-                          className="bg-amber-400 h-full block rounded-full"
+                          className="bg-[var(--tone-warning)] h-full block rounded-full"
                           style={{ width: `${Math.min(100, Math.round((pagesReadToday / (readingData.dailyTargetPages || 20)) * 100))}%` }}
                         />
                       </div>
@@ -508,7 +509,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       </div>
                       <div className="progress-line h-2 rounded-full bg-[var(--d-reading-chip)]">
                         <span
-                          className="bg-emerald-400 h-full block rounded-full"
+                          className="bg-[var(--tone-success)] h-full block rounded-full"
                           style={{ width: `${Math.min(100, Math.round((completedBooks.length / (readingData.annualTargetBooks || 24)) * 100))}%` }}
                         />
                       </div>
@@ -569,7 +570,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       {isAr ? 'عرض الكل' : 'View all'} →
                     </button>
                   </div>
-                  <blockquote className="text-sm font-medium text-[var(--text-primary)]/95 italic border-s-2 border-amber-400 ps-3 py-1">
+                  <blockquote className="text-sm font-medium text-[var(--text-primary)]/95 italic border-s-2 border-[var(--tone-warning-line)] ps-3 py-1">
                     "{readingData.quotes![0].quote}"
                   </blockquote>
                   <div className="text-[11px] text-muted flex items-center gap-2">
@@ -596,7 +597,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       {isAr ? 'يُحسب الإنجاز فوراً كتقدم لعادة القراءة ويزيد من سلسلة استمرارك وXP.' : 'Auto-updates reading velocity, habit streak, and compounds XP.'}
                     </p>
                   </div>
-                  <span className="text-xs font-mono text-[var(--d-reading-accent-strong)] bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded">
+                  <span className="text-xs font-mono text-[var(--d-reading-accent-strong)] bg-[var(--tone-warning-wash)] border border-[var(--tone-warning-line)] px-2.5 py-1 rounded">
                     +XP & Streak
                   </span>
                 </div>
@@ -605,20 +606,17 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                   {/* Book Picker for Session */}
                   <div className="field">
                     <label className="text-xs text-muted mb-1 block">{isAr ? 'الكتاب المقروء في هذه الجلسة' : 'Select Book'}</label>
-                    <select
-                      className="select w-full text-xs font-semibold"
-                      value={sessionBookId || activeBook?.id}
-                      onChange={(e) => {
+                    <NuqtaSelect value={sessionBookId || activeBook?.id} onChange={(e) => {
                         setSessionBookId(e.target.value);
                         setActiveBook(habit.id, e.target.value);
-                      }}
-                    >
+                      }} className="text-xs font-semibold">
+
                       {readingData.books.filter((b) => b.status !== 'archived').map((b) => (
                         <option key={b.id} value={b.id}>
                           {b.title} ({b.currentPage} / {b.totalPages}p) — {b.status === 'completed' ? (isAr ? 'مكتمل' : 'Done') : (isAr ? 'قيد القراءة' : 'Reading')}
                         </option>
                       ))}
-                    </select>
+                    </NuqtaSelect>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -721,7 +719,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       </span>
                     )}
 
-                    <button type="submit" className="btn primary bg-amber-500 hover:bg-amber-400 text-black font-bold">
+                    <button type="submit" className="btn primary bg-[var(--tone-warning)] hover:bg-[var(--tone-warning)] text-[var(--accent-ink)] font-bold">
                       <span>{isAr ? 'تأكيد وحفظ الجلسة' : 'Save Session'}</span>
                       <span>✓</span>
                     </button>
@@ -759,7 +757,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                                 {s.date} · {s.durationMinutes}m · {s.speedPagesPerHour} {isAr ? 'ص/س' : 'p/h'}
                               </span>
                             </div>
-                            <span className="font-mono text-[var(--d-reading-accent)] font-bold px-2 py-0.5 rounded bg-amber-500/10">
+                            <span className="font-mono text-[var(--d-reading-accent)] font-bold px-2 py-0.5 rounded bg-[var(--tone-warning-wash)]">
                               +{s.pagesRead} {isAr ? 'ص' : 'p'}
                             </span>
                           </div>
@@ -792,7 +790,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleOpenBookModal()}
-                    className="btn primary small bg-amber-500 hover:bg-amber-400 text-black font-bold"
+                    className="btn primary small bg-[var(--tone-warning)] hover:bg-[var(--tone-warning)] text-[var(--accent-ink)] font-bold"
                   >
                     <span>+ {isAr ? 'إضافة كتاب جديد' : 'Add Book'}</span>
                   </button>
@@ -828,7 +826,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                 <button
                   onClick={() => setLibraryFilter('want_to_read')}
                   className={`px-3 py-1 text-xs rounded-lg transition-colors ${
-                    libraryFilter === 'want_to_read' ? 'bg-[var(--d-reading-chip)] text-blue-300 font-bold' : 'text-muted hover:text-[var(--text-primary)]'
+                    libraryFilter === 'want_to_read' ? 'bg-[var(--d-reading-chip)] text-[var(--tone-info)] font-bold' : 'text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
                   📌 {isAr ? `في الانتظار (${wishlistBooks.length})` : `Wishlist (${wishlistBooks.length})`}
@@ -862,7 +860,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       <div
                         key={b.id}
                         className={`panel p-4 border rounded-xl transition-all flex flex-col justify-between ${
-                          isCurrentActive ? 'border-amber-500/50 bg-[var(--d-reading-chip)]' : 'border-[var(--d-reading-border)] bg-[var(--d-reading-raised)]'
+                          isCurrentActive ? 'border-[var(--tone-warning-line)] bg-[var(--d-reading-chip)]' : 'border-[var(--d-reading-border)] bg-[var(--d-reading-raised)]'
                         }`}
                       >
                         <div>
@@ -881,11 +879,11 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                                 <span
                                   className={`inline-block text-[9px] px-1.5 py-0.5 rounded font-mono uppercase mb-1 ${
                                     b.status === 'completed'
-                                      ? 'bg-emerald-500/20 text-[var(--state-success)]'
+                                      ? 'bg-[var(--tone-success-wash)] text-[var(--state-success)]'
                                       : b.status === 'reading'
-                                      ? 'bg-amber-500/20 text-[var(--d-reading-accent-strong)]'
+                                      ? 'bg-[var(--tone-warning-wash)] text-[var(--d-reading-accent-strong)]'
                                       : b.status === 'want_to_read'
-                                      ? 'bg-blue-500/20 text-blue-300'
+                                      ? 'bg-[var(--tone-info-wash)] text-[var(--tone-info)]'
                                       : 'bg-[var(--surface-chip)] text-[var(--text-secondary)]'
                                   }`}
                                 >
@@ -908,7 +906,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                                   </button>
                                   <button
                                     onClick={() => deleteBook(habit.id, b.id)}
-                                    className="text-muted hover:text-red-400 text-xs px-1"
+                                    className="text-muted hover:text-[var(--tone-danger)] text-xs px-1"
                                     title={isAr ? 'حذف الكتاب' : 'Delete'}
                                   >
                                     ✕
@@ -929,7 +927,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                             </div>
                             <div className="progress-line h-1.5 rounded-full bg-[var(--d-reading-chip)]">
                               <span
-                                className="bg-amber-400 h-full block rounded-full"
+                                className="bg-[var(--tone-warning)] h-full block rounded-full"
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
@@ -951,7 +949,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                                 setActiveBook(habit.id, b.id);
                                 setActiveTab('session');
                               }}
-                              className="btn subtle small flex-1 justify-center text-[11px] py-1 text-[var(--d-reading-accent-strong)] hover:bg-amber-500/15"
+                              className="btn subtle small flex-1 justify-center text-[11px] py-1 text-[var(--d-reading-accent-strong)] hover:bg-[var(--tone-warning-wash)]"
                             >
                               {isAr ? 'جلسة قراءة' : 'Log Session'}
                             </button>
@@ -1031,17 +1029,14 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
 
                         <div className="field">
                           <label className="text-xs text-muted mb-1 block">{isAr ? 'التصنيف' : 'Category'}</label>
-                          <select
-                            className="select w-full text-xs"
-                            value={bookCategory}
-                            onChange={(e) => setBookCategory(e.target.value as BookCategory)}
-                          >
+                          <NuqtaSelect value={bookCategory} onChange={(e) => setBookCategory(e.target.value as BookCategory)} className="text-xs">
+
                             {Object.entries(categoryLabels).map(([catKey, catVal]) => (
                               <option key={catKey} value={catKey}>
                                 {isAr ? catVal.ar : catVal.en}
                               </option>
                             ))}
-                          </select>
+                          </NuqtaSelect>
                         </div>
                       </div>
 
@@ -1072,16 +1067,12 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
 
                         <div className="field">
                           <label className="text-xs text-muted mb-1 block">{isAr ? 'الحالة' : 'Status'}</label>
-                          <select
-                            className="select w-full text-xs"
-                            value={bookStatus}
-                            onChange={(e) => setBookStatus(e.target.value as any)}
-                          >
+                          <NuqtaSelect value={bookStatus} onChange={(e) => setBookStatus(e.target.value as any)} className="text-xs">
                             <option value="reading">{isAr ? 'قيد القراءة' : 'Reading'}</option>
                             <option value="completed">{isAr ? 'مكتمل' : 'Completed'}</option>
                             <option value="want_to_read">{isAr ? 'في الانتظار' : 'Wishlist'}</option>
                             <option value="archived">{isAr ? 'أرشيف' : 'Archived'}</option>
-                          </select>
+                          </NuqtaSelect>
                         </div>
                       </div>
 
@@ -1101,7 +1092,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       <button type="button" onClick={() => setIsEditingBook(false)} className="btn subtle small">
                         {isAr ? 'إلغاء' : 'Cancel'}
                       </button>
-                      <button type="submit" className="btn primary small bg-amber-500 hover:bg-amber-400 text-black font-bold">
+                      <button type="submit" className="btn primary small bg-[var(--tone-warning)] hover:bg-[var(--tone-warning)] text-[var(--accent-ink)] font-bold">
                         {isAr ? 'حفظ الكتاب' : 'Save Book'}
                       </button>
                     </div>
@@ -1126,7 +1117,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
 
                 <button
                   onClick={() => setIsAddingQuote(!isAddingQuote)}
-                  className="btn primary small bg-amber-500 hover:bg-amber-400 text-black font-bold"
+                  className="btn primary small bg-[var(--tone-warning)] hover:bg-[var(--tone-warning)] text-[var(--accent-ink)] font-bold"
                 >
                   {isAddingQuote ? (isAr ? 'إلغاء' : 'Cancel') : (isAr ? '+ تدوين اقتباس' : '+ Add Quote')}
                 </button>
@@ -1211,7 +1202,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                           <span className="text-[var(--d-reading-accent)] text-xl font-serif">“</span>
                           <button
                             onClick={() => deleteBookQuote(habit.id, q.id)}
-                            className="text-muted hover:text-red-400 text-xs px-1"
+                            className="text-muted hover:text-[var(--tone-danger)] text-xs px-1"
                             title={isAr ? 'حذف الاقتباس' : 'Delete'}
                           >
                             ✕

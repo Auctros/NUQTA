@@ -5,6 +5,7 @@ import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
 import { NuqtaStorageEngine } from '../lib/storage';
 import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
+import { NuqtaSelect } from './ui';
 
 export const SettingsView: React.FC = () => {
   const { profile, setLanguage, setTheme, updateProfileName } = useNuqtaStore();
@@ -147,14 +148,10 @@ export const SettingsView: React.FC = () => {
 
             <div className="field">
               <label>{isAr ? 'اللغة' : 'Language'}</label>
-              <select
-                className="select"
-                value={profile.language}
-                onChange={(e) => setLanguage(e.target.value as any)}
-              >
+              <NuqtaSelect value={profile.language} onChange={(e) => setLanguage(e.target.value as any)}>
                 <option value="ar">العربية (Arabic)</option>
                 <option value="en">English</option>
-              </select>
+              </NuqtaSelect>
             </div>
 
             <div className="toggle-row">
