@@ -14,10 +14,21 @@ import {
 import {
   EXERCISE_CATALOG,
   PrebuiltExercise,
+  MuscleGroup,
+  MovementPattern,
   exerciseEntryFromCatalog,
   movementLabel,
-  equipmentLabel
+  equipmentLabel,
+  categoryLabel,
+  patternLabel,
+  difficultyLabel,
+  muscleLabel,
+  CATALOG_CATEGORIES,
+  CATALOG_EQUIPMENT,
+  CATALOG_PATTERNS
 } from '../lib/exerciseCatalog';
+import { ExerciseCard } from './workout/ExerciseCard';
+import { ExerciseDetailModal } from './workout/ExerciseDetailModal';
 
 type WTab = 'today' | 'programs' | 'exercises' | 'history' | 'progress';
 
@@ -124,9 +135,11 @@ export const WorkoutView: React.FC = () => {
 
   // ---------- Exercise library ----------
   const [libQuery, setLibQuery] = useState('');
-  const [libMovement, setLibMovement] = useState<'all' | MuscleMovement>('all');
+  const [libCategory, setLibCategory] = useState<'all' | MuscleGroup>('all');
+  const [libPattern, setLibPattern] = useState<'all' | MovementPattern>('all');
   const [libEquipment, setLibEquipment] = useState<'all' | string>('all');
   const [libDifficulty, setLibDifficulty] = useState<'all' | string>('all');
+  const [openExercise, setOpenExercise] = useState<PrebuiltExercise | null>(null);
 
   // ---------- Progress ----------
   const [progressMetric, setProgressMetric] = useState<'reps' | 'volume' | 'minutes'>('reps');
@@ -362,12 +375,18 @@ export const WorkoutView: React.FC = () => {
   };
 
   const filteredCatalog = EXERCISE_CATALOG.filter((e) => {
-    if (libMovement !== 'all' && e.movement !== libMovement) return false;
+    if (libCategory !== 'all' && e.category !== libCategory) return false;
+    if (libPattern !== 'all' && e.pattern !== libPattern) return false;
     if (libEquipment !== 'all' && e.equipment !== libEquipment) return false;
     if (libDifficulty !== 'all' && e.difficulty !== libDifficulty) return false;
     if (libQuery.trim()) {
       const q = libQuery.trim().toLowerCase();
-      if (!e.nameAr.toLowerCase().includes(q) && !e.nameEn.toLowerCase().includes(q)) return false;
+      const inName = e.nameAr.toLowerCase().includes(q) || e.nameEn.toLowerCase().includes(q);
+      const inMuscle =
+        e.primary.some((m) => muscleLabel(m, isAr).toLowerCase().includes(q)) ||
+        e.secondary.some((m) => muscleLabel(m, isAr).toLowerCase().includes(q));
+      const inRegion = categoryLabel(e.category, isAr).toLowerCase().includes(q);
+      if (!inName && !inMuscle && !inRegion) return false;
     }
     return true;
   });
@@ -725,26 +744,29 @@ export const WorkoutView: React.FC = () => {
               </Button>
             }
           >
-            <div className="grid gap-2 sm:grid-cols-2">
-              {EXERCISE_CATALOG.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => addCatalogExercise(e)}
-                  className="studio-tile text-start hover:border-[var(--studio-accent-line)] transition-colors"
-                >
-                  <span className="block text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
-                    {isAr ? e.nameAr : e.nameEn}
-                  </span>
-                  <span className="block text-[var(--fs-micro)] text-[var(--text-secondary)] mt-0.5">
-                    {movementLabel(e.movement, isAr)} · {equipmentLabel(e.equipment, isAr)} · {e.defaultReps}{' '}
-                    {isAr ? 'تكرار' : 'reps'}
-                  </span>
-                </button>
+            <input
+              type="search"
+              value={libQuery}
+              onChange={(e) => setLibQuery(e.target.value)}
+              placeholder={isAr ? 'ابحث بالاسم أو العضلة…' : 'Search by name or muscle…'}
+              aria-label={isAr ? 'بحث في المكتبة' : 'Search the library'}
+              className="input w-full mb-3 text-[var(--fs-xs)]"
+            />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredCatalog.map((e) => (
+                <ExerciseCard key={e.id} exercise={e} isAr={isAr} onOpen={setOpenExercise} onAdd={addCatalogExercise} addLabel={isAr ? 'إضافة' : 'Add'} />
               ))}
             </div>
           </StudioSection>
         )}
+
+        <ExerciseDetailModal
+          exercise={openExercise}
+          isAr={isAr}
+          onClose={() => setOpenExercise(null)}
+          onAdd={addCatalogExercise}
+          addLabel={isAr ? 'أضف للتمرين' : 'Add to workout'}
+        />
       </div>
     );
   }
@@ -976,21 +998,9 @@ export const WorkoutView: React.FC = () => {
               </div>
             </form>
             {showCatalog && (
-              <div className="grid gap-2 sm:grid-cols-2 mt-3">
-                {EXERCISE_CATALOG.map((e) => (
-                  <button
-                    key={e.id}
-                    type="button"
-                    onClick={() => addCatalogExercise(e)}
-                    className="studio-tile text-start hover:border-[var(--studio-accent-line)] transition-colors"
-                  >
-                    <span className="block text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
-                      {isAr ? e.nameAr : e.nameEn}
-                    </span>
-                    <span className="block text-[var(--fs-micro)] text-[var(--text-secondary)] mt-0.5">
-                      {movementLabel(e.movement, isAr)} · {e.defaultReps} {isAr ? 'تكرار' : 'reps'}
-                    </span>
-                  </button>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-3">
+                {filteredCatalog.map((e) => (
+                  <ExerciseCard key={e.id} exercise={e} isAr={isAr} onOpen={setOpenExercise} onAdd={addCatalogExercise} addLabel={isAr ? 'إضافة' : 'Add'} />
                 ))}
               </div>
             )}
@@ -1012,22 +1022,31 @@ export const WorkoutView: React.FC = () => {
                 type="search"
                 value={libQuery}
                 onChange={(e) => setLibQuery(e.target.value)}
-                placeholder={isAr ? 'ابحث عن تمرين…' : 'Search exercises…'}
+                placeholder={isAr ? 'ابحث بالاسم أو العضلة…' : 'Search by name or muscle…'}
+                aria-label={isAr ? 'بحث في المكتبة' : 'Search the library'}
                 className="input flex-1 min-w-[160px] text-[var(--fs-xs)]"
               />
-              <NuqtaSelect value={libMovement} onChange={(e) => setLibMovement(e.target.value as typeof libMovement)} aria-label={isAr ? 'الحركة' : 'Movement'} className="text-[var(--fs-xs)]">
-                <option value="all">{isAr ? 'كل الحركات' : 'All movements'}</option>
-                {(['push', 'legs', 'core', 'back_pull', 'mobility', 'cardio'] as MuscleMovement[]).map((m) => (
-                  <option key={m} value={m}>
-                    {movementLabel(m, isAr)}
+              <NuqtaSelect value={libCategory} onChange={(e) => setLibCategory(e.target.value as typeof libCategory)} aria-label={isAr ? 'المنطقة' : 'Region'} className="text-[var(--fs-xs)]">
+                <option value="all">{isAr ? 'كل المناطق' : 'All regions'}</option>
+                {CATALOG_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {categoryLabel(c, isAr)}
+                  </option>
+                ))}
+              </NuqtaSelect>
+              <NuqtaSelect value={libPattern} onChange={(e) => setLibPattern(e.target.value as typeof libPattern)} aria-label={isAr ? 'النمط' : 'Pattern'} className="text-[var(--fs-xs)]">
+                <option value="all">{isAr ? 'كل الأنماط' : 'All patterns'}</option>
+                {CATALOG_PATTERNS.map((pp) => (
+                  <option key={pp} value={pp}>
+                    {patternLabel(pp, isAr)}
                   </option>
                 ))}
               </NuqtaSelect>
               <NuqtaSelect value={libEquipment} onChange={(e) => setLibEquipment(e.target.value)} aria-label={isAr ? 'الأدوات' : 'Equipment'} className="text-[var(--fs-xs)]">
                 <option value="all">{isAr ? 'كل الأدوات' : 'All equipment'}</option>
-                {['bodyweight_only', 'mat', 'chair_elevated', 'light_dumbbells', 'resistance_band', 'pullup_bar'].map((eq) => (
+                {CATALOG_EQUIPMENT.map((eq) => (
                   <option key={eq} value={eq}>
-                    {equipmentLabel(eq as never, isAr)}
+                    {equipmentLabel(eq, isAr)}
                   </option>
                 ))}
               </NuqtaSelect>
@@ -1037,6 +1056,22 @@ export const WorkoutView: React.FC = () => {
                 <option value="intermediate">{isAr ? 'متوسط' : 'Intermediate'}</option>
                 <option value="advanced">{isAr ? 'متقدم' : 'Advanced'}</option>
               </NuqtaSelect>
+              {(libQuery || libCategory !== 'all' || libPattern !== 'all' || libEquipment !== 'all' || libDifficulty !== 'all') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon="close"
+                  onClick={() => {
+                    setLibQuery('');
+                    setLibCategory('all');
+                    setLibPattern('all');
+                    setLibEquipment('all');
+                    setLibDifficulty('all');
+                  }}
+                >
+                  {isAr ? 'مسح' : 'Clear'}
+                </Button>
+              )}
             </div>
           </StudioSection>
 
@@ -1051,54 +1086,30 @@ export const WorkoutView: React.FC = () => {
             {filteredCatalog.length === 0 ? (
               <StudioEmpty icon="search" title={isAr ? 'لا نتائج' : 'No matches'} />
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredCatalog.map((e) => {
-                  const prev = previousFor(isAr ? e.nameAr : e.nameEn);
-                  return (
-                    <div key={e.id} className="studio-tile flex flex-col gap-2">
-                      <div>
-                        <p className="text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
-                          {isAr ? e.nameAr : e.nameEn}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5 mt-1">
-                          <span className="px-2 h-5 inline-flex items-center rounded-[var(--r-full)] border border-[var(--studio-line)] text-[var(--fs-micro)] text-[var(--text-secondary)]">
-                            {movementLabel(e.movement, isAr)}
-                          </span>
-                          <span className="px-2 h-5 inline-flex items-center rounded-[var(--r-full)] border border-[var(--studio-line)] text-[var(--fs-micro)] text-[var(--text-secondary)]">
-                            {equipmentLabel(e.equipment, isAr)}
-                          </span>
-                          <span className="px-2 h-5 inline-flex items-center rounded-[var(--r-full)] border border-[var(--studio-line)] text-[var(--fs-micro)] text-[var(--text-secondary)]">
-                            {e.difficulty === 'beginner'
-                              ? isAr
-                                ? 'مبتدئ'
-                                : 'Beginner'
-                              : e.difficulty === 'intermediate'
-                              ? isAr
-                                ? 'متوسط'
-                                : 'Intermediate'
-                              : isAr
-                              ? 'متقدم'
-                              : 'Advanced'}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-[var(--fs-xs)] text-[var(--text-secondary)] leading-relaxed">{e.tipsAr}</p>
-                      {prev && (
-                        <p className="text-[var(--fs-micro)] text-[var(--text-tertiary)] font-mono">
-                          {isAr ? 'سابقاً' : 'Previous'}: {prev.sets.map((s) => `${s.weightKg ? s.weightKg + 'kg×' : ''}${s.reps}`).join(' · ')}
-                        </p>
-                      )}
-                      <Button variant="secondary" size="sm" icon="play" className="mt-auto" onClick={() => startWorkout(isAr ? e.nameAr : e.nameEn, [exerciseEntryFromCatalog(e, isAr)])}>
-                        {isAr ? 'ابدأ التمرين' : 'Start exercise'}
-                      </Button>
-                    </div>
-                  );
-                })}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filteredCatalog.map((e) => (
+                  <ExerciseCard key={e.id} exercise={e} isAr={isAr} onOpen={setOpenExercise} />
+                ))}
               </div>
             )}
           </StudioSection>
         </div>
       )}
+
+      <ExerciseDetailModal
+        exercise={openExercise}
+        isAr={isAr}
+        onClose={() => setOpenExercise(null)}
+        onAdd={
+          openExercise
+            ? (ex) => {
+                startWorkout(isAr ? ex.nameAr : ex.nameEn, [exerciseEntryFromCatalog(ex, isAr)]);
+                setOpenExercise(null);
+              }
+            : undefined
+        }
+        addLabel={isAr ? 'ابدأ هذا التمرين' : 'Start this exercise'}
+      />
 
       {/* ---------------- HISTORY ---------------- */}
       {activeTab === 'history' && (

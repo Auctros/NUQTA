@@ -77,6 +77,21 @@ with an IndexedDB mirror for recovery.
   (`EXERCISE_CATALOG`, `exerciseEntryFromCatalog`, `movementLabel`, `equipmentLabel`) and is
   the single source of truth shared by `WorkoutAppModal` (dashboard/habits entry point) and
   the Workout Studio. Add exercises there, never in a second copy.
+  - Catalog rows are authored per body region in `src/lib/catalog/upperBody.ts` and
+    `src/lib/catalog/lowerBody.ts`; `exerciseCatalog.ts` only aggregates and re-exports.
+  - Catalog-only vocabulary (fine-grained muscle groups, movement patterns, equipment)
+    lives in `src/lib/exerciseTypes.ts`. It is never persisted — logged sessions keep
+    using the legacy `MuscleMovement` unions, so the catalog can grow without a
+    backup-schema change.
+- Exercise visuals are code-generated SVG, not images. `ExerciseIllustration`
+  (`src/components/workout/illustration/`) renders one shared anatomical `Figure` driven
+  by keypoint `poses`; `registry.ts` keys each exercise by `PrebuiltExercise.illustrationKey`.
+  Add a key → it appears on the card and in the detail view. Entries marked `animated`
+  must have phases that actually differ, and every pose must stay inside the 200×200
+  viewBox — `tests/exerciseLibrary.test.tsx` enforces both.
+- `MuscleMap` draws front/back anatomical views and highlights primary/secondary muscles;
+  `ExerciseCard` and `ExerciseDetailModal` compose the illustration, muscle map, cues and
+  variations. Both `WorkoutView` (Exercises tab) and `WorkoutAppModal` use the same card.
 - Goal linkage: sessions carry `linkedGoalId` and the store defaults it from the habit.
   Do not compute goal progress in a studio — `goalProgressEngine` owns that.
 - `WorkoutAppModal` / `ReadingAppModal` are the dashboard/habits entry points; keep them
