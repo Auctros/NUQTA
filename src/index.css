@@ -2185,7 +2185,7 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .quran-cell[data-status='not_started'] { opacity: 0.72; }
 .quran-cell-flag { position: absolute; top: 3px; inset-inline-end: 3px; font-size: 9px; line-height: 1; }
 
-.set-row { display: grid; grid-template-columns: 34px minmax(58px, 1fr) minmax(58px, 1fr) 48px 40px; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 0; border-bottom: 1px solid var(--studio-line, var(--border-default)); }
+.set-row { display: grid; grid-template-columns: 28px 1fr 1fr 62px 40px; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 0; border-bottom: 1px solid var(--studio-line, var(--border-default)); }
 .set-row-head { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-weight: var(--fw-semibold); border-bottom: 1px solid var(--studio-line-strong, var(--border-strong)); }
 .set-row:last-child { border-bottom: none; }
 .set-input { width: 100%; min-height: 38px; text-align: center; font-family: ui-monospace, monospace; font-weight: var(--fw-bold); border: 1px solid var(--studio-line, var(--border-default)); border-radius: var(--r-sm); background: var(--surface-inset, var(--surface-track)); color: var(--text-primary); }
@@ -2194,7 +2194,7 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .set-done[data-done='true'] { background: var(--state-success); border-color: var(--state-success); color: var(--text-on-state); }
 .set-index { font-family: ui-monospace, monospace; font-size: var(--fs-xs); color: var(--text-secondary); }
 .set-type-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--state-warning-strong, var(--state-warning)); }
-@media (max-width: 560px) { .set-row { grid-template-columns: 30px 1fr 1fr 40px 36px; gap: 6px; } }
+@media (max-width: 560px) { .set-row { grid-template-columns: 24px 1fr 1fr 54px 36px; gap: 5px; } }
 
 .rest-timer { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-md); border: 1px solid var(--studio-accent-line, var(--border-strong)); background: var(--studio-accent-soft, var(--surface-active)); }
 .rest-timer-clock { font-family: ui-monospace, monospace; font-size: var(--fs-2xl); font-weight: var(--fw-heavy); color: var(--studio-accent, var(--brand-strong)); font-variant-numeric: tabular-nums; }
