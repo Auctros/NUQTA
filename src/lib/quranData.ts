@@ -182,7 +182,20 @@ export const calculateDistinctAyahs = (ranges: AyahRange[]): number => {
   return ranges.reduce((acc, r) => acc + Math.max(0, r.end - r.start + 1), 0);
 };
 
-// Generate default tracking state for all 114 Surahs
+/**
+ * Generate a blank tracking state for all 114 Surahs (nothing memorised).
+ * Used when a Quran habit is created by the user: unlike
+ * `generateInitialQuranSurahs`, this seeds no sample memorisation.
+ */
+export const generateEmptyQuranSurahs = (): SurahMemorizationState[] =>
+  QURAN_SURAHS.map((s) => ({
+    surahNumber: s.number,
+    status: 'not_started' as const,
+    memorizedAyahsRanges: [],
+    memorizedAyahsCount: 0
+  }));
+
+/** Generate default tracking state for all 114 Surahs, with sample memorisation. */
 export const generateInitialQuranSurahs = (): SurahMemorizationState[] => {
   const states: SurahMemorizationState[] = QURAN_SURAHS.map((s) => {
     // Initial sample seed: Surah Al-Fatihah memorized, An-Nas memorized, Al-Baqarah started

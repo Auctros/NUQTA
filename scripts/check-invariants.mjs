@@ -122,8 +122,39 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 13. The app must survive a render crash instead of white-screening.
+{
+  const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
+  if (!/ErrorBoundary/.test(main)) {
+    fail('App is not wrapped in an ErrorBoundary', 'a render error would leave a blank page with no way to export data');
+  }
+  if (!existsSync(join(root, 'src/components/ErrorBoundary.tsx'))) {
+    fail('ErrorBoundary component is missing', 'expected src/components/ErrorBoundary.tsx');
+  }
+}
+// 14. No obvious network/telemetry primitives in the application source.
+//     This is a *textual* scan of non-comment lines in every .ts/.tsx file under src/.
+//     It flags six literal patterns: fetch(, XMLHttpRequest, navigator.sendBeacon,
+//     new WebSocket, new EventSource, navigator.geolocation.
+//     What it guarantees: none of those six primitives appear in the scanned source.
+//     What it CANNOT guarantee: it does not scan index.html, public/, scripts/, tests/,
+//     CSS url() references, bundled/minified output, or third-party dependencies; and it
+//     cannot see network activity reached indirectly — dynamic import(), a URL assigned
+//     to an <img>/<a>/<script> src, navigator.serviceWorker.register, a same-origin
+//     relative path, or a request made from a dependency. It proves the absence of the
+//     listed primitives in first-party source, not the absence of all network access.
+{
+  const hits = grep(/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon|new\s+WebSocket|new\s+EventSource|navigator\.geolocation/);
+  if (hits.length) {
+    fail(
+      'Network/telemetry primitive found in scanned source (fetch/XHR/sendBeacon/WebSocket/EventSource/geolocation)',
+      hits.slice(0, 5).join('\n    ')
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (12 rules).');
+console.log('Invariant check passed (14 rules).');

@@ -1339,6 +1339,26 @@ body.light-mode {
   }
 }
 
+/* Page headings must never overflow the viewport. The theme declares
+   .heading-actions with flex-shrink:0 and only wraps it below 660px, so between
+   661px and ~1150px a wide action row (e.g. Insights' view switcher) pushed the
+   document past the viewport edge. Let the heading wrap and the action row shrink
+   and wrap instead of forcing a horizontal scrollbar. */
+.page-heading {
+  flex-wrap: wrap;
+}
+.heading-actions {
+  flex-shrink: 1;
+  flex-wrap: wrap;
+  min-width: 0;
+  justify-content: flex-end;
+}
+.heading-actions > .btn,
+.heading-actions > button {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
 /* Chrome surfaces (neutral translucent glass with subtle specular edge highlight) */
 .sidebar,
 .topbar {

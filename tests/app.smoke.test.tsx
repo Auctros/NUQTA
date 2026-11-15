@@ -67,3 +67,23 @@ describe('the whole app renders', () => {
     expect(await screen.findByRole('alert')).toBeTruthy();
   });
 });
+
+describe('the error boundary contains a render crash', () => {
+  it('renders the recovery screen instead of a blank page when a child throws', async () => {
+    const { ErrorBoundary } = await import('../src/components/ErrorBoundary');
+    const Boom: React.FC = () => { throw new Error('boom'); };
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <ErrorBoundary>
+        <Boom />
+      </ErrorBoundary>
+    );
+    await settle();
+    // The recovery UI is shown, the export/reload affordances are present, and the
+    // app has not white-screened (there is real text on screen).
+    expect(screen.getByText(/Something went wrong/)).toBeTruthy();
+    expect(screen.getByText(/Export backup/)).toBeTruthy();
+    expect(screen.getByText(/Reload/)).toBeTruthy();
+    err.mockRestore();
+  });
+});

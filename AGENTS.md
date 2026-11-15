@@ -9,15 +9,25 @@ with an IndexedDB mirror for recovery.
 - `npm run test` — Vitest (jsdom, `TZ=Africa/Cairo` so UTC-vs-local date bugs surface).
 - `npm run build` — production bundle into `dist/`.
 - `npm run verify` — lint + tests + build + `scripts/check-invariants.mjs` (the acceptance gate).
-- `npm run test:e2e` — builds, serves with `vite preview`, and runs the Playwright offline
-  acceptance test (`scripts/e2e/run-offline.mjs` -> `scripts/e2e/offline.py`).
+- `npm run test:e2e` — builds, serves with `vite preview`, and runs two Playwright
+  acceptance scripts (`scripts/e2e/run-offline.mjs`):
+  - `scripts/e2e/offline.py` — offline shell install/reload.
+  - `scripts/e2e/views.py` — every view renders, 4 responsive widths have no horizontal
+    overflow, mobile nav open→navigate→close, and an Arabic/RTL pass.
   Requires `pip install playwright && playwright install chromium`.
 - `npm run verify:full` — `verify` + `test:e2e`.
 
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(12 rules). Add a rule whenever a new safety property must never regress.
+(14 rules). Add a rule whenever a new safety property must never regress.
+
+## Layout / responsive rules
+
+- `.page-heading` and `.heading-actions` must wrap and shrink; never reintroduce
+  `flex-shrink: 0` on a heading action row (it overflowed the viewport in the 661–1150 px
+  band). Inner flex rows that can hold long content need `flex-wrap` + `min-w-0`.
+- Any responsive change must keep `scripts/e2e/views.py` green across all views and widths.
 
 ## Storage / backup rules
 

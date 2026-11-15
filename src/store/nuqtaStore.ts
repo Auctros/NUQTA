@@ -22,14 +22,120 @@ import {
 import { NuqtaStorageEngine } from '../lib/storage';
 import { parseNaturalLanguageTask } from '../lib/nlpParser';
 import { computeDailyEnergyScore } from '../lib/energyAlgorithm';
+import { computeCurrentStreak } from '../lib/habitSchedule';
 import { runLiquidThemeTransition } from '../lib/themeTransition';
 import {
-  generateInitialQuranSurahs,
+  generateEmptyQuranSurahs,
   mergeAyahRanges,
   calculateDistinctAyahs,
-  getSurahMeta
+  getSurahMeta,
+  QURAN_SURAHS
 } from '../lib/quranData';
 import confetti from 'canvas-confetti';
+
+/**
+ * Clear `linkedGoalId` from a goal's *nested* activity records (books, reading
+ * sessions, artwork pieces, art projects and Quran sessions). These carry their own
+ * `linkedGoalId` (copied from their parent habit at creation time), so deleting a goal
+ * must sweep them too — otherwise the deleted id lingers as a dangling reference.
+ */
+const clearNestedGoalLinks = (habits: Habit[], goalId: string): Habit[] =>
+  habits.map((h) => {
+    let next = h;
+    const reading = h.readingData;
+    if (reading) {
+      const books = reading.books.map((b) => (b.linkedGoalId === goalId ? { ...b, linkedGoalId: undefined } : b));
+      const sessions = reading.sessions.map((s) =>
+        s.linkedGoalId === goalId ? { ...s, linkedGoalId: undefined } : s
+      );
+      if (books.some((b, i) => b !== reading.books[i]) || sessions.some((s, i) => s !== reading.sessions[i])) {
+        next = { ...next, readingData: { ...reading, books, sessions } };
+      }
+    }
+    const drawing = next.drawingData;
+    if (drawing) {
+      const projects = (drawing.projects || []).map((p) =>
+        p.linkedGoalId === goalId ? { ...p, linkedGoalId: undefined } : p
+      );
+      const pieces = drawing.pieces.map((p) => (p.linkedGoalId === goalId ? { ...p, linkedGoalId: undefined } : p));
+      const projectsChanged = projects.some((p, i) => p !== (drawing.projects || [])[i]);
+      if (projectsChanged || pieces.some((p, i) => p !== drawing.pieces[i])) {
+        next = { ...next, drawingData: { ...drawing, projects, pieces } };
+      }
+    }
+    const quran = next.quranData;
+    if (quran) {
+      const sessions = quran.sessions.map((s) =>
+        s.linkedGoalId === goalId ? { ...s, linkedGoalId: undefined } : s
+      );
+      if (sessions.some((s, i) => s !== quran.sessions[i])) {
+        next = { ...next, quranData: { ...quran, sessions } };
+      }
+    }
+    const workout = next.workoutData;
+    if (workout) {
+      const sessions = workout.sessions.map((s) =>
+        s.linkedGoalId === goalId ? { ...s, linkedGoalId: undefined } : s
+      );
+      if (sessions.some((s, i) => s !== workout.sessions[i])) {
+        next = { ...next, workoutData: { ...workout, sessions } };
+      }
+    }
+    return next;
+  });
+
+/**
+ * Drop the given ids from a goal's explicit relation lists. `linkedBookIds` and
+ * `linkedArtProjectIds` live on the goal itself, so deleting a book or project must
+ * remove its id here as well, or the goal keeps a link to a record that is gone.
+ */
+const pruneGoalRelationIds = (
+  goals: Goal[],
+  removed: { taskIds?: string[]; habitIds?: string[]; bookIds?: string[]; artProjectIds?: string[] }
+): Goal[] => {
+  const drop = (list: string[] | undefined, ids: string[] | undefined) => {
+    if (!list || !ids || ids.length === 0) return list;
+    const gone = new Set(ids);
+    const next = list.filter((id) => !gone.has(id));
+    return next.length === list.length ? list : next;
+  };
+  return goals.map((g) => {
+    const linkedTaskIds = drop(g.linkedTaskIds, removed.taskIds);
+    const linkedHabitIds = drop(g.linkedHabitIds, removed.habitIds);
+    const linkedBookIds = drop(g.linkedBookIds, removed.bookIds);
+    const linkedArtProjectIds = drop(g.linkedArtProjectIds, removed.artProjectIds);
+    if (
+      linkedTaskIds === g.linkedTaskIds &&
+      linkedHabitIds === g.linkedHabitIds &&
+      linkedBookIds === g.linkedBookIds &&
+      linkedArtProjectIds === g.linkedArtProjectIds
+    ) {
+      return g;
+    }
+    return { ...g, linkedTaskIds, linkedHabitIds, linkedBookIds, linkedArtProjectIds, updatedAt: new Date().toISOString() };
+  });
+};
+
+/**
+ * Recompute a Quran studio's denormalised totals from its surah states and its
+ * session log, so deleting a session (or surah progress) can never leave a
+ * stale aggregate behind.
+ */
+const recomputeQuranTotals = (
+  quran: import('../types').QuranHabitData
+): import('../types').QuranHabitData => ({
+  ...quran,
+  totalAyahsMemorized: quran.surahs.reduce((sum, s) => sum + (s.memorizedAyahsCount || 0), 0),
+  totalSurahsCompleted: quran.surahs.filter((s) => s.status === 'completed').length,
+  totalMemorizationMinutes: quran.sessions.reduce(
+    (sum, s) => sum + (s.type === 'new_memorization' ? s.durationMinutes || 0 : 0),
+    0
+  ),
+  totalRevisionMinutes: quran.sessions.reduce(
+    (sum, s) => sum + (s.type !== 'new_memorization' ? s.durationMinutes || 0 : 0),
+    0
+  )
+});
 
 interface NuqtaStoreState {
   // Data
@@ -411,10 +517,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     NuqtaStorageEngine.saveTasks(updated);
     set({ tasks: updated });
 
-    const updatedGoals = get().goals.map((g) => ({
-      ...g,
-      linkedTaskIds: (g.linkedTaskIds || []).filter((tid) => tid !== id)
-    }));
+    const updatedGoals = pruneGoalRelationIds(get().goals, { taskIds: [id] });
     NuqtaStorageEngine.saveGoals(updatedGoals);
     set({ goals: updatedGoals });
   },
@@ -468,9 +571,9 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       ? habit.completedDates.filter((d) => d !== todayStr)
       : [...habit.completedDates, todayStr];
 
-    const currentStreak = alreadyDone
-      ? Math.max(0, habit.currentStreak - 1)
-      : habit.currentStreak + 1;
+    // Derive the streak from real dates so a missed due day breaks it.
+    const updatedHabit: Habit = { ...habit, completedDates: updatedDates };
+    const currentStreak = computeCurrentStreak(updatedHabit, todayStr);
     const longestStreak = Math.max(habit.longestStreak, currentStreak);
 
     if (!alreadyDone) {
@@ -517,347 +620,56 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     let drawingData = habitDraft.drawingData;
     let quranData = habitDraft.quranData;
 
-    const todayStr = localDateKey();
-
+    // New habits start empty: no sample/fabricated studio history is created.
     if (specializedType === 'reading' && !readingData) {
-      const book1Id = 'book-' + crypto.randomUUID().slice(0, 6);
       readingData = {
         annualTargetBooks: 24,
         dailyTargetPages: 20,
         weeklyTargetPages: 140,
-        totalPagesRead: 545,
-        totalReadingMinutes: 780,
-        activeBookId: book1Id,
-        books: [
-          {
-            id: book1Id,
-            title: 'العادات الذرية (Atomic Habits)',
-            author: 'James Clear',
-            category: 'productivity',
-            totalPages: 320,
-            currentPage: 65,
-            status: 'reading',
-            coverColor: '#d97706',
-            rating: 5,
-            notes: 'كتاب استثنائي يركز على قوة التراكم البسيط بنسبة 1% يومياً.',
-            startDate: todayStr
-          },
-          {
-            id: 'book-' + crypto.randomUUID().slice(0, 6),
-            title: 'العمل العميق (Deep Work)',
-            author: 'Cal Newport',
-            category: 'productivity',
-            totalPages: 280,
-            currentPage: 0,
-            status: 'want_to_read',
-            coverColor: '#2563eb',
-            notes: 'قائمة القراءة القادمة لتعزيز التركيز العالي بدون تشتت.'
-          },
-          {
-            id: 'book-' + crypto.randomUUID().slice(0, 6),
-            title: 'التفكير السريع والبطيء (Thinking, Fast and Slow)',
-            author: 'Daniel Kahneman',
-            category: 'philosophy',
-            totalPages: 500,
-            currentPage: 500,
-            status: 'completed',
-            coverColor: '#059669',
-            rating: 5,
-            completedDate: todayStr,
-            notes: 'استكشاف شامل لانحيازات النظام 1 العفوي والنظام 2 التحليلي.'
-          }
-        ],
-        quotes: [
-          {
-            id: 'q-1',
-            quote: 'أنت لا ترتقي إلى مستوى أهدافك، بل تهبط إلى مستوى أنظمتك اليومية.',
-            bookId: book1Id,
-            bookTitle: 'العادات الذرية',
-            author: 'James Clear',
-            page: 27,
-            date: todayStr
-          },
-          {
-            id: 'q-2',
-            quote: 'القدرة على أداء العمل العميق أصبحت نادرة وفي نفس الوقت ذات قيمة استثنائية في اقتصاد المعرفة.',
-            bookTitle: 'العمل العميق',
-            author: 'Cal Newport',
-            page: 14,
-            date: todayStr
-          }
-        ],
-        sessions: [
-          {
-            id: 'rs-' + crypto.randomUUID().slice(0, 6),
-            date: todayStr,
-            bookId: book1Id,
-            bookTitle: 'العادات الذرية (Atomic Habits)',
-            pagesRead: 20,
-            durationMinutes: 28,
-            speedPagesPerHour: 43,
-            notes: 'قراءة الفصل الثالث: بناء بيئة تدعم السلوك المرغوب.'
-          }
-        ]
+        totalPagesRead: 0,
+        totalReadingMinutes: 0,
+        books: [],
+        quotes: [],
+        sessions: []
       };
     } else if (specializedType === 'workout' && !workoutData) {
       workoutData = {
         weeklyTargetSessions: 4,
         monthlyTargetReps: 500,
-        totalReps: 320,
+        totalReps: 0,
         totalVolumeKg: 0,
-        totalMinutes: 140,
-        totalWorkouts: 4,
-        favoriteRoutine: 'Home Calisthenics',
-        customRoutines: [
-          {
-            id: 'rt-1',
-            name: 'Full-Body Calisthenics',
-            nameAr: 'روتين وزن الجسم المتكامل (ضغط + سكوات + بلانك)',
-            descriptionAr: 'بناء القوة الأساسية للجسم بالكامل بدون أي أوزان.',
-            targetLevel: 'intermediate',
-            estimatedMinutes: 25,
-            category: 'bodyweight',
-            exercises: [
-              {
-                id: 'ex-1',
-                name: 'تمرين الضغط (Push-ups)',
-                category: 'chest',
-                movement: 'push',
-                sets: [
-                  { setNumber: 1, weightKg: 0, reps: 15, completed: true, restSeconds: 60 },
-                  { setNumber: 2, weightKg: 0, reps: 15, completed: true, restSeconds: 60 },
-                  { setNumber: 3, weightKg: 0, reps: 12, completed: true, restSeconds: 60 }
-                ]
-              },
-              {
-                id: 'ex-2',
-                name: 'سكوات بوزن الجسم (Air Squats)',
-                category: 'legs',
-                movement: 'legs',
-                sets: [
-                  { setNumber: 1, weightKg: 0, reps: 20, completed: true, restSeconds: 45 },
-                  { setNumber: 2, weightKg: 0, reps: 20, completed: true, restSeconds: 45 },
-                  { setNumber: 3, weightKg: 0, reps: 20, completed: true, restSeconds: 45 }
-                ]
-              },
-              {
-                id: 'ex-3',
-                name: 'بلانك البطن (Plank Core Hold)',
-                category: 'core',
-                movement: 'core',
-                sets: [
-                  { setNumber: 1, weightKg: 0, reps: 45, completed: true, restSeconds: 60 },
-                  { setNumber: 2, weightKg: 0, reps: 45, completed: true, restSeconds: 60 }
-                ]
-              }
-            ]
-          },
-          {
-            id: 'rt-2',
-            name: 'Core & Abs Burn',
-            nameAr: 'روتين البطن والـ Core المنزلي',
-            descriptionAr: 'تقوية عضلات الجذع وحماية أسفل الظهر.',
-            targetLevel: 'beginner',
-            estimatedMinutes: 18,
-            category: 'core',
-            exercises: [
-              {
-                id: 'ex-c1',
-                name: 'بلانك ساكن (Plank Hold)',
-                category: 'core',
-                movement: 'core',
-                sets: [
-                  { setNumber: 1, weightKg: 0, reps: 45, completed: true, restSeconds: 45 },
-                  { setNumber: 2, weightKg: 0, reps: 45, completed: true, restSeconds: 45 }
-                ]
-              },
-              {
-                id: 'ex-c2',
-                name: 'تسلق الجبل (Mountain Climbers)',
-                category: 'core',
-                movement: 'core',
-                sets: [
-                  { setNumber: 1, weightKg: 0, reps: 25, completed: true, restSeconds: 45 },
-                  { setNumber: 2, weightKg: 0, reps: 25, completed: true, restSeconds: 45 }
-                ]
-              }
-            ]
-          },
-          {
-            id: 'rt-3',
-            name: 'Spinal Mobility & Stretch',
-            nameAr: 'إطالات منزلية ومرونة المفاصل',
-            descriptionAr: 'تحرير التوتر من الظهر والكتفين بعد الجلوس المطول.',
-            targetLevel: 'beginner',
-            estimatedMinutes: 15,
-            category: 'mobility',
-            exercises: [
-              {
-                id: 'ex-m1',
-                name: 'إطالة القطة والبقرة (Cat-Cow)',
-                category: 'mobility',
-                movement: 'mobility',
-                sets: [
-                  { setNumber: 1, weightKg: 0, reps: 15, completed: true, restSeconds: 30 },
-                  { setNumber: 2, weightKg: 0, reps: 15, completed: true, restSeconds: 30 }
-                ]
-              },
-              {
-                id: 'ex-m2',
-                name: 'إطالة الحوض والورك (Hip Flexor)',
-                category: 'mobility',
-                movement: 'mobility',
-                sets: [
-                  { setNumber: 1, weightKg: 0, reps: 30, completed: true, restSeconds: 30 }
-                ]
-              }
-            ]
-          }
-        ],
-        sessions: [
-          {
-            id: 'ws-' + crypto.randomUUID().slice(0, 6),
-            date: todayStr,
-            title: 'تمارين وزن الجسم والرشاقة (ضغط وسكوات وبلانك)',
-            workoutType: 'bodyweight',
-            durationMinutes: 28,
-            totalReps: 82,
-            volumeKg: 0,
-            intensityRating: 3,
-            difficultyLevel: 'intermediate',
-            notes: 'أداء ممتاز مع التركيز على وتيرة الحركة الهادئة.',
-            exercises: [
-              {
-                id: 'ex-1',
-                name: 'تمرين الضغط (Push-ups)',
-                category: 'chest',
-                movement: 'push',
-                sets: [
-                  { setNumber: 1, reps: 15, completed: true },
-                  { setNumber: 2, reps: 15, completed: true },
-                  { setNumber: 3, reps: 12, completed: true }
-                ]
-              },
-              {
-                id: 'ex-2',
-                name: 'سكوات بوزن الجسم (Air Squats)',
-                category: 'legs',
-                movement: 'legs',
-                sets: [
-                  { setNumber: 1, reps: 20, completed: true },
-                  { setNumber: 2, reps: 20, completed: true }
-                ]
-              }
-            ]
-          }
-        ]
+        totalMinutes: 0,
+        totalWorkouts: 0,
+        favoriteRoutine: '',
+        customRoutines: [],
+        sessions: []
       };
     } else if (specializedType === 'drawing' && !drawingData) {
-      const proj1Id = 'proj-' + crypto.randomUUID().slice(0, 6);
-      const proj2Id = 'proj-' + crypto.randomUUID().slice(0, 6);
       drawingData = {
         weeklyTargetHours: 3,
-        totalDrawingMinutes: 240,
-        totalSketches: 5,
+        totalDrawingMinutes: 0,
+        totalSketches: 0,
         favoriteMedium: 'sketch',
-        projects: [
-          {
-            id: proj1Id,
-            title: 'دفتر دراسات الملامح والظلال',
-            description: 'سكتشات يومية سريعة لتدريب العين وتطوير دقة التظليل.',
-            stage: 'sketching',
-            medium: 'sketch',
-            startedDate: todayStr,
-            thumbnailColor: '#7c3aed',
-            totalMinutesSpent: 90,
-            sessionsCount: 3,
-            tags: ['Anatomy', 'Shadows', 'Charcoal']
-          },
-          {
-            id: proj2Id,
-            title: 'مشهد معماري مستقبلي لمدينة أندلسية',
-            description: 'لوحة رقمية متكاملة للمنظور المعماري والأقواس التراثية.',
-            stage: 'coloring',
-            medium: 'digital',
-            startedDate: todayStr,
-            thumbnailColor: '#0ea5e9',
-            totalMinutesSpent: 150,
-            sessionsCount: 2,
-            tags: ['Architecture', 'Digital Art', 'Lighting']
-          }
-        ],
-        pieces: [
-          {
-            id: 'art-' + crypto.randomUUID().slice(0, 6),
-            projectId: proj1Id,
-            projectTitle: 'دفتر دراسات الملامح والظلال',
-            title: 'دراسة سريعة للعين والأنف بالفحم',
-            medium: 'sketch',
-            durationMinutes: 30,
-            completedDate: todayStr,
-            stage: 'sketching',
-            notes: 'تركيز على مصادر الإضاءة والظلال الساقطة.'
-          },
-          {
-            id: 'art-' + crypto.randomUUID().slice(0, 6),
-            projectId: proj2Id,
-            projectTitle: 'مشهد معماري مستقبلي',
-            title: 'منظور البوابة والأقواس التراثية',
-            medium: 'digital',
-            durationMinutes: 60,
-            completedDate: todayStr,
-            stage: 'inking',
-            notes: 'تحديد خطوط المنظور ثلاثية الأبعاد ببرنامج الرسم.'
-          }
-        ]
+        projects: [],
+        pieces: []
       };
     } else if (specializedType === 'quran' && !quranData) {
-      const initialSurahs = generateInitialQuranSurahs();
-      const distinctAyahs = initialSurahs.reduce((sum, s) => sum + s.memorizedAyahsCount, 0);
-      const completedSurahs = initialSurahs.filter((s) => s.status === 'completed').length;
       quranData = {
-        surahs: initialSurahs,
-        sessions: [
-          {
-            id: 'qs-seed-1',
-            date: todayStr,
-            type: 'new_memorization',
-            surahNumber: 2,
-            surahName: 'البقرة',
-            ayahStart: 1,
-            ayahEnd: 25,
-            ayahCount: 25,
-            durationMinutes: 30,
-            quality: 'excellent',
-            notes: 'حفظ الحزب الأول من سورة البقرة بإتقان مع التجويد.'
-          },
-          {
-            id: 'qs-seed-2',
-            date: todayStr,
-            type: 'revision',
-            surahNumber: 67,
-            surahName: 'الملك',
-            ayahStart: 1,
-            ayahEnd: 15,
-            ayahCount: 15,
-            durationMinutes: 15,
-            quality: 'very_good',
-            notes: 'تثبيت ومراجعة النصف الأول من سورة الملك.'
-          }
-        ],
+        surahs: generateEmptyQuranSurahs(),
+        sessions: [],
         revisionSchedule: {
           dailyWirdJuz: 1,
           revisionCycleDays: 7,
-          currentReviewSurahs: [1, 2, 67, 112, 113, 114],
+          currentReviewSurahs: [],
           targetDailyAyahs: 10,
           weeklyTargetRevisionMinutes: 120
         },
-        totalAyahsMemorized: distinctAyahs,
-        totalSurahsCompleted: completedSurahs,
-        totalMemorizationMinutes: 180,
-        totalRevisionMinutes: 120,
+        totalAyahsMemorized: 0,
+        totalSurahsCompleted: 0,
+        totalMemorizationMinutes: 0,
+        totalRevisionMinutes: 0,
         dailyTargetAyahs: 10,
-        activeSurahNumber: 2
+        activeSurahNumber: 1
       };
     }
 
@@ -943,14 +755,20 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   deleteHabit: (id) => {
-    const updated = get().habits.filter((h) => h.id !== id);
+    const target = get().habits.find((h) => h.id === id);
+    // Habits stacked on the deleted habit must not keep a parent id that no
+    // longer resolves; they become standalone habits.
+    const updated = get()
+      .habits.filter((h) => h.id !== id)
+      .map((h) => (h.stackParentHabitId === id ? { ...h, stackParentHabitId: undefined } : h));
     NuqtaStorageEngine.saveHabits(updated);
     set({ habits: updated });
 
-    const updatedGoals = get().goals.map((g) => ({
-      ...g,
-      linkedHabitIds: (g.linkedHabitIds || []).filter((hid) => hid !== id)
-    }));
+    // The habit's own books/art projects disappear with it, so drop them from any
+    // goal that linked them explicitly, along with the habit link itself.
+    const bookIds = (target?.readingData?.books ?? []).map((b) => b.id);
+    const artProjectIds = (target?.drawingData?.projects ?? []).map((p) => p.id);
+    const updatedGoals = pruneGoalRelationIds(get().goals, { habitIds: [id], bookIds, artProjectIds });
     NuqtaStorageEngine.saveGoals(updatedGoals);
     set({ goals: updatedGoals });
   },
@@ -1003,7 +821,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       const completedDates = h.completedDates.includes(todayStr)
         ? h.completedDates
         : [...h.completedDates, todayStr];
-      const currentStreak = h.completedDates.includes(todayStr) ? h.currentStreak : h.currentStreak + 1;
+      const currentStreak = computeCurrentStreak({ ...h, completedDates }, todayStr);
       const longestStreak = Math.max(h.longestStreak, currentStreak);
 
       return {
@@ -1062,17 +880,37 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       const newActiveId = h.readingData.activeBookId === bookId
         ? remainingBooks[0]?.id
         : h.readingData.activeBookId;
+      // Drop the deleted book's logged sessions and recompute the denormalised
+      // totals so the dashboard never reports pages/hours that no longer exist.
+      const sessions = h.readingData.sessions.filter((s) => s.bookId !== bookId);
+      // Quotes captured against the deleted book must not keep a bookId that no
+      // longer resolves; the quote text itself is preserved.
+      const quotes = (h.readingData.quotes || []).map((q) =>
+        q.bookId === bookId ? { ...q, bookId: undefined } : q
+      );
+      const totalPagesRead = sessions.reduce((sum, s) => sum + (s.pagesRead || 0), 0);
+      const totalReadingMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
       return {
         ...h,
         readingData: {
           ...h.readingData,
           books: remainingBooks,
-          activeBookId: newActiveId
+          activeBookId: newActiveId,
+          sessions,
+          quotes,
+          totalPagesRead,
+          totalReadingMinutes
         }
       };
     });
     NuqtaStorageEngine.saveHabits(updated);
     set({ habits: updated });
+
+    // A goal may explicitly link the deleted book; drop that id so the goal never
+    // points at a record that no longer exists.
+    const updatedGoals = pruneGoalRelationIds(get().goals, { bookIds: [bookId] });
+    NuqtaStorageEngine.saveGoals(updatedGoals);
+    set({ goals: updatedGoals });
   },
 
   setActiveBook: (habitId, bookId) => {
@@ -1184,7 +1022,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       const completedDates = h.completedDates.includes(todayStr)
         ? h.completedDates
         : [...h.completedDates, todayStr];
-      const currentStreak = h.completedDates.includes(todayStr) ? h.currentStreak : h.currentStreak + 1;
+      const currentStreak = computeCurrentStreak({ ...h, completedDates }, todayStr);
       const longestStreak = Math.max(h.longestStreak, currentStreak);
 
       return {
@@ -1248,7 +1086,12 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
         ...h,
         workoutData: {
           ...h.workoutData,
-          customRoutines: (h.workoutData.customRoutines || []).filter((r) => r.id !== routineId)
+          customRoutines: (h.workoutData.customRoutines || []).filter((r) => r.id !== routineId),
+          // Sessions logged from this routine must not keep a routineId that no
+          // longer resolves; the session itself is preserved.
+          sessions: h.workoutData.sessions.map((s) =>
+            s.routineId === routineId ? { ...s, routineId: undefined } : s
+          )
         }
       };
     });
@@ -1321,7 +1164,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       const completedDates = h.completedDates.includes(todayStr)
         ? h.completedDates
         : [...h.completedDates, todayStr];
-      const currentStreak = h.completedDates.includes(todayStr) ? h.currentStreak : h.currentStreak + 1;
+      const currentStreak = computeCurrentStreak({ ...h, completedDates }, todayStr);
       const longestStreak = Math.max(h.longestStreak, currentStreak);
 
       return {
@@ -1344,13 +1187,25 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   deleteArtworkPiece: (habitId, pieceId) => {
     const updated = get().habits.map((h) => {
       if (h.id !== habitId || !h.drawingData) return h;
+      const piece = h.drawingData.pieces.find((p) => p.id === pieceId);
       const remaining = h.drawingData.pieces.filter((p) => p.id !== pieceId);
+      // Keep per-project stats consistent with the pieces that still exist.
+      const projects = (h.drawingData.projects || []).map((proj) => {
+        if (!piece || piece.projectId !== proj.id) return proj;
+        return {
+          ...proj,
+          totalMinutesSpent: Math.max(0, (proj.totalMinutesSpent || 0) - (piece.durationMinutes || 0)),
+          sessionsCount: Math.max(0, (proj.sessionsCount || 0) - 1)
+        };
+      });
       return {
         ...h,
         drawingData: {
           ...h.drawingData,
+          projects,
           pieces: remaining,
-          totalSketches: remaining.length
+          totalSketches: remaining.length,
+          totalDrawingMinutes: remaining.reduce((sum, p) => sum + (p.durationMinutes || 0), 0)
         }
       };
     });
@@ -1396,12 +1251,22 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
         ...h,
         drawingData: {
           ...h.drawingData,
-          projects: (h.drawingData.projects || []).filter((p) => p.id !== projectId)
+          projects: (h.drawingData.projects || []).filter((p) => p.id !== projectId),
+          // Pieces logged against this project must not keep a projectId that no
+          // longer resolves; they become standalone pieces rather than orphans.
+          pieces: h.drawingData.pieces.map((p) =>
+            p.projectId === projectId ? { ...p, projectId: undefined } : p
+          )
         }
       };
     });
     NuqtaStorageEngine.saveHabits(updated);
     set({ habits: updated });
+
+    // Drop the deleted project id from any goal that linked it explicitly.
+    const updatedGoals = pruneGoalRelationIds(get().goals, { artProjectIds: [projectId] });
+    NuqtaStorageEngine.saveGoals(updatedGoals);
+    set({ goals: updatedGoals });
   },
 
   updateDrawingTargets: (habitId, targets) => {
@@ -1422,6 +1287,18 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   // Dedicated Quran App Actions
   logQuranSession: (habitId, sessionDraft) => {
     const todayStr = localDateKey();
+
+    // Validate the surah reference before touching any state. An out-of-range
+    // number rejects the whole operation: no session, no streak/completion
+    // change, no XP and no total drift.
+    const surahNumber = sessionDraft.surahNumber;
+    const isValidSurah =
+      Number.isInteger(surahNumber) && surahNumber >= 1 && surahNumber <= QURAN_SURAHS.length;
+    if (!isValidSurah) {
+      console.warn(`NUQTA: logQuranSession rejected an invalid surah number (${surahNumber}).`);
+      return;
+    }
+
     const targetHabit = get().habits.find((h) => h.id === habitId);
     const newSession: import('../types').QuranSessionLog = {
       id: 'qs-' + crypto.randomUUID().slice(0, 8),
@@ -1433,7 +1310,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const updated = get().habits.map((h) => {
       if (h.id !== habitId) return h;
       const quran = h.quranData || {
-        surahs: generateInitialQuranSurahs(),
+        surahs: generateEmptyQuranSurahs(),
         sessions: [],
         revisionSchedule: {
           dailyWirdJuz: 1,
@@ -1447,66 +1324,65 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
         totalMemorizationMinutes: 0,
         totalRevisionMinutes: 0,
         dailyTargetAyahs: 10,
-        activeSurahNumber: sessionDraft.surahNumber
+        activeSurahNumber: 1
       };
 
-      const surahMeta = getSurahMeta(sessionDraft.surahNumber);
+      const surahMeta = getSurahMeta(surahNumber);
 
-      // Update Surahs array
-      const existingSurahIdx = quran.surahs.findIndex((s) => s.surahNumber === sessionDraft.surahNumber);
+      // Update Surahs array. A valid surah that is not tracked yet is created
+      // (upsert) so its memorisation is never silently dropped.
       let updatedSurahs = [...quran.surahs];
+      const existingSurahIdx = updatedSurahs.findIndex((s) => s.surahNumber === surahNumber);
+      const baseSurah: import('../types').SurahMemorizationState =
+        existingSurahIdx >= 0
+          ? updatedSurahs[existingSurahIdx]
+          : { surahNumber, status: 'not_started', memorizedAyahsRanges: [], memorizedAyahsCount: 0 };
+
+      let nextSurah: import('../types').SurahMemorizationState;
+      if (sessionDraft.type === 'new_memorization') {
+        const mergedRanges = mergeAyahRanges(baseSurah.memorizedAyahsRanges || [], {
+          start: sessionDraft.ayahStart,
+          end: sessionDraft.ayahEnd
+        });
+        const distinctCount = calculateDistinctAyahs(mergedRanges);
+        const isDone = distinctCount >= surahMeta.totalAyahs;
+        nextSurah = {
+          ...baseSurah,
+          memorizedAyahsRanges: mergedRanges,
+          memorizedAyahsCount: distinctCount,
+          status: isDone ? 'completed' : 'in_progress',
+          lastReviewedDate: todayStr,
+          masteryRating: sessionDraft.quality === 'excellent' ? 5 : sessionDraft.quality === 'very_good' ? 4 : 3,
+          notes: sessionDraft.notes || baseSurah.notes
+        };
+      } else {
+        // revision or recitation test
+        nextSurah = {
+          ...baseSurah,
+          lastReviewedDate: todayStr,
+          masteryRating: sessionDraft.quality === 'excellent' ? 5 : sessionDraft.quality === 'very_good' ? 4 : sessionDraft.quality === 'good' ? 3 : 2,
+          status: sessionDraft.quality === 'needs_reinforcement' && baseSurah.status !== 'completed' ? 'needs_revision' : baseSurah.status
+        };
+      }
 
       if (existingSurahIdx >= 0) {
-        const curr = quran.surahs[existingSurahIdx];
-        if (sessionDraft.type === 'new_memorization') {
-          const mergedRanges = mergeAyahRanges(curr.memorizedAyahsRanges || [], {
-            start: sessionDraft.ayahStart,
-            end: sessionDraft.ayahEnd
-          });
-          const distinctCount = calculateDistinctAyahs(mergedRanges);
-          const isDone = distinctCount >= surahMeta.totalAyahs;
-
-          updatedSurahs[existingSurahIdx] = {
-            ...curr,
-            memorizedAyahsRanges: mergedRanges,
-            memorizedAyahsCount: distinctCount,
-            status: isDone ? 'completed' : 'in_progress',
-            lastReviewedDate: todayStr,
-            masteryRating: sessionDraft.quality === 'excellent' ? 5 : sessionDraft.quality === 'very_good' ? 4 : 3,
-            notes: sessionDraft.notes || curr.notes
-          };
-        } else {
-          // revision or recitation test
-          updatedSurahs[existingSurahIdx] = {
-            ...curr,
-            lastReviewedDate: todayStr,
-            masteryRating: sessionDraft.quality === 'excellent' ? 5 : sessionDraft.quality === 'very_good' ? 4 : sessionDraft.quality === 'good' ? 3 : 2,
-            status: sessionDraft.quality === 'needs_reinforcement' && curr.status !== 'completed' ? 'needs_revision' : curr.status
-          };
-        }
+        updatedSurahs[existingSurahIdx] = nextSurah;
+      } else {
+        updatedSurahs = [...updatedSurahs, nextSurah];
       }
 
       // Recompute totals strictly without duplicate counting
-      const totalAyahs = updatedSurahs.reduce((sum, s) => sum + (s.memorizedAyahsCount || 0), 0);
-      const completedSurahs = updatedSurahs.filter((s) => s.status === 'completed').length;
-      const memMins = quran.totalMemorizationMinutes + (sessionDraft.type === 'new_memorization' ? sessionDraft.durationMinutes : 0);
-      const revMins = quran.totalRevisionMinutes + (sessionDraft.type !== 'new_memorization' ? sessionDraft.durationMinutes : 0);
-
-      const updatedQuran: import('../types').QuranHabitData = {
+      const updatedQuran: import('../types').QuranHabitData = recomputeQuranTotals({
         ...quran,
         surahs: updatedSurahs,
         sessions: [newSession, ...quran.sessions],
-        totalAyahsMemorized: totalAyahs,
-        totalSurahsCompleted: completedSurahs,
-        totalMemorizationMinutes: memMins,
-        totalRevisionMinutes: revMins,
-        activeSurahNumber: sessionDraft.surahNumber
-      };
+        activeSurahNumber: surahNumber
+      });
 
       // Mark habit completed today
       const alreadyDone = h.completedDates.includes(todayStr);
       const completedDates = alreadyDone ? h.completedDates : [...h.completedDates, todayStr];
-      const currentStreak = alreadyDone ? h.currentStreak : h.currentStreak + 1;
+      const currentStreak = computeCurrentStreak({ ...h, completedDates }, todayStr);
       const longestStreak = Math.max(h.longestStreak, currentStreak);
 
       return {
@@ -1575,10 +1451,10 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       if (h.id !== habitId || !h.quranData) return h;
       return {
         ...h,
-        quranData: {
+        quranData: recomputeQuranTotals({
           ...h.quranData,
           sessions: h.quranData.sessions.filter((s) => s.id !== sessionId)
-        }
+        })
       };
     });
     NuqtaStorageEngine.saveHabits(updated);
@@ -1796,11 +1672,14 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const updated = get().goals.filter((g) => g.id !== id);
     NuqtaStorageEngine.saveGoals(updated);
 
-    // Do not leave dangling references to a goal that no longer exists.
+    // Do not leave dangling references to a goal that no longer exists. This
+    // covers top-level tasks/habits AND the nested studio records (books, reading
+    // sessions, artwork pieces, art projects, Quran/workout sessions) that copied
+    // the goal id from their parent habit.
     const clear = <T extends { linkedGoalId?: string }>(items: T[]): T[] =>
       items.map((it) => (it.linkedGoalId === id ? { ...it, linkedGoalId: undefined } : it));
     const tasks = clear(get().tasks);
-    const habits = clear(get().habits);
+    const habits = clearNestedGoalLinks(clear(get().habits), id);
     NuqtaStorageEngine.saveTasks(tasks);
     NuqtaStorageEngine.saveHabits(habits);
     set({ goals: updated, tasks, habits });

@@ -170,9 +170,9 @@ export const TasksView: React.FC = () => {
       case 1:
         return { label: isAr ? 'Q1 عاجل ومهم' : 'Q1 Urgent & Important', tagClass: 'tag red', dotClass: 'high' };
       case 2:
-        return { label: isAr ? 'Q2 مهم وغير عاجل' : 'Q2 Important', tagClass: 'tag green', dotClass: 'low' };
+        return { label: isAr ? 'Q2 مهم وغير عاجل' : 'Q2 Important', tagClass: 'tag green', dotClass: 'medium' };
       case 3:
-        return { label: isAr ? 'Q3 عاجل وغير مهم' : 'Q3 Urgent', tagClass: 'tag orange', dotClass: 'medium' };
+        return { label: isAr ? 'Q3 عاجل وغير مهم' : 'Q3 Urgent', tagClass: 'tag orange', dotClass: 'low' };
       case 4:
       default:
         return { label: isAr ? 'Q4 غير مهم' : 'Q4 Low Priority', tagClass: 'tag', dotClass: 'normal' };
