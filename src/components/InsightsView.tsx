@@ -1,15 +1,47 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
-import { TimeHorizon, computeLifeIntelligence } from '../lib/lifeIntelligenceEngine';
-import {
-  TrendLineChart,
-  ActivityBarChart,
-  CalendarHeatmap,
-  SphereAllocationBar,
-  MovementDistributionBar
-} from './charts/LifeIntelligenceCharts';
-import { WhatIfSimulator } from './WhatIfSimulator';
+import { InsightsInput, InsightsRange, computeInsightsReport } from '../lib/insightsEngine';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
+import {
+  BarSeries,
+  ChartPoint,
+  DualBars,
+  HorizontalBars,
+  MetricCard,
+  TrendChart,
+  WeekdayStrip
+} from './charts/InsightsCharts';
+
+/**
+ * Insights — NUQTA's analytics center.
+ *
+ * The Dashboard answers "what needs my attention now?"; Insights answers "how is
+ * my life progressing over time, and what do the patterns in my data reveal?".
+ * Everything here is derived from real records by `insightsEngine`; empty domains
+ * say so explicitly instead of rendering a zero.
+ */
+
+type SectionId = 'overview' | 'execution' | 'habits' | 'goals' | 'time' | 'learning' | 'finance' | 'patterns';
+
+const RANGES: { id: InsightsRange; en: string; ar: string }[] = [
+  { id: 'week', en: 'This week', ar: 'هذا الأسبوع' },
+  { id: '30d', en: '30 days', ar: '30 يوماً' },
+  { id: '90d', en: '90 days', ar: '90 يوماً' },
+  { id: 'year', en: '12 months', ar: '12 شهراً' },
+  { id: 'all', en: 'All-time', ar: 'المدى الشامل' }
+];
+
+type TrendMetric = 'activeMinutes' | 'tasks' | 'habitRate' | 'focusMinutes' | 'readingPages' | 'workoutReps' | 'quranAyahs';
+
+const TREND_METRICS: { id: TrendMetric; en: string; ar: string; unitEn: string; unitAr: string; color: string }[] = [
+  { id: 'activeMinutes', en: 'Invested time', ar: 'الوقت المستثمر', unitEn: 'min', unitAr: 'دقيقة', color: 'var(--tone-success)' },
+  { id: 'tasks', en: 'Tasks done', ar: 'المهام المنجزة', unitEn: 'tasks', unitAr: 'مهمة', color: 'var(--tone-info)' },
+  { id: 'habitRate', en: 'Habit adherence', ar: 'انتظام العادات', unitEn: '%', unitAr: '%', color: 'var(--brand)' },
+  { id: 'focusMinutes', en: 'Focus minutes', ar: 'دقائق التركيز', unitEn: 'min', unitAr: 'دقيقة', color: 'var(--tone-info)' },
+  { id: 'readingPages', en: 'Pages read', ar: 'صفحات القراءة', unitEn: 'pages', unitAr: 'صفحة', color: 'var(--tone-warning)' },
+  { id: 'workoutReps', en: 'Workout reps', ar: 'تكرارات التمارين', unitEn: 'reps', unitAr: 'تكرار', color: 'var(--tone-success)' },
+  { id: 'quranAyahs', en: 'Quran ayahs', ar: 'آيات القرآن', unitEn: 'ayahs', unitAr: 'آية', color: 'var(--tone-info)' }
+];
 
 export const InsightsView: React.FC = () => {
   const {
@@ -17,958 +49,993 @@ export const InsightsView: React.FC = () => {
     habits,
     goals,
     focusSessions,
+    healthMetrics,
+    expenses,
+    savingsGoals,
     journalEntries,
-    setSundayRitualOpen,
+    profile,
     setActiveNavTab,
-    profile
+    setSundayRitualOpen
   } = useNuqtaStore();
-
   const isAr = profile.language === 'ar';
 
-  // Navigation & Time Horizon State
-  const [horizon, setHorizon] = useState<TimeHorizon>('week');
-  const [activeTab, setActiveTab] = useState<'overview' | 'domains' | 'simulator' | 'milestones'>('overview');
-  const [domainDetailTab, setDomainDetailTab] = useState<'productivity' | 'habits' | 'reading' | 'fitness' | 'drawing' | 'focus'>('productivity');
-  const [trendMetric, setTrendMetric] = useState<'totalActiveMinutes' | 'tasksDone' | 'readingPages' | 'workoutReps'>('totalActiveMinutes');
+  const [range, setRange] = useState<InsightsRange>('30d');
+  const [section, setSection] = useState<SectionId>('overview');
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>('activeMinutes');
 
-  // Compute live intelligence report
-  const report = computeLifeIntelligence(horizon, tasks, habits, goals, focusSessions, isAr);
+  const input: InsightsInput = useMemo(
+    () => ({ tasks, habits, goals, focusSessions, healthMetrics, expenses, savingsGoals, journalEntries }),
+    [tasks, habits, goals, focusSessions, healthMetrics, expenses, savingsGoals, journalEntries]
+  );
 
-  // Delta badge renderer helper
-  const renderDelta = (deltaPercent: number | null, unit = '') => {
-    if (deltaPercent === null) return null;
-    if (deltaPercent === 0) {
-      return (
-        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
-          0% {isAr ? 'مستقر' : 'flat'}
-        </span>
-      );
+  const report = useMemo(() => computeInsightsReport(range, input, isAr), [range, input, isAr]);
+  const t = (en: string, ar: string) => (isAr ? ar : en);
+
+  const metricMeta = TREND_METRICS.find((m) => m.id === trendMetric)!;
+
+  const metricValueOf = (p: (typeof report.timeline)[number]): number | null => {
+    switch (trendMetric) {
+      case 'tasks':
+        return p.tasksCompleted > 0 || p.tasksScheduled > 0 ? p.tasksCompleted : null;
+      case 'activeMinutes':
+        return p.activeMinutes > 0 ? p.activeMinutes : p.recordedDays === 0 ? null : 0;
+      case 'habitRate':
+        return p.habitDue > 0 ? Math.round((p.habitDone / p.habitDue) * 100) : null;
+      case 'focusMinutes':
+        return p.focusMinutes > 0 ? p.focusMinutes : p.recordedDays === 0 ? null : 0;
+      case 'readingPages':
+        return p.readingPages > 0 ? p.readingPages : p.recordedDays === 0 ? null : 0;
+      case 'workoutReps':
+        return p.workoutReps > 0 ? p.workoutReps : p.recordedDays === 0 ? null : 0;
+      case 'quranAyahs':
+        return p.quranAyahs > 0 ? p.quranAyahs : p.recordedDays === 0 ? null : 0;
     }
-    const isUp = deltaPercent > 0;
-    return (
-      <span
-        className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border flex items-center gap-0.5 ${
-          isUp
-            ? 'bg-[var(--tone-success-wash)] text-[var(--tone-success)] border-[var(--tone-success-line)]'
-            : 'bg-[var(--tone-danger-wash)] text-[var(--tone-danger)] border-[var(--tone-danger-line)]'
-        }`}
-      >
-        <NuqtaIcon name={isUp ? 'trending-up' : 'trending-down'} className="w-3 h-3" />
-        <span>{Math.abs(deltaPercent)}%</span>
-      </span>
-    );
   };
 
-  // Meaningful non-infantilizing milestones
-  const achievements: { icon: IconName; title: string; sub: string; unlocked: boolean }[] = [
-    {
-      icon: 'sparkle',
-      title: isAr ? 'أول نقطة' : 'First Point',
-      sub: isAr ? 'إنجاز أول مهمة بحضور كامل' : 'Complete first anchor task',
-      unlocked: tasks.filter((t) => t.status === 'completed').length >= 1
-    },
-    {
-      icon: 'flame',
-      title: isAr ? 'سلسلة ٧ أيام' : 'Seven-Day Chain',
-      sub: isAr ? 'المحافظة على عادة لأسبوع كامل' : 'Keep a habit unbroken for a week',
-      unlocked: habits.some((h) => h.longestStreak >= 7 || h.currentStreak >= 7)
-    },
-    {
-      icon: 'book-open',
-      title: isAr ? 'قارئ منهجي' : 'Systematic Reader',
-      sub: isAr ? 'قراءة أكثر من 100 صفحة موثقة' : 'Log 100+ verified pages read',
-      unlocked: report.reading.pagesRead.currentValue >= 100
-    },
-    {
-      icon: 'dumbbell',
-      title: isAr ? 'عزيمة كاليستنكس' : 'Calisthenics Discipline',
-      sub: isAr ? 'إنجاز أكثر من 100 تكرار بوزن الجسم' : 'Complete 100+ bodyweight reps',
-      unlocked: report.fitness.workoutReps.currentValue >= 100
-    },
-    {
-      icon: 'palette',
-      title: isAr ? 'حالة تدفق إبداعي' : 'Creative Flow Master',
-      sub: isAr ? 'تسجيل 3 ساعات تدفق في المرسم' : '3+ hours of studio flow',
-      unlocked: report.drawing.flowHours.currentValue >= 3
-    },
-    {
-      icon: 'timer',
-      title: isAr ? 'انتباه غير منقطع' : 'Deep Attention',
-      sub: isAr ? 'تسجيل 5 جلسات تركيز عميقة' : '5+ deep work focus sprints',
-      unlocked: focusSessions.length >= 5
-    },
-    {
-      icon: 'target',
-      title: isAr ? 'محقق الأهداف' : 'Milestone Crusher',
-      sub: isAr ? 'إنجاز أول مرحلة زمنية استراتيجية' : 'Hit first strategic milestone',
-      unlocked: report.goals.milestonesAchieved >= 1
-    },
-    {
-      icon: 'check',
-      title: isAr ? 'أسبوع متوازن' : 'Steady Week',
-      sub: isAr ? 'انتظام العادات بنسبة تتجاوز 70%' : '70%+ habit consistency',
-      unlocked: report.habits.consistencyRate.currentValue >= 70
-    }
+  const trendPoints: ChartPoint[] = report.timeline.map((p) => ({
+    key: p.key,
+    label: p.label,
+    fullLabel: p.fullLabel,
+    value: metricValueOf(p),
+    missing: p.recordedDays === 0
+  }));
+
+  const sections: { id: SectionId; en: string; ar: string; icon: IconName }[] = [
+    { id: 'overview', en: 'Overview', ar: 'النظرة الشاملة', icon: 'chart' },
+    { id: 'execution', en: 'Execution', ar: 'الالتزام بالمهام', icon: 'check' },
+    { id: 'habits', en: 'Habits', ar: 'العادات', icon: 'repeat' },
+    { id: 'goals', en: 'Goals', ar: 'الأهداف', icon: 'target' },
+    { id: 'time', en: 'Focus & Body', ar: 'التركيز والجسد', icon: 'timer' },
+    { id: 'learning', en: 'Learning & Faith', ar: 'التعلم والإيمان', icon: 'book-open' },
+    { id: 'finance', en: 'Finance', ar: 'المال', icon: 'wallet' },
+    { id: 'patterns', en: 'Patterns', ar: 'الأنماط', icon: 'activity' }
   ];
 
+  const measuredDash = (m: { hasData: boolean; value: number | null }, unit: string) =>
+    m.hasData && m.value !== null ? (
+      <>
+        {m.value} <span className="text-[11px] text-muted">{unit}</span>
+      </>
+    ) : (
+      <span className="text-base text-muted">{t('no data', 'لا بيانات')}</span>
+    );
+
+  const investedTotal =
+    (report.focus.totalMinutes.value ?? 0) +
+    report.learning.totalMinutes +
+    (report.body.totalMinutes.value ?? 0) +
+    report.faith.totalMinutes;
+
+  const weekdayDays = report.habits.weekdayRhythm.map((d) => ({
+    dow: d.dow,
+    label: isAr ? d.labelAr : d.labelEn,
+    rate: d.rate,
+    dueCount: d.dueCount
+  }));
+
   return (
-    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-      {/* Top Header */}
+    <div className="space-y-5" dir={isAr ? 'rtl' : 'ltr'}>
+      {/* Header */}
       <div className="page-heading">
         <div>
           <div className="eyebrow">
             <span className="line"></span>
-            <span>NUQTA / LIFE INTELLIGENCE OBSERVATORY</span>
+            <span>{t('NUQTA / ANALYTICS CENTER', 'نقطة / مركز التحليلات')}</span>
           </div>
-          <h1>{isAr ? 'لوحة الذكاء الحياتي والتحليلات' : 'Life Intelligence Dashboard'}</h1>
+          <h1>{t('Insights', 'الرؤى والأنماط')}</h1>
           <p>
-            {isAr
-              ? 'مرصد تحليلي موحد يربط إنتاجيتك وعاداتك وقراءتك وتمارينك ورسمك في صورة شمولية واقعية.'
-              : 'Unified analytical observatory deriving cross-domain momentum from your real habits, focus, and craft.'}
+            {t(
+              'How your life is progressing over time — measured from real records, honest about what is missing.',
+              'كيف تتقدّم حياتك عبر الزمن — مقاسة من سجلاتك الحقيقية، وصريحة بشأن ما هو ناقص.'
+            )}
           </p>
         </div>
-
         <div className="heading-actions flex-wrap gap-2">
-          {/* Main Sub-view switcher */}
-          <div className="view-switcher" role="group" aria-label="Insight views">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={activeTab === 'overview' ? 'active' : ''}
-            >
-              {isAr ? 'النظرة الشاملة' : 'Overview'}
-            </button>
-            <button
-              onClick={() => setActiveTab('domains')}
-              className={activeTab === 'domains' ? 'active' : ''}
-            >
-              {isAr ? 'تحليل المجالات' : 'Deep Domains'}
-            </button>
-            <button
-              onClick={() => setActiveTab('simulator')}
-              className={activeTab === 'simulator' ? 'active' : ''}
-            >
-              {isAr ? 'محاكي التراكم' : 'What-If'}
-            </button>
-            <button
-              onClick={() => setActiveTab('milestones')}
-              className={activeTab === 'milestones' ? 'active' : ''}
-            >
-              {isAr ? 'شواهد الإتقان' : 'Milestones'}
-            </button>
-          </div>
-
-          <button
-            onClick={() => setActiveNavTab('archive')}
-            className="btn subtle flex items-center gap-1.5"
-            title={isAr ? 'فتح الأرشيف والسجل الزمني الشامل' : 'Open Universal Archive & History'}
-          >
+          <button onClick={() => setActiveNavTab('archive')} className="btn subtle flex items-center gap-1.5">
             <NuqtaIcon name="archive" className="w-4 h-4" />
-            <span>{isAr ? 'الذاكرة والأرشيف' : 'Archive & History'}</span>
+            <span>{t('Archive & History', 'الذاكرة والأرشيف')}</span>
           </button>
-
-          <button
-            onClick={() => setSundayRitualOpen(true)}
-            className="btn primary"
-            title={isAr ? 'مراجعة الأسبوع المنصرم يوم الجمعة' : 'Close out the week on Friday'}
-          >
+          <button onClick={() => setSundayRitualOpen(true)} className="btn primary flex items-center gap-1.5">
             <NuqtaIcon name="sparkle" className="w-4 h-4" />
-            <span>{isAr ? 'طقس الجمعة الأسبوعي' : 'Friday Weekly Review'}</span>
+            <span>{t('Friday Weekly Review', 'طقس الجمعة الأسبوعي')}</span>
           </button>
         </div>
       </div>
 
-      {/* Time Horizon Selector Ribbon (Today / Week / Month / All) */}
-      <div className="panel p-3 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted font-medium">{isAr ? 'النافذة التحليلية:' : 'Analysis Window:'}</span>
-          <div className="flex p-0.5 rounded-lg bg-[var(--surface-deep)] border border-[var(--border-default)] text-xs">
-            <button
-              onClick={() => setHorizon('today')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                horizon === 'today' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              {isAr ? 'اليوم' : 'Today'}
-            </button>
-            <button
-              onClick={() => setHorizon('week')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                horizon === 'week' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              {isAr ? 'هذا الأسبوع' : 'This Week'}
-            </button>
-            <button
-              onClick={() => setHorizon('month')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                horizon === 'month' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              {isAr ? 'هذا الشهر' : 'This Month'}
-            </button>
-            <button
-              onClick={() => setHorizon('all')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                horizon === 'all' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              {isAr ? 'المدى الشامل' : 'All-Time'}
-            </button>
+      {/* Range selector + coverage strip */}
+      <div className="panel p-3 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted font-medium">{t('Range:', 'النطاق:')}</span>
+          <div className="flex flex-wrap p-0.5 rounded-lg bg-[var(--surface-deep)] border border-[var(--border-default)] text-xs">
+            {RANGES.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => setRange(r.id)}
+                aria-pressed={range === r.id}
+                className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                  range === r.id ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {isAr ? r.ar : r.en}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-muted">
-          <NuqtaIcon name="calendar" className="w-3.5 h-3.5" />
-          <span>{report.dateRangeLabel}</span>
-          {horizon !== 'all' && (
-            <span className="text-[11px] text-accent font-medium">
-              ({isAr ? 'مقارن بالفترة السابقة المماثلة' : 'vs prior period'})
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-muted">
+          <span className="flex items-center gap-1.5">
+            <NuqtaIcon name="calendar" className="w-3.5 h-3.5" />
+            <span>{isAr ? report.rangeLabelAr : report.rangeLabelEn}</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[var(--tone-success)]" />
+            {t(`${report.recordedDays} days recorded`, `${report.recordedDays} يوماً مسجّلاً`)}
+          </span>
+          {report.missingDays > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full border border-dashed border-[var(--border-strong)]" />
+              {t(`${report.missingDays} without records`, `${report.missingDays} بلا سجلات`)}
             </span>
+          )}
+          {report.hasComparison && (
+            <span className="text-accent font-medium">{t('vs prior period', 'مقارنة بالفترة السابقة')}</span>
           )}
         </div>
       </div>
 
-      {/* ==================================================== */}
-      {/* VIEW 1: OVERVIEW & CROSS-DOMAIN INTELLIGENCE */}
-      {/* ==================================================== */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* 4 Core Domain Hero Metric Cards with Deltas */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {/* 1. Tasks & Execution */}
-            <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted flex items-center gap-1.5">
-                  <NuqtaIcon name="check" className="w-3.5 h-3.5" />
-                  <span>{isAr ? 'إنجاز المهام' : 'Tasks Completed'}</span>
-                </span>
-                {renderDelta(report.productivity.tasksCompleted.deltaPercent)}
-              </div>
-              <div>
-                <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold block">
-                  {report.productivity.tasksCompleted.currentValue}
-                </strong>
-                <span className="text-[11px] text-muted">
-                  {isAr ? `معدل الإنجاز: ${report.productivity.completionRate}%` : `Completion rate: ${report.productivity.completionRate}%`}
-                </span>
-              </div>
-              <div className="text-[10px] text-muted font-mono pt-1 border-t border-[var(--border-subtle)]">
-                {report.productivity.topThreeDone} {isAr ? 'مهام بوصلة منجزة' : 'compass tasks done'}
-              </div>
-            </div>
-
-            {/* 2. Habit Cadence */}
-            <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted flex items-center gap-1.5">
-                  <NuqtaIcon name="repeat" className="w-3.5 h-3.5" />
-                  <span>{isAr ? 'انتظام العادات' : 'Habit Cadence'}</span>
-                </span>
-                {renderDelta(report.habits.consistencyRate.deltaPercent)}
-              </div>
-              <div>
-                <strong className="text-2xl font-mono text-accent font-bold block">
-                  {report.habits.consistencyRate.currentValue}%
-                </strong>
-                <div className="w-full bg-[var(--surface-chip)] rounded-full h-1.5 overflow-hidden border border-[var(--border-default)] mt-1.5">
-                  <div
-                    className="bg-accent h-full rounded-full transition-all duration-300"
-                    style={{ width: `${report.habits.consistencyRate.currentValue}%` }}
-                  />
-                </div>
-              </div>
-              <div className="text-[10px] text-muted font-mono pt-1 border-t border-[var(--border-subtle)]">
-                {isAr ? `أطول سلسلة: ${report.habits.longestActiveStreak} يوم` : `Longest streak: ${report.habits.longestActiveStreak}d`}
-              </div>
-            </div>
-
-            {/* 3. Reading Studio */}
-            <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted flex items-center gap-1.5">
-                  <NuqtaIcon name="book-open" className="w-3.5 h-3.5" />
-                  <span>{isAr ? 'صفحات القراءة' : 'Pages Read'}</span>
-                </span>
-                {renderDelta(report.reading.pagesRead.deltaPercent)}
-              </div>
-              <div>
-                <strong className="text-2xl font-mono text-[var(--tone-warning)] font-bold block">
-                  {report.reading.pagesRead.currentValue}
-                </strong>
-                <span className="text-[11px] text-muted">
-                  ~{report.reading.readingHours.currentValue}h {isAr ? 'قراءة مركزة' : 'read'}
-                </span>
-              </div>
-              <div className="text-[10px] text-muted font-mono pt-1 border-t border-[var(--border-subtle)]">
-                {report.reading.averageSpeedPagesPerHour > 0
-                  ? `${report.reading.averageSpeedPagesPerHour} ${isAr ? 'صفحة/ساعة' : 'pages/hr'}`
-                  : (isAr ? 'حساب السرعة نشط' : 'tracking speed')}
-              </div>
-            </div>
-
-            {/* 4. Home Fitness */}
-            <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted flex items-center gap-1.5">
-                  <NuqtaIcon name="dumbbell" className="w-3.5 h-3.5" />
-                  <span>{isAr ? 'تكرارات اللياقة' : 'Calisthenics Reps'}</span>
-                </span>
-                {renderDelta(report.fitness.workoutReps.deltaPercent)}
-              </div>
-              <div>
-                <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold block">
-                  {report.fitness.workoutReps.currentValue}
-                </strong>
-                <span className="text-[11px] text-muted">
-                  {report.fitness.sessionsCount} {isAr ? 'حصص تدريبية منزلية' : 'sessions'} · {report.fitness.workoutMinutes.currentValue}m
-                </span>
-              </div>
-              <div className="text-[10px] text-[var(--tone-success)] font-mono pt-1 border-t border-[var(--border-subtle)]">
-                {report.fitness.workoutMinutes.currentValue} {isAr ? 'دقيقة تدريب منجزة' : 'active mins'}
-              </div>
-            </div>
-          </div>
-
-          {/* Time & Effort Allocation Across Spheres (Cross-Domain) */}
-          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <NuqtaIcon name="scale" className="w-4 h-4" />
-                  <span>{isAr ? 'توزيع الوقت والمجهود بين مجالات الحياة' : 'Life Spheres Time & Effort Allocation'}</span>
-                </h3>
-                <p className="text-xs text-muted">
-                  {isAr
-                    ? 'رصد واقعي لساعات تركيزك الموزعة بين العمل العميق، اللياقة البدنية، القراءة الفكرية، والمرسم الإبداعي.'
-                    : 'Actual observation of how your conscious hours distributed across essential life spheres.'}
-                </p>
-              </div>
-
-              <div className="text-end font-mono">
-                <span className="text-xs text-muted block">{isAr ? 'إجمالي الساعات المستثمرة:' : 'Total Active Hours:'}</span>
-                <strong className="text-base font-bold text-accent">{report.totalActiveTimeHours}h</strong>
-              </div>
-            </div>
-
-            {/* Segmented Distribution Bar */}
-            <SphereAllocationBar
-              allocations={report.sphereAllocations}
-              totalHours={report.totalActiveTimeHours}
-              isAr={isAr}
-            />
-
-            {/* Highest Momentum vs Area Needing Attention Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-              <div className="p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] flex items-start gap-3">
-                <NuqtaIcon name="rocket" className="w-5 h-5" />
-                <div className="space-y-1 min-w-0">
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-accent font-semibold block">
-                    {isAr ? 'المجال الأكثر نشاطاً وزخماً' : 'HIGHEST MOMENTUM SPHERE'}
-                  </span>
-                  <strong className="text-sm text-[var(--text-primary)] block">
-                    {isAr ? report.highestMomentumDomain.nameAr : report.highestMomentumDomain.nameEn}
-                  </strong>
-                  <p className="text-xs text-muted">
-                    {isAr ? report.highestMomentumDomain.reasonAr : report.highestMomentumDomain.reasonEn}
-                  </p>
-                </div>
-              </div>
-
-              {report.areaNeedingAttention ? (
-                <div className="p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] flex items-start gap-3">
-                  <NuqtaIcon name="alert" className="w-5 h-5" />
-                  <div className="space-y-1 min-w-0">
-                    <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--tone-warning)] font-semibold block">
-                      {isAr ? 'مجال يحتاج انتباهاً وتنشيطاً' : 'SPHERE NEEDING MOMENTUM'}
-                    </span>
-                    <strong className="text-sm text-[var(--text-primary)] block">
-                      {isAr ? report.areaNeedingAttention.nameAr : report.areaNeedingAttention.nameEn}
-                    </strong>
-                    <p className="text-xs text-muted">
-                      {isAr ? report.areaNeedingAttention.reasonAr : report.areaNeedingAttention.reasonEn}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] flex items-start gap-3">
-                  <NuqtaIcon name="leaf" className="w-5 h-5" />
-                  <div className="space-y-1 min-w-0">
-                    <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--tone-success)] font-semibold block">
-                      {isAr ? 'توازن مستقر بين المجالات' : 'BALANCED SPHERE DISTRIBUTION'}
-                    </span>
-                    <strong className="text-sm text-[var(--text-primary)] block">
-                      {isAr ? 'جميع المجالات سجلت نشاطاً' : 'All domains engaged'}
-                    </strong>
-                    <p className="text-xs text-muted">
-                      {isAr ? 'هناك استثمار متزن ومستمر بين العمل والجسد والفكر والإبداع.' : 'Continuous steady investment across all life anchors.'}
-                    </p>
-                  </div>
-                </div>
+      {/* Empty window notice */}
+      {report.isEmptyWindow && (
+        <div className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex items-start gap-3">
+          <NuqtaIcon name="alert" className="w-5 h-5 text-[var(--tone-warning)] shrink-0" />
+          <div className="space-y-1">
+            <strong className="text-sm text-[var(--text-primary)] block">
+              {t('No records in this window', 'لا توجد سجلات في هذه الفترة')}
+            </strong>
+            <p className="text-xs text-muted">
+              {t(
+                'Insights reports what your data actually shows. Log tasks, habits, focus or studio sessions and the analytics will appear here — it will not invent numbers.',
+                'تعرض الرؤى ما تُظهره بياناتك فعلياً. سجّل مهامك وعاداتك وجلسات التركيز أو الاستوديو وستظهر التحليلات هنا — ولن يتم اختلاق أي أرقام.'
               )}
-            </div>
-          </section>
-
-          {/* Interactive Trend Chart Section */}
-          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <NuqtaIcon name="trending-up" className="w-4 h-4" />
-                  <span>{isAr ? 'منحنى الاتجاه والوتيرة اليومية (Daily Momentum Curve)' : 'Daily Momentum Trend Line'}</span>
-                </h3>
-                <p className="text-xs text-muted">
-                  {isAr ? 'تتبع صعود وهبوط الإيقاع اليومي ومعدل البناء التراكمي.' : 'Visualize daily velocity peaks and steady recovery cycles.'}
-                </p>
-              </div>
-
-              {/* Metric Selector Switcher */}
-              <div className="flex p-0.5 rounded-lg bg-[var(--surface-deep)] border border-[var(--border-default)] text-xs self-start sm:self-auto">
-                <button
-                  onClick={() => setTrendMetric('totalActiveMinutes')}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    trendMetric === 'totalActiveMinutes' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {isAr ? 'الدقائق النشطة' : 'Active Mins'}
-                </button>
-                <button
-                  onClick={() => setTrendMetric('tasksDone')}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    trendMetric === 'tasksDone' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {isAr ? 'المهام' : 'Tasks'}
-                </button>
-                <button
-                  onClick={() => setTrendMetric('readingPages')}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    trendMetric === 'readingPages' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {isAr ? 'صفحات القراءة' : 'Pages'}
-                </button>
-                <button
-                  onClick={() => setTrendMetric('workoutReps')}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    trendMetric === 'workoutReps' ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {isAr ? 'تكرارات التمارين' : 'Reps'}
-                </button>
-              </div>
-            </div>
-
-            {/* Smooth SVG Trend Line Chart */}
-            <TrendLineChart
-              data={report.dailyTrend}
-              metricKey={trendMetric}
-              color={
-                trendMetric === 'totalActiveMinutes'
-                  ? 'var(--tone-success)'
-                  : trendMetric === 'readingPages'
-                  ? 'var(--tone-warning)'
-                  : trendMetric === 'workoutReps'
-                  ? 'var(--tone-success)'
-                  : 'var(--tone-info)'
-              }
-              unit={
-                trendMetric === 'totalActiveMinutes'
-                  ? (isAr ? 'دقيقة' : 'mins')
-                  : trendMetric === 'readingPages'
-                  ? (isAr ? 'صفحة' : 'pages')
-                  : trendMetric === 'workoutReps'
-                  ? (isAr ? 'تكرار' : 'reps')
-                  : (isAr ? 'مهمة' : 'tasks')
-              }
-              isAr={isAr}
-            />
-          </section>
-
-          {/* Calendar Activity Heatmap Matrix (GitHub Style - 56 Days) */}
-          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <NuqtaIcon name="blocks" className="w-4 h-4" />
-                  <span>{isAr ? 'مصفوفة النشاط التراكمي (8 أسابيع / 56 يوماً)' : 'Continuous Momentum Matrix (8 Weeks)'}</span>
-                </h3>
-                <p className="text-xs text-muted">
-                  {isAr
-                    ? 'كثافة الإنجاز اليومية المجمعة من كافة المهام، العادات، التمارين، جلسات القراءة، والرسم.'
-                    : 'Composite daily intensity across all tasks, habits, calisthenics, books, and artwork.'}
-                </p>
-              </div>
-            </div>
-
-            <CalendarHeatmap weeks={report.heatmapWeeks} isAr={isAr} />
-          </section>
-
-          {/* Goals Contribution Matrix */}
-          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <NuqtaIcon name="target" className="w-4 h-4" />
-                  <span>{isAr ? 'مساهمة الأنشطة في الأهداف الاستراتيجية' : 'Activity Contribution to Strategic Goals'}</span>
-                </h3>
-                <p className="text-xs text-muted">
-                  {isAr
-                    ? 'تغذية الأهداف الكبرى بالأنشطة المنفذة فعلياً خلال هذه الفترة.'
-                    : 'Live trace of how execution activities compound into macro goals.'}
-                </p>
-              </div>
-              <button
-                onClick={() => setActiveNavTab('goals')}
-                className="text-xs text-accent hover:underline"
-              >
-                {isAr ? 'خارطة الأهداف الكاملة' : 'Goals Roadmap'}
-                <NuqtaIcon name="arrow" className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {report.goals.goalSummaries.length === 0 ? (
-              <div className="p-6 text-center text-xs text-muted border border-dashed border-[var(--border-default)] rounded-xl">
-                {isAr ? 'لا توجد أهداف نشطة مرتبطة بأنشطة حالياً.' : 'No active goals linked yet.'}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {report.goals.goalSummaries.map((g) => (
-                  <div
-                    key={g.goalId}
-                    className="p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] flex flex-col justify-between space-y-2.5"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent font-semibold">
-                          {g.category}
-                        </span>
-                        <span className="font-mono text-accent font-bold text-sm">
-                          {g.progressPercent}%
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-[var(--text-primary)] text-xs truncate">{g.title}</h4>
-                    </div>
-
-                    <div className="w-full bg-[var(--surface-chip)] rounded-full h-1.5 overflow-hidden border border-[var(--border-default)]">
-                      <div
-                        className="bg-accent h-full rounded-full transition-all duration-300"
-                        style={{ width: `${g.progressPercent}%` }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] text-muted pt-1 border-t border-[var(--border-subtle)]">
-                      <span>
-                        {g.recentEventsCount > 0
-                          ? `${g.recentEventsCount} ${isAr ? 'مساهمات مسجلة في الفترة' : 'contributions'}`
-                          : (isAr ? 'بانتظار أنشطة' : 'no activity in period')}
-                      </span>
-                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                        g.activeStatus === 'ahead' ? 'text-[var(--tone-success)] bg-[var(--tone-success-wash)]' :
-                        g.activeStatus === 'dormant' ? 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)]' : 'text-[var(--tone-info)] bg-[var(--tone-info-wash)]'
-                      }`}>
-                        {g.activeStatus}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+            </p>
+          </div>
         </div>
       )}
 
-      {/* ==================================================== */}
-      {/* VIEW 2: DEEP DOMAIN ANALYTICS (تحليل المجالات) */}
-      {/* ==================================================== */}
-      {activeTab === 'domains' && (
-        <div className="space-y-6">
-          {/* Domain Picker Pills */}
-          <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl bg-[var(--surface-deep)] border border-[var(--border-default)] text-xs">
-            <button
-              onClick={() => setDomainDetailTab('productivity')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'productivity' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <NuqtaIcon name="check" className="w-3.5 h-3.5" />
-              <span>{isAr ? 'الإنتاجية والمهام' : 'Tasks'}</span>
-            </button>
-            <button
-              onClick={() => setDomainDetailTab('habits')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'habits' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <NuqtaIcon name="repeat" className="w-3.5 h-3.5" />
-              <span>{isAr ? 'العادات اليومية' : 'Habits'}</span>
-            </button>
-            <button
-              onClick={() => setDomainDetailTab('reading')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'reading' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <NuqtaIcon name="book-open" className="w-3.5 h-3.5" />
-              <span>{isAr ? 'مكتبة القراءة' : 'Reading'}</span>
-            </button>
-            <button
-              onClick={() => setDomainDetailTab('fitness')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'fitness' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <NuqtaIcon name="dumbbell" className="w-3.5 h-3.5" />
-              <span>{isAr ? 'اللياقة المنزلية' : 'Fitness'}</span>
-            </button>
-            <button
-              onClick={() => setDomainDetailTab('drawing')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'drawing' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <NuqtaIcon name="palette" className="w-3.5 h-3.5" />
-              <span>{isAr ? 'مرسم الإبداع' : 'Drawing'}</span>
-            </button>
-            <button
-              onClick={() => setDomainDetailTab('focus')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
-                domainDetailTab === 'focus' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <NuqtaIcon name="timer" className="w-3.5 h-3.5" />
-              <span>{isAr ? 'التركيز العميق' : 'Focus'}</span>
-            </button>
+      {/* Section switcher */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl bg-[var(--surface-deep)] border border-[var(--border-default)] text-xs">
+        {sections.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setSection(s.id)}
+            aria-pressed={section === s.id}
+            className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+              section === s.id ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <NuqtaIcon name={s.icon} className="w-3.5 h-3.5" />
+            <span>{isAr ? s.ar : s.en}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ===================================================== OVERVIEW */}
+      {section === 'overview' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <MetricCard
+              icon="check"
+              label={t('Tasks completed', 'المهام المنجزة')}
+              value={report.execution.completed.hasData ? report.execution.completed.value ?? 0 : '—'}
+              delta={report.execution.delta}
+              sub={
+                report.execution.completionRate !== null
+                  ? t(`${report.execution.completionRate}% of scheduled`, `${report.execution.completionRate}% من المجدولة`)
+                  : t('no scheduled tasks', 'لا مهام مجدولة')
+              }
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="repeat"
+              label={t('Habit adherence', 'انتظام العادات')}
+              value={report.habits.adherenceRate !== null ? `${report.habits.adherenceRate}%` : '—'}
+              delta={report.habits.delta}
+              accent="var(--brand)"
+              sub={t(`${report.habits.doneDays}/${report.habits.dueDays} due days`, `${report.habits.doneDays}/${report.habits.dueDays} يوم مستحق`)}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="timer"
+              label={t('Focus time', 'وقت التركيز')}
+              value={measuredDash(report.focus.totalMinutes, 'min')}
+              delta={report.focus.delta}
+              sub={report.focus.sessionsCount > 0 ? t(`${report.focus.sessionsCount} sessions`, `${report.focus.sessionsCount} جلسة`) : t('no sessions', 'لا جلسات')}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="dumbbell"
+              label={t('Workout time', 'وقت التمارين')}
+              value={measuredDash(report.body.totalMinutes, 'min')}
+              delta={report.body.delta}
+              accent="var(--tone-success)"
+              sub={report.body.sessionsCount > 0 ? t(`${report.body.totalReps} reps`, `${report.body.totalReps} تكرار`) : t('no sessions', 'لا حصص')}
+              isAr={isAr}
+            />
           </div>
 
-          {/* DOMAIN 1: PRODUCTIVITY & TASKS */}
-          {domainDetailTab === 'productivity' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'المهام المكتملة' : 'Completed Tasks'}</span>
-                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
-                    {report.productivity.tasksCompleted.currentValue}
-                  </strong>
-                  <div className="mt-1">
-                    {renderDelta(report.productivity.tasksCompleted.deltaPercent)}
-                  </div>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'معدل إنجاز المهام المجدولة' : 'Schedule Completion Rate'}</span>
-                  <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
-                    {report.productivity.completionRate}%
-                  </strong>
-                  <span className="text-[11px] text-muted">
-                    {report.productivity.tasksCompleted.currentValue} {isAr ? 'من أصل' : 'of'} {report.productivity.totalTasksScheduled} {isAr ? 'مجدولة' : 'scheduled'}
-                  </span>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'مهام البوصلة الثلاث المنجزة' : 'Compass Focus Tasks Hit'}</span>
-                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
-                    {report.productivity.topThreeDone}
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'مهام عالية التأثير والأولوية' : 'high-leverage focus anchors'}</span>
-                </div>
+          {/* Trend chart */}
+          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
+                  <NuqtaIcon name="trending-up" className="w-4 h-4" />
+                  <span>{t('Trend over time', 'الاتجاه عبر الزمن')}</span>
+                </h3>
+                <p className="text-xs text-muted">
+                  {report.timelineGranularity === 'day'
+                    ? t('Daily buckets', 'نطاقات يومية')
+                    : report.timelineGranularity === 'week'
+                    ? t('Weekly buckets (Sat–Fri weeks)', 'نطاقات أسبوعية (أسابيع السبت–الجمعة)')
+                    : t('Monthly buckets', 'نطاقات شهرية')}
+                  {' · '}
+                  {t('gaps mean no record, not zero', 'الفراغات تعني غياب السجل لا الصفر')}
+                </p>
               </div>
+              <div className="flex flex-wrap p-0.5 rounded-lg bg-[var(--surface-deep)] border border-[var(--border-default)] text-xs">
+                {TREND_METRICS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setTrendMetric(m.id)}
+                    aria-pressed={trendMetric === m.id}
+                    className={`px-2 py-1 rounded-md transition-colors ${
+                      trendMetric === m.id ? 'bg-[var(--surface-track)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    {isAr ? m.ar : m.en}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <TrendChart
+              points={trendPoints}
+              color={metricMeta.color}
+              unit={isAr ? metricMeta.unitAr : metricMeta.unitEn}
+              isAr={isAr}
+            />
+          </section>
 
-              {/* Daily Task Breakdown Bar Chart */}
-              <div className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
-                <h4 className="text-sm font-bold text-[var(--text-primary)]">
-                  {isAr ? 'توزيع إنجاز المهام اليومية (Daily Tasks Bar Chart)' : 'Daily Task Completion Distribution'}
-                </h4>
-                <ActivityBarChart
-                  data={report.dailyTrend}
-                  metricKey="tasksDone"
-                  color="var(--tone-success)"
+          {/* Invested time by domain */}
+          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
+            <div>
+              <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
+                <NuqtaIcon name="scale" className="w-4 h-4" />
+                <span>{t('Invested time by domain', 'الوقت المستثمر حسب المجال')}</span>
+              </h3>
+              <p className="text-xs text-muted">
+                {t(
+                  'Focus, reading, workouts and Quran study — each block is time, counted once.',
+                  'التركيز والقراءة والتمارين ودراسة القرآن — كل جزء وقت مُحتسب مرة واحدة.'
+                )}
+              </p>
+            </div>
+            <HorizontalBars
+              rows={[
+                { key: 'focus', label: t('Focus', 'التركيز'), value: report.focus.totalMinutes.value ?? 0, percent: share(report.focus.totalMinutes.value, investedTotal), color: 'var(--tone-info)' },
+                { key: 'read', label: t('Reading', 'القراءة'), value: report.learning.totalMinutes, percent: share(report.learning.totalMinutes, investedTotal), color: 'var(--tone-warning)' },
+                { key: 'workout', label: t('Workouts', 'التمارين'), value: report.body.totalMinutes.value ?? 0, percent: share(report.body.totalMinutes.value, investedTotal), color: 'var(--tone-success)' },
+                { key: 'quran', label: t('Quran', 'القرآن'), value: report.faith.totalMinutes, percent: share(report.faith.totalMinutes, investedTotal), color: 'var(--brand)' }
+              ]}
+              unit={isAr ? 'دقيقة' : 'min'}
+              isAr={isAr}
+              emptyLabel={t('No invested time recorded in this window.', 'لم يُسجَّل وقت مستثمر في هذه الفترة.')}
+            />
+          </section>
+
+          {/* Section summary cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <SummaryCard
+              title={t('Execution', 'الالتزام بالمهام')}
+              icon="check"
+              hasData={report.execution.hasData}
+              onOpen={() => setSection('execution')}
+              isAr={isAr}
+              lines={[
+                report.execution.completionRate !== null
+                  ? t(`${report.execution.completionRate}% completion rate`, `معدل إنجاز ${report.execution.completionRate}%`)
+                  : t('No scheduled tasks', 'لا مهام مجدولة'),
+                t(`${report.execution.overdueCount} overdue`, `${report.execution.overdueCount} متأخرة`)
+              ]}
+            />
+            <SummaryCard
+              title={t('Habits', 'العادات')}
+              icon="repeat"
+              hasData={report.habits.hasData}
+              onOpen={() => setSection('habits')}
+              isAr={isAr}
+              lines={[
+                report.habits.adherenceRate !== null
+                  ? t(`${report.habits.adherenceRate}% adherence`, `انتظام ${report.habits.adherenceRate}%`)
+                  : t('No active habits', 'لا عادات نشطة'),
+                t(`${report.habits.activeHabits} active`, `${report.habits.activeHabits} نشطة`)
+              ]}
+            />
+            <SummaryCard
+              title={t('Goals', 'الأهداف')}
+              icon="target"
+              hasData={report.goals.hasData}
+              onOpen={() => setSection('goals')}
+              isAr={isAr}
+              lines={[
+                report.goals.avgOutcomePercent !== null
+                  ? t(`${report.goals.avgOutcomePercent}% avg progress`, `متوسط تقدّم ${report.goals.avgOutcomePercent}%`)
+                  : t('No active goals', 'لا أهداف نشطة'),
+                t(`${report.goals.activeCount} active`, `${report.goals.activeCount} نشطة`)
+              ]}
+            />
+            <SummaryCard
+              title={t('Learning', 'التعلم')}
+              icon="book-open"
+              hasData={report.learning.hasData}
+              onOpen={() => setSection('learning')}
+              isAr={isAr}
+              lines={[
+                report.learning.pagesRead.hasData
+                  ? t(`${report.learning.pagesRead.value} pages`, `${report.learning.pagesRead.value} صفحة`)
+                  : t('No reading logged', 'لا قراءة مسجّلة'),
+                t(`${report.learning.booksFinishedInRange} books finished`, `${report.learning.booksFinishedInRange} كتاب منجز`)
+              ]}
+            />
+            <SummaryCard
+              title={t('Faith', 'الإيمان')}
+              icon="mosque"
+              hasData={report.faith.hasData}
+              onOpen={() => setSection('learning')}
+              isAr={isAr}
+              lines={[
+                report.faith.ayahsInRange.hasData
+                  ? t(`${report.faith.ayahsInRange.value} ayahs`, `${report.faith.ayahsInRange.value} آية`)
+                  : t('No Quran sessions', 'لا جلسات قرآن'),
+                t(`${report.faith.distinctSurahs} surahs`, `${report.faith.distinctSurahs} سورة`)
+              ]}
+            />
+            <SummaryCard
+              title={t('Finance', 'المال')}
+              icon="wallet"
+              hasData={report.finance.hasData}
+              onOpen={() => setSection('finance')}
+              isAr={isAr}
+              lines={[
+                t(`net ${formatMoney(report.finance.net)}`, `الصافي ${formatMoney(report.finance.net)}`),
+                t(`savings ${report.finance.savingsPercent ?? 0}%`, `الادخار ${report.finance.savingsPercent ?? 0}%`)
+              ]}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================== EXECUTION */}
+      {section === 'execution' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <MetricCard
+              icon="check"
+              label={t('Completed tasks', 'المهام المنجزة')}
+              value={measuredDash(report.execution.completed, '')}
+              delta={report.execution.delta}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="target"
+              label={t('Completion rate', 'معدل الإنجاز')}
+              value={report.execution.completionRate !== null ? `${report.execution.completionRate}%` : '—'}
+              accent="var(--brand)"
+              sub={
+                report.execution.previousCompletionRate !== null
+                  ? t(`prior: ${report.execution.previousCompletionRate}%`, `السابقة: ${report.execution.previousCompletionRate}%`)
+                  : t('no prior period data', 'لا بيانات للفترة السابقة')
+              }
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="alert"
+              label={t('Overdue now', 'متأخرة الآن')}
+              value={report.execution.overdueCount}
+              accent={report.execution.overdueCount > 0 ? 'var(--tone-danger)' : 'var(--tone-success)'}
+              sub={t(`${report.execution.scheduledTotal} scheduled in range`, `${report.execution.scheduledTotal} مجدولة في النطاق`)}
+              isAr={isAr}
+            />
+          </div>
+
+          {report.execution.hasData ? (
+            <>
+              <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Daily completions', 'الإنجاز اليومي')}</h3>
+                <BarSeries
+                  points={report.timeline.map((p) => ({
+                    key: p.key,
+                    label: p.label,
+                    fullLabel: p.fullLabel,
+                    value: p.tasksCompleted > 0 || p.tasksScheduled > 0 ? p.tasksCompleted : p.recordedDays === 0 ? null : 0,
+                    missing: p.recordedDays === 0
+                  }))}
+                  color="var(--tone-info)"
                   unit={isAr ? 'مهمة' : 'tasks'}
                   isAr={isAr}
                 />
-              </div>
-            </div>
+              </section>
+
+              <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Overdue aging', 'تقدّم التأخير')}</h3>
+                <HorizontalBars
+                  rows={report.execution.overdueAging.map((a, i) => ({
+                    key: `age-${i}`,
+                    label: isAr ? a.labelAr : a.labelEn,
+                    value: a.count,
+                    percent: report.execution.overdueCount > 0 ? Math.round((a.count / report.execution.overdueCount) * 100) : 0,
+                    color: 'var(--tone-danger)'
+                  }))}
+                  unit={isAr ? 'مهمة' : 'tasks'}
+                  isAr={isAr}
+                  emptyLabel={t('Nothing overdue.', 'لا شيء متأخر.')}
+                />
+              </section>
+            </>
+          ) : (
+            <EmptySection isAr={isAr} />
           )}
+        </div>
+      )}
 
-          {/* DOMAIN 2: HABITS */}
-          {domainDetailTab === 'habits' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'معدل انتظام العادات' : 'Habit Consistency Rate'}</span>
-                  <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
-                    {report.habits.consistencyRate.currentValue}%
-                  </strong>
-                  <div className="mt-1">
-                    {renderDelta(report.habits.consistencyRate.deltaPercent)}
-                  </div>
+      {/* ===================================================== HABITS */}
+      {section === 'habits' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <MetricCard
+              icon="repeat"
+              label={t('Adherence', 'الانتظام')}
+              value={report.habits.adherenceRate !== null ? `${report.habits.adherenceRate}%` : '—'}
+              delta={report.habits.delta}
+              accent="var(--brand)"
+              sub={t(`${report.habits.doneDays}/${report.habits.dueDays} due days done`, `${report.habits.doneDays}/${report.habits.dueDays} يوم مستحق منجز`)}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="flame"
+              label={t('Active streak', 'أطول سلسلة حالية')}
+              value={report.habits.longestActiveStreak}
+              unit={t('days', 'يوم')}
+              accent="var(--tone-warning)"
+              sub={t(`best ever: ${report.habits.bestEverStreak}`, `الأفضل سابقاً: ${report.habits.bestEverStreak}`)}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="alert"
+              label={t('Missed due days', 'أيام مستحقة فائتة')}
+              value={report.habits.missedDueDays}
+              accent={report.habits.missedDueDays > 0 ? 'var(--tone-danger)' : 'var(--tone-success)'}
+              sub={t(`${report.habits.activeHabits} active habits`, `${report.habits.activeHabits} عادة نشطة`)}
+              isAr={isAr}
+            />
+          </div>
+
+          {report.habits.hasData ? (
+            <>
+              <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                    {t('Weekday rhythm (Sat → Fri)', 'إيقاع أيام الأسبوع (السبت → الجمعة)')}
+                  </h3>
+                  <p className="text-xs text-muted">
+                    {t('Adherence on each day the habits were actually due.', 'الانتظام في كل يوم كانت فيه العادات مستحقة فعلاً.')}
+                  </p>
                 </div>
+                <WeekdayStrip days={weekdayDays} isAr={isAr} />
+              </section>
 
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'أطول سلسلة متواصلة' : 'Longest Unbroken Streak'}</span>
-                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
-                    {report.habits.longestActiveStreak} {isAr ? 'يوم' : 'days'}
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'استمرارية راسخة' : 'unbroken momentum'}</span>
-                </div>
+              <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                  {t('Adherence by time of day', 'الانتظام حسب وقت اليوم')}
+                </h3>
+                <HorizontalBars
+                  rows={report.habits.timeOfDay
+                    .filter((s) => s.dueCount > 0)
+                    .map((s) => ({ key: s.slot, label: isAr ? s.labelAr : s.labelEn, value: s.rate ?? 0, percent: s.rate ?? 0, color: 'var(--brand)' }))}
+                  unit="%"
+                  isAr={isAr}
+                  emptyLabel={t('No habits due in this window.', 'لا عادات مستحقة في هذه الفترة.')}
+                />
+              </section>
+            </>
+          ) : (
+            <EmptySection isAr={isAr} />
+          )}
+        </div>
+      )}
 
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'إجمالي علامات الإنجاز' : 'Total Check-ins'}</span>
-                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
-                    {report.habits.totalChecks}
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'تكرار عادة في الفترة' : 'habit executions'}</span>
-                </div>
-              </div>
+      {/* ===================================================== GOALS */}
+      {section === 'goals' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <MetricCard
+              icon="target"
+              label={t('Active goals', 'الأهداف النشطة')}
+              value={report.goals.activeCount}
+              sub={t(`${report.goals.milestonesTotal} milestones total`, `${report.goals.milestonesTotal} مرحلة إجمالاً`)}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="rocket"
+              label={t('Avg outcome progress', 'متوسط تقدّم النتائج')}
+              value={report.goals.avgOutcomePercent !== null ? `${report.goals.avgOutcomePercent}%` : '—'}
+              accent="var(--tone-success)"
+              sub={t('from key results & milestones', 'من النتائج والمحطات')}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="activity"
+              label={t('Avg execution progress', 'متوسط التقدّم التنفيذي')}
+              value={report.goals.avgExecutionPercent !== null ? `${report.goals.avgExecutionPercent}%` : '—'}
+              accent="var(--tone-info)"
+              sub={t('from linked tasks & habits', 'من المهام والعادات المرتبطة')}
+              isAr={isAr}
+            />
+          </div>
 
-              {/* Habit Breakdown list */}
-              <div className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
-                <h4 className="text-sm font-bold text-[var(--text-primary)]">
-                  {isAr ? 'حالة العادات الفردية والسلاسل النشطة' : 'Active Habits & Current Streaks'}
-                </h4>
-                <div className="space-y-2">
-                  {habits.map((h) => (
-                    <div
-                      key={h.id}
-                      className="p-3 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)] flex items-center justify-between text-xs"
-                    >
-                      <div>
-                        <strong className="text-[var(--text-primary)] block font-semibold">{h.name}</strong>
-                        <span className="text-[11px] text-muted">{h.anchor || (isAr ? 'عادة يومية' : 'Daily anchor')}</span>
+          {report.goals.hasData ? (
+            <>
+              <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Pacing overview', 'نظرة على الوتيرة')}</h3>
+                <HorizontalBars
+                  rows={pacingRows(report.goals.pacing, isAr)}
+                  unit={t('goals', 'هدف')}
+                  isAr={isAr}
+                  emptyLabel={t('No active goals.', 'لا أهداف نشطة.')}
+                />
+              </section>
+
+              <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Goal detail', 'تفاصيل الأهداف')}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {report.goals.cards.map((g) => (
+                    <div key={g.goalId} className="p-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent font-semibold">
+                          {g.category}
+                        </span>
+                        <PacingChip status={g.pacingStatus} isAr={isAr} />
                       </div>
-                      <div className="text-end font-mono">
-                        <span className="text-accent font-bold block">{h.currentStreak}d streak</span>
-                        <span className="text-[10px] text-muted">{isAr ? `الأفضل: ${h.longestStreak}d` : `Best: ${h.longestStreak}d`}</span>
+                      <h4 className="font-bold text-[var(--text-primary)] text-xs truncate">{g.title}</h4>
+                      <div className="space-y-1.5">
+                        <ProgressRow label={t('Outcome', 'النتيجة')} percent={g.outcomePercent} color="var(--tone-success)" />
+                        <ProgressRow label={t('Execution', 'التنفيذ')} percent={g.executionPercent} color="var(--tone-info)" />
+                      </div>
+                      <div className="text-[11px] text-muted pt-1 border-t border-[var(--border-subtle)]">
+                        {g.linkedActivityInRange > 0
+                          ? t(`${g.linkedActivityInRange} linked activities in range`, `${g.linkedActivityInRange} نشاط مرتبط في الفترة`)
+                          : t('no linked activity in range', 'لا نشاط مرتبط في الفترة')}
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* DOMAIN 3: READING STUDIO */}
-          {domainDetailTab === 'reading' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'الصفحات المقروءة' : 'Pages Read'}</span>
-                  <strong className="text-2xl font-mono text-[var(--tone-warning)] font-bold mt-1 block">
-                    {report.reading.pagesRead.currentValue}
-                  </strong>
-                  <div className="mt-1">
-                    {renderDelta(report.reading.pagesRead.deltaPercent)}
-                  </div>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'ساعات القراءة' : 'Reading Hours'}</span>
-                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
-                    {report.reading.readingHours.currentValue}h
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'وقت تدفق معرفي' : 'focus reading'}</span>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'سرعة القراءة' : 'Average Pace'}</span>
-                  <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
-                    {report.reading.averageSpeedPagesPerHour}
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'صفحة لكل ساعة' : 'pages / hr'}</span>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'الكتب المكتملة' : 'Books Finished'}</span>
-                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
-                    {report.reading.booksFinished}
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'كتاب منجز' : 'completed'}</span>
-                </div>
-              </div>
-
-              {/* Reading Trend Bar Chart */}
-              <div className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
-                <h4 className="text-sm font-bold text-[var(--text-primary)]">
-                  {isAr ? 'وتيرة قراءة الصفحات اليومية' : 'Daily Pages Read Velocity'}
-                </h4>
-                <ActivityBarChart
-                  data={report.dailyTrend}
-                  metricKey="readingPages"
-                  color="var(--tone-warning)"
-                  unit={isAr ? 'صفحة' : 'pages'}
-                  isAr={isAr}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* DOMAIN 4: HOME FITNESS */}
-          {domainDetailTab === 'fitness' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'مجموع التكرارات المنجزة' : 'Total Calisthenics Reps'}</span>
-                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
-                    {report.fitness.workoutReps.currentValue}
-                  </strong>
-                  <div className="mt-1">
-                    {renderDelta(report.fitness.workoutReps.deltaPercent)}
-                  </div>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'دقائق التدريب المنزلي' : 'Active Training Minutes'}</span>
-                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
-                    {report.fitness.workoutMinutes.currentValue}m
-                  </strong>
-                  <span className="text-[11px] text-muted">
-                    {report.fitness.sessionsCount} {isAr ? 'حصص تدريبية' : 'sessions'}
-                  </span>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'معدل الحصة' : 'Avg Session Length'}</span>
-                  <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
-                    {report.fitness.sessionsCount > 0
-                      ? Math.round(report.fitness.workoutMinutes.currentValue / report.fitness.sessionsCount)
-                      : 25}m
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'دقائق لكل تمرين' : 'mins / workout'}</span>
-                </div>
-              </div>
-
-              {/* Movement Pattern Balance Distribution */}
-              <div className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-bold text-[var(--text-primary)]">
-                      {isAr ? 'ميزان الأنماط الحركية (Movement Pattern Balance)' : 'Movement Pattern Balance Distribution'}
-                    </h4>
-                    <p className="text-xs text-muted">
-                      {isAr ? 'توزيع التكرارات على حركات الدفع، الأرجل، الجذع، والسحب والمرونة لمنع عدم الاتزان العضلي.' : 'Distribution of reps across muscle movements ensuring structural balance.'}
-                    </p>
-                  </div>
-                </div>
-                <MovementDistributionBar
-                  distribution={report.fitness.movementDistribution}
-                  isAr={isAr}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* DOMAIN 5: CREATIVE STUDIO (DRAWING) */}
-          {domainDetailTab === 'drawing' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'ساعات التدفق الإبداعي' : 'Flow Hours'}</span>
-                  <strong className="text-2xl font-mono text-[var(--tone-purple)] font-bold mt-1 block">
-                    {report.drawing.flowHours.currentValue}h
-                  </strong>
-                  <div className="mt-1">
-                    {renderDelta(report.drawing.flowHours.deltaPercent)}
-                  </div>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'الأعمال والسكتشات' : 'Artworks Logged'}</span>
-                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
-                    {report.drawing.artworksLogged}
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'قطعة في المعرض' : 'pieces preserved'}</span>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'المشاريع المنجزة' : 'Projects Completed'}</span>
-                  <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
-                    {report.drawing.projectsCompleted}
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'مشروع مكتمل' : 'completed projects'}</span>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'الوسيط الأبرز' : 'Top Medium'}</span>
-                  <strong className="text-sm font-bold text-[var(--tone-info)] mt-1 block truncate capitalize">
-                    {report.drawing.favoriteMedium}
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'الأسلوب الأكثر استخداماً' : 'highest cadence'}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* DOMAIN 6: DEEP WORK FOCUS */}
-          {domainDetailTab === 'focus' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'ساعات العمل العميق' : 'Deep Work Hours'}</span>
-                  <strong className="text-2xl font-mono text-[var(--tone-info)] font-bold mt-1 block">
-                    {report.focus.deepWorkHours.currentValue}h
-                  </strong>
-                  <div className="mt-1">
-                    {renderDelta(report.focus.deepWorkHours.deltaPercent)}
-                  </div>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'جلسات الانتباه المركزة' : 'Focus Sprints'}</span>
-                  <strong className="text-2xl font-mono text-[var(--text-primary)] font-bold mt-1 block">
-                    {report.focus.sessionsCount}
-                  </strong>
-                  <span className="text-[11px] text-muted">
-                    {isAr ? `متوسط الجلسة: ${report.focus.averageSessionMinutes} دقيقة` : `avg ${report.focus.averageSessionMinutes}m per sprint`}
-                  </span>
-                </div>
-
-                <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
-                  <span className="text-xs text-muted block">{isAr ? 'معدل مقاطعة الجلسات' : 'Interruption Rate'}</span>
-                  <strong className="text-2xl font-mono text-[var(--tone-success)] font-bold mt-1 block">
-                    {report.focus.interruptionRate}
-                  </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'مقاطعة / جلسة' : 'interruptions / session'}</span>
-                </div>
-              </div>
-            </div>
+              </section>
+            </>
+          ) : (
+            <EmptySection isAr={isAr} />
           )}
         </div>
       )}
 
-      {/* ==================================================== */}
-      {/* VIEW 3: "WHAT-IF" COMPOUNDING SIMULATOR */}
-      {/* ==================================================== */}
-      {activeTab === 'simulator' && <WhatIfSimulator />}
-
-      {/* ==================================================== */}
-      {/* VIEW 4: MEANINGFUL MILESTONES & ACHIEVEMENTS */}
-      {/* ==================================================== */}
-      {activeTab === 'milestones' && (
-        <section className="panel insight-card p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4">
-          <div className="panel-heading">
-            <div>
-              <h2>{isAr ? 'محطات وشواهد الإتقان التراكمي (Milestones)' : 'Calm Milestones of Mastery'}</h2>
-              <p>
-                {isAr
-                  ? 'شواهد حقيقية ترصد ثباتك والتزامك دون ضوضاء أو مكافآت طفولية زائفة.'
-                  : 'Grounded milestones honoring conscious execution and steady, quiet discipline.'}
-              </p>
-            </div>
+      {/* ===================================================== FOCUS & BODY */}
+      {section === 'time' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <MetricCard
+              icon="timer"
+              label={t('Focus sessions', 'جلسات التركيز')}
+              value={report.focus.sessionsCount}
+              sub={report.focus.avgSessionMinutes !== null ? t(`avg ${report.focus.avgSessionMinutes} min`, `متوسط ${report.focus.avgSessionMinutes} دقيقة`) : t('no data', 'لا بيانات')}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="activity"
+              label={t('Avg productivity', 'متوسط الإنتاجية')}
+              value={report.focus.avgProductivityScore !== null ? report.focus.avgProductivityScore : '—'}
+              unit={t('/ 5', '/ 5')}
+              accent="var(--tone-info)"
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="dumbbell"
+              label={t('Workout sessions', 'حصص التمارين')}
+              value={report.body.sessionsCount}
+              accent="var(--tone-success)"
+              sub={report.body.weeklyTargetSessions > 0 ? t(`target ${report.body.weeklyTargetSessions}/week`, `الهدف ${report.body.weeklyTargetSessions}/أسبوع`) : t('no target set', 'لا هدف محدد')}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="flame"
+              label={t('Total reps', 'إجمالي التكرارات')}
+              value={report.body.totalReps}
+              accent="var(--tone-warning)"
+              sub={report.body.avgIntensity !== null ? t(`avg RPE ${report.body.avgIntensity}`, `متوسط الشدة ${report.body.avgIntensity}`) : t('no RPE logged', 'لا شدة مسجّلة')}
+              isAr={isAr}
+            />
           </div>
 
-          <div className="achievement-grid">
-            {achievements.map((a, i) => (
-              <div
-                key={i}
-                className={`achievement ${a.unlocked ? 'unlocked' : ''}`}
-              >
-                <span className="achievement-icon"><NuqtaIcon name={a.icon} className="w-4 h-4" /></span>
-                <strong>{a.title}</strong>
-                <small>{a.sub}</small>
+          {report.focus.hasData && (
+            <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Focus minutes over time', 'دقائق التركيز عبر الزمن')}</h3>
+              <BarSeries
+                points={report.timeline.map((p) => ({
+                  key: p.key,
+                  label: p.label,
+                  fullLabel: p.fullLabel,
+                  value: p.focusMinutes > 0 ? p.focusMinutes : p.recordedDays === 0 ? null : 0,
+                  missing: p.recordedDays === 0
+                }))}
+                color="var(--tone-info)"
+                unit={isAr ? 'دقيقة' : 'min'}
+                isAr={isAr}
+              />
+            </section>
+          )}
+
+          {report.body.hasData && (
+            <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Movement balance', 'توازن أنماط الحركة')}</h3>
+              <HorizontalBars
+                rows={report.body.movementDistribution
+                  .filter((m) => m.reps > 0)
+                  .map((m) => ({ key: m.key, label: isAr ? m.labelAr : m.labelEn, value: m.reps, percent: m.percent, color: 'var(--brand)' }))}
+                unit={t('reps', 'تكرار')}
+                isAr={isAr}
+                emptyLabel={t('No exercise breakdown recorded.', 'لم تُسجَّل تفاصيل التمارين.')}
+              />
+              <p className="text-[11px] text-muted pt-1 border-t border-[var(--border-subtle)]">
+                {t(`Volume: ${report.body.totalVolumeKg} kg`, `الحجم: ${report.body.totalVolumeKg} كجم`)}
+              </p>
+            </section>
+          )}
+
+          {!report.focus.hasData && !report.body.hasData && <EmptySection isAr={isAr} />}
+        </div>
+      )}
+
+      {/* ===================================================== LEARNING & FAITH */}
+      {section === 'learning' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <MetricCard
+              icon="book-open"
+              label={t('Pages read', 'صفحات القراءة')}
+              value={measuredDash(report.learning.pagesRead, '')}
+              delta={report.learning.delta}
+              accent="var(--tone-warning)"
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="clock"
+              label={t('Reading minutes', 'دقائق القراءة')}
+              value={report.learning.hasData ? report.learning.totalMinutes : '—'}
+              sub={report.learning.avgSpeedPagesPerHour !== null ? t(`${report.learning.avgSpeedPagesPerHour} pages/hr`, `${report.learning.avgSpeedPagesPerHour} صفحة/ساعة`) : t('no speed data', 'لا بيانات سرعة')}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="mosque"
+              label={t('Ayahs memorized/recited', 'آيات حُفظت/تُليت')}
+              value={measuredDash(report.faith.ayahsInRange, '')}
+              delta={report.faith.delta}
+              accent="var(--tone-info)"
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="target"
+              label={t('Surahs touched', 'سور تمت تغطيتها')}
+              value={report.faith.hasData ? report.faith.distinctSurahs : '—'}
+              sub={report.faith.hasData ? t(`${report.faith.sessionsCount} sessions`, `${report.faith.sessionsCount} جلسة`) : t('no sessions', 'لا جلسات')}
+              isAr={isAr}
+            />
+          </div>
+
+          {report.learning.hasData && (
+            <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Pages read over time', 'صفحات القراءة عبر الزمن')}</h3>
+              <BarSeries
+                points={report.timeline.map((p) => ({
+                  key: p.key,
+                  label: p.label,
+                  fullLabel: p.fullLabel,
+                  value: p.readingPages > 0 ? p.readingPages : p.recordedDays === 0 ? null : 0,
+                  missing: p.recordedDays === 0
+                }))}
+                color="var(--tone-warning)"
+                unit={isAr ? 'صفحة' : 'pages'}
+                isAr={isAr}
+              />
+            </section>
+          )}
+
+          {report.faith.hasData && (
+            <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Recitation quality', 'جودة التلاوة')}</h3>
+              <HorizontalBars
+                rows={report.faith.qualityBreakdown
+                  .filter((q) => q.count > 0)
+                  .map((q) => ({
+                    key: q.key,
+                    label: isAr ? q.labelAr : q.labelEn,
+                    value: q.count,
+                    percent: report.faith.sessionsCount > 0 ? Math.round((q.count / report.faith.sessionsCount) * 100) : 0,
+                    color: 'var(--brand)'
+                  }))}
+                unit={t('sessions', 'جلسة')}
+                isAr={isAr}
+                emptyLabel={t('No quality data.', 'لا بيانات جودة.')}
+              />
+            </section>
+          )}
+
+          {!report.learning.hasData && !report.faith.hasData && <EmptySection isAr={isAr} />}
+        </div>
+      )}
+
+      {/* ===================================================== FINANCE */}
+      {section === 'finance' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <MetricCard icon="trending-up" label={t('Income', 'الدخل')} value={formatMoney(report.finance.income)} accent="var(--tone-success)" isAr={isAr} />
+            <MetricCard icon="trending-down" label={t('Expenses', 'المصروفات')} value={formatMoney(report.finance.expense)} accent="var(--tone-danger)" isAr={isAr} />
+            <MetricCard
+              icon="scale"
+              label={t('Net', 'الصافي')}
+              value={formatMoney(report.finance.net)}
+              accent={report.finance.net >= 0 ? 'var(--tone-success)' : 'var(--tone-danger)'}
+              isAr={isAr}
+            />
+            <MetricCard
+              icon="wallet"
+              label={t('Savings', 'الادخار')}
+              value={formatMoney(report.finance.savingsCurrent)}
+              sub={report.finance.savingsPercent !== null ? t(`${report.finance.savingsPercent}% of goal`, `${report.finance.savingsPercent}% من الهدف`) : t('no savings goal', 'لا هدف ادخار')}
+              isAr={isAr}
+            />
+          </div>
+
+          {report.finance.hasData ? (
+            <>
+              {report.finance.monthlyTrend.length > 0 && (
+                <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                  <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Monthly cashflow', 'التدفق الشهري')}</h3>
+                  <DualBars
+                    points={report.finance.monthlyTrend.map((m) => ({ key: m.key, label: m.label, a: m.income, b: m.expense }))}
+                    colorA="var(--tone-success)"
+                    colorB="var(--tone-danger)"
+                    labelA={t('Income', 'الدخل')}
+                    labelB={t('Expenses', 'المصروفات')}
+                    isAr={isAr}
+                  />
+                </section>
+              )}
+              <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Spending by category', 'المصروفات حسب الفئة')}</h3>
+                <HorizontalBars
+                  rows={report.finance.topCategories.map((c) => ({ key: c.category, label: c.category, value: c.amount, percent: c.sharePercent, color: 'var(--tone-danger)' }))}
+                  unit={t('spent', 'مصروف')}
+                  isAr={isAr}
+                  emptyLabel={t('No expenses in this window.', 'لا مصروفات في هذه الفترة.')}
+                />
+              </section>
+            </>
+          ) : (
+            <EmptySection isAr={isAr} />
+          )}
+        </div>
+      )}
+
+      {/* ===================================================== PATTERNS */}
+      {section === 'patterns' && (
+        <div className="space-y-4">
+          <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex items-start gap-3">
+            <NuqtaIcon name="brain" className="w-5 h-5 text-accent shrink-0" />
+            <p className="text-xs text-muted">
+              {t(
+                'Correlations are shown only when there are enough paired days with real variation. A flat line has no correlation to report — that is stated, never invented.',
+                'لا تُعرض الارتباطات إلا عند توفّر أيام مقترنة كافية بتباين حقيقي. الخط المسطّح لا ارتباط له — ويُذكر ذلك صراحةً دون اختلاق.'
+              )}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {report.correlations.map((c) => (
+              <div key={c.id} className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl space-y-3">
+                <h4 className="text-sm font-bold text-[var(--text-primary)]">{isAr ? c.titleAr : c.titleEn}</h4>
+                {c.available && c.r !== null ? (
+                  <div className="flex items-center gap-4">
+                    <div className="w-24 h-16 shrink-0">
+                      <CorrelationGauge r={c.r} />
+                    </div>
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-2xl font-mono font-bold text-[var(--text-primary)]">{c.r.toFixed(2)}</span>
+                      <p className="text-xs text-muted">{isAr ? c.interpretationAr : c.interpretationEn}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-lg bg-[var(--surface-inset)] border border-dashed border-[var(--border-default)] text-xs text-muted">
+                    {isAr ? c.interpretationAr : c.interpretationEn}
+                  </div>
+                )}
+                <div className="text-[10px] font-mono text-muted pt-1 border-t border-[var(--border-subtle)]">
+                  {t(`${c.n} paired days`, `${c.n} يوماً مقترناً`)}
+                </div>
               </div>
             ))}
           </div>
-        </section>
+
+          {report.habits.hasData && (
+            <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">{t('Weekday rhythm', 'إيقاع أيام الأسبوع')}</h3>
+              <WeekdayStrip days={weekdayDays} isAr={isAr} />
+            </section>
+          )}
+        </div>
       )}
+
+      <p className="text-[11px] text-muted text-center pt-2">
+        {t(
+          'All figures derive from your stored records for the selected range. NUQTA weeks run Saturday to Friday.',
+          'كل الأرقام مستخرجة من سجلاتك المخزّنة في النطاق المحدد. يبدأ أسبوع نقطة من السبت إلى الجمعة.'
+        )}
+      </p>
     </div>
   );
 };
+
+// ------------------------------------------------------------------ helpers
+
+function share(value: number | null, total: number): number {
+  if (value === null || total <= 0) return 0;
+  return Math.round((value / total) * 100);
+}
+
+function formatMoney(n: number): string {
+  const sign = n < 0 ? '-' : '';
+  return `${sign}${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
+}
+
+function pacingRows(
+  pacing: { ahead: number; on_track: number; behind: number; dormant: number; not_started: number; completed: number },
+  isAr: boolean
+): { key: string; label: string; value: number; percent: number; color: string }[] {
+  const defs: { key: keyof typeof pacing; en: string; ar: string; color: string }[] = [
+    { key: 'ahead', en: 'Ahead', ar: 'متقدّم', color: 'var(--tone-success)' },
+    { key: 'on_track', en: 'On track', ar: 'على المسار', color: 'var(--tone-info)' },
+    { key: 'behind', en: 'Behind', ar: 'متأخّر', color: 'var(--tone-warning)' },
+    { key: 'dormant', en: 'Dormant', ar: 'خامل', color: 'var(--tone-danger)' },
+    { key: 'not_started', en: 'Not started', ar: 'لم يبدأ', color: 'var(--tone-warning)' },
+    { key: 'completed', en: 'Completed', ar: 'مكتمل', color: 'var(--tone-success)' }
+  ];
+  const total = Object.values(pacing).reduce((a, b) => a + b, 0);
+  return defs
+    .map((d) => ({
+      key: d.key,
+      label: isAr ? d.ar : d.en,
+      value: pacing[d.key],
+      percent: total > 0 ? Math.round((pacing[d.key] / total) * 100) : 0,
+      color: d.color
+    }))
+    .filter((r) => r.value > 0);
+}
+
+const PacingChip: React.FC<{ status: string; isAr: boolean }> = ({ status, isAr }) => {
+  const labels: Record<string, { en: string; ar: string; tone: string }> = {
+    ahead: { en: 'Ahead', ar: 'متقدّم', tone: 'var(--tone-success)' },
+    on_track: { en: 'On track', ar: 'على المسار', tone: 'var(--tone-info)' },
+    behind: { en: 'Behind', ar: 'متأخّر', tone: 'var(--tone-warning)' },
+    dormant: { en: 'Dormant', ar: 'خامل', tone: 'var(--tone-danger)' },
+    not_started: { en: 'Not started', ar: 'لم يبدأ', tone: 'var(--tone-warning)' },
+    completed: { en: 'Completed', ar: 'مكتمل', tone: 'var(--tone-success)' }
+  };
+  const meta = labels[status] ?? labels.not_started;
+  return (
+    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border" style={{ color: meta.tone, borderColor: meta.tone }}>
+      {isAr ? meta.ar : meta.en}
+    </span>
+  );
+};
+
+const ProgressRow: React.FC<{ label: string; percent: number; color: string }> = ({ label, percent, color }) => (
+  <div className="space-y-1">
+    <div className="flex items-center justify-between text-[10px] text-muted">
+      <span>{label}</span>
+      <span className="font-mono">{percent}%</span>
+    </div>
+    <div className="w-full h-1.5 rounded-full bg-[var(--surface-chip)] overflow-hidden border border-[var(--border-default)]">
+      <div className="h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(100, percent)}%`, backgroundColor: color }} />
+    </div>
+  </div>
+);
+
+/** Half-circle gauge: -1 → left, 0 → top, +1 → right. */
+const CorrelationGauge: React.FC<{ r: number }> = ({ r }) => {
+  const angle = (r + 1) * 90;
+  const rad = (angle * Math.PI) / 180;
+  const cx = 48;
+  const cy = 48;
+  const radius = 34;
+  const x = cx - Math.cos(rad) * radius;
+  const y = cy - Math.sin(rad) * radius;
+  const color = r > 0.15 ? 'var(--tone-success)' : r < -0.15 ? 'var(--tone-danger)' : 'var(--text-muted)';
+  return (
+    <svg viewBox="0 0 96 56" className="w-full h-full">
+      <path d="M 14 48 A 34 34 0 0 1 82 48" fill="none" stroke="var(--border-subtle)" strokeWidth={6} strokeLinecap="round" />
+      <line x1={cx} y1={cy} x2={x} y2={y} stroke={color} strokeWidth={3} strokeLinecap="round" />
+      <circle cx={cx} cy={cy} r={4} fill={color} />
+    </svg>
+  );
+};
+
+const EmptySection: React.FC<{ isAr: boolean }> = ({ isAr }) => (
+  <div className="panel p-8 border border-dashed border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl text-center space-y-2">
+    <NuqtaIcon name="chart" className="w-6 h-6 mx-auto text-muted" />
+    <strong className="text-sm text-[var(--text-primary)] block">
+      {isAr ? 'لا توجد بيانات لهذا القسم في النطاق المحدد' : 'No data for this section in the selected range'}
+    </strong>
+    <p className="text-xs text-muted">
+      {isAr
+        ? 'جرّب توسيع النطاق الزمني أو تسجيل نشاط جديد — لن تُعرض أرقام غير حقيقية.'
+        : 'Try widening the range or logging new activity — no numbers are fabricated.'}
+    </p>
+  </div>
+);
+
+interface SummaryCardProps {
+  title: string;
+  icon: IconName;
+  hasData: boolean;
+  lines: string[];
+  onOpen: () => void;
+  isAr: boolean;
+}
+
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, icon, hasData, lines, onOpen, isAr }) => (
+  <button
+    onClick={onOpen}
+    className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl text-start space-y-2 hover:border-[var(--border-strong)] transition-colors"
+  >
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+        <NuqtaIcon name={icon} className="w-3.5 h-3.5" />
+        {title}
+      </span>
+      <NuqtaIcon name="arrow" className="w-3.5 h-3.5 text-muted" />
+    </div>
+    {hasData ? (
+      lines.map((l, i) => (
+        <div key={i} className="text-[11px] text-muted">
+          {l}
+        </div>
+      ))
+    ) : (
+      <div className="text-[11px] text-muted italic">{isAr ? 'لا بيانات' : 'No data'}</div>
+    )}
+  </button>
+);
