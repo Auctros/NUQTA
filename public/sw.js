@@ -46,8 +46,8 @@ function toSameOriginUrl(ref, base) {
 /** Every <script src> / <link href> in the shell HTML, as absolute same-origin URLs. */
 function discoverShellAssets(html) {
   const urls = new Set();
-  const tagRe = /<(script|link)\\b[^>]*>/gi;
-  const attrRe = /\\b(?:src|href)\\s*=\\s*(\"([^\"]*)\"|'([^']*)')/gi;
+  const tagRe = /<(script|link)\b[^>]*>/gi;
+  const attrRe = /\b(?:src|href)\s*=\s*(\"([^\"]*)\"|'([^']*)')/gi;
   let tag;
   while ((tag = tagRe.exec(html)) !== null) {
     let attr;
@@ -62,7 +62,7 @@ function discoverShellAssets(html) {
 /** Same-origin url(...) references inside a stylesheet (self-hosted fonts, images). */
 function discoverStylesheetAssets(css, base) {
   const urls = new Set();
-  const urlRe = /url\\(\\s*(\"([^\"]*)\"|'([^']*)'|([^)'"]*))\\s*\\)/gi;
+  const urlRe = /url\(\s*(\"([^\"]*)\"|'([^']*)'|([^)'"]*))\s*\)/gi;
   let m;
   while ((m = urlRe.exec(css)) !== null) {
     const url = toSameOriginUrl(m[2] ?? m[3] ?? m[4] ?? '', base);
