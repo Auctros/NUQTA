@@ -84,6 +84,15 @@ with an IndexedDB mirror for recovery.
   whose `target.value` is the chosen option's value) and accepts `<option>` children, so it
   is a drop-in swap. It is portal-rendered, RTL-aware, keyboard-accessible and theme-aware.
   Do not add a new native `<select>`; the styling and behaviour would drift.
+- **Icons come from `NuqtaIcon` only.** `IconName` (exported from `./NuqtaIcon`) is the single
+  icon union; interface controls, nav items, tiles and status markers must render a
+  `NuqtaIcon`, never a bare emoji or a text glyph. Emoji that is *user content* (journal
+  mood, illustrations, studio vault imagery) is intentionally kept.
+- **Escape closes overlays.** Any overlay that renders its own backdrop (legacy `.modal`
+  markup and the kit `Modal`/`Sheet`) closes on Escape via `useEscapeKey(open, onClose)`
+  from `src/lib/useEscapeKey.ts`, and exposes `role="dialog"` + `aria-modal="true"`.
+- **Prefer inline panels over popups.** Reserve modals for genuinely modal tasks; savings
+  and budget editing live in inline panels toggled with `aria-expanded`/`aria-controls`.
 
 ## Layout / responsive rules
 

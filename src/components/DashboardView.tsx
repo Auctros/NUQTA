@@ -30,6 +30,7 @@ import { SecondaryAnalyticsSection } from './dashboard/SecondaryAnalyticsSection
 import { LifeDomainsGrid } from './dashboard/LifeDomainsGrid';
 import { GoalsMilestonesSection } from './dashboard/GoalsMilestonesSection';
 import { LifeConnectionsSection } from './dashboard/LifeConnectionsSection';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const DashboardView: React.FC = () => {
   const {
@@ -63,6 +64,7 @@ export const DashboardView: React.FC = () => {
 
   // Daily Focus Selector Modal State
   const [isTaskPickerOpen, setIsTaskPickerOpen] = useState(false);
+  useEscapeKey(isTaskPickerOpen, () => setIsTaskPickerOpen(false));
 
   // Focus Launcher State
   const [focusingTask, setFocusingTask] = useState<Task | null>(null);
@@ -70,6 +72,7 @@ export const DashboardView: React.FC = () => {
   const [focusPreset, setFocusPreset] = useState<number>(25);
   const [focusRemaining, setFocusRemaining] = useState<number>(25 * 60);
   const [focusRunning, setFocusRunning] = useState<boolean>(false);
+  useEscapeKey(isFocusModalOpen, () => { if (!focusRunning) setIsFocusModalOpen(false); });
   const [focusDistractions, setFocusDistractions] = useState<number>(0);
 
   // Daily Command Center Agenda Filter
@@ -908,6 +911,8 @@ export const DashboardView: React.FC = () => {
           onClick={() => setIsTaskPickerOpen(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
             className="modal glass-surface w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
             onClick={(e) => e.stopPropagation()}
             dir={isAr ? 'rtl' : 'ltr'}
@@ -1007,6 +1012,8 @@ export const DashboardView: React.FC = () => {
           }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
             className="modal glass-surface w-full max-w-md rounded-2xl p-6 shadow-2xl text-center space-y-5"
             onClick={(e) => e.stopPropagation()}
             dir={isAr ? 'rtl' : 'ltr'}

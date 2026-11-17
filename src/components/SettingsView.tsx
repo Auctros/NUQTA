@@ -8,8 +8,7 @@ import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 import { NuqtaSelect } from './ui';
 
 export const SettingsView: React.FC = () => {
-  const { profile, setLanguage, setTheme, updateProfileName } = useNuqtaStore();
-  const [nameInput, setNameInput] = useState(profile.name);
+  const { profile, setLanguage, setTheme, setActiveNavTab } = useNuqtaStore();
   const [importStatus, setImportStatus] = useState<string>('');
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
 
@@ -46,14 +45,6 @@ export const SettingsView: React.FC = () => {
     if (!file) return;
     const result = await restoreBackupFromFile(file, isAr, setImportStatus);
     if (result && result.ok) setTimeout(() => window.location.reload(), 1000);
-  };
-
-  const handleSaveName = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (nameInput.trim()) {
-      updateProfileName(nameInput.trim());
-      alert(isAr ? 'تم حفظ الاسم بنجاح' : 'Name updated successfully');
-    }
   };
 
   const handleWipeData = async () => {
@@ -105,40 +96,29 @@ export const SettingsView: React.FC = () => {
       <div className="settings-layout">
         {/* Left Column: Profile, Appearance, Data */}
         <section>
-          {/* Profile Section */}
+          {/* Profile lives on its own page; Settings links to it instead of duplicating the form. */}
           <div className="panel settings-section">
             <div className="panel-heading">
               <div>
                 <h2>{isAr ? 'الملف الشخصي' : 'Your Profile'}</h2>
-                <p>{isAr ? 'ملف محلي محفوظ على هذا الجهاز فقط.' : 'Local profile saved on this device only.'}</p>
+                <p>{isAr ? 'هويتك وتقدّمك في صفحة مستقلة.' : 'Your identity and progress live on their own page.'}</p>
               </div>
             </div>
 
             <div className="settings-profile">
               <span className="settings-avatar">{(profile.name || 'ع').charAt(0)}</span>
               <div>
-                <strong>{profile.name || (isAr ? 'علي' : 'User')}</strong>
+                <strong>{profile.name || (isAr ? 'مستخدم نقطة' : 'NUQTA User')}</strong>
                 <small>{isAr ? 'بيانات محفوظة محلياً وبشكل خاص' : 'Stored locally and privately'}</small>
               </div>
             </div>
 
-            <form onSubmit={handleSaveName} className="space-y-3">
-              <div className="field">
-                <label htmlFor="profile-name-input">{isAr ? 'اسم العرض' : 'Display Name'}</label>
-                <input
-                  id="profile-name-input"
-                  className="input"
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  maxLength={60}
-                />
-              </div>
-              <div className="form-actions">
-                <button type="submit" className="btn primary">
-                  {isAr ? 'حفظ الاسم' : 'Save'}
-                </button>
-              </div>
-            </form>
+            <div className="settings-actions">
+              <button type="button" className="btn" onClick={() => setActiveNavTab('profile')}>
+                <NuqtaIcon name="compass" className="w-4 h-4" />
+                <span>{isAr ? 'فتح الملف الشخصي' : 'Open Profile'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Preferences Section */}

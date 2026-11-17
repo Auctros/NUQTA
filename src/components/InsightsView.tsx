@@ -9,6 +9,7 @@ import {
   MovementDistributionBar
 } from './charts/LifeIntelligenceCharts';
 import { WhatIfSimulator } from './WhatIfSimulator';
+import { NuqtaIcon } from './NuqtaIcon';
 
 export const InsightsView: React.FC = () => {
   const {
@@ -161,7 +162,7 @@ export const InsightsView: React.FC = () => {
             className="btn subtle flex items-center gap-1.5"
             title={isAr ? 'فتح الأرشيف والسجل الزمني الشامل' : 'Open Universal Archive & History'}
           >
-            <span>🗄️</span>
+            <NuqtaIcon name="archive" className="w-4 h-4" />
             <span>{isAr ? 'الذاكرة والأرشيف' : 'Archive & History'}</span>
           </button>
 
@@ -169,7 +170,7 @@ export const InsightsView: React.FC = () => {
             onClick={() => setSundayRitualOpen(true)}
             className="btn primary"
           >
-            <span>✳</span>
+            <NuqtaIcon name="sparkle" className="w-4 h-4" />
             <span>{isAr ? 'طقس الأحد' : 'Sunday Ritual'}</span>
           </button>
         </div>

@@ -8,6 +8,7 @@ import { NuqtaIcon } from './NuqtaIcon';
 import { EmptyState, NuqtaSelect, PageHeader, TabBar } from './ui';
 import { ReadingAppModal } from './ReadingAppModal';
 import { WorkoutAppModal } from './WorkoutAppModal';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 /**
  * Map the habit frequency picker to a recurrence rule. `weekdays` means NUQTA's
@@ -40,6 +41,7 @@ export const HabitsView: React.FC = () => {
 
   const isAr = profile.language === 'ar';
   const [isModalOpen, setIsModalOpen] = useState(false);
+  useEscapeKey(isModalOpen, () => setIsModalOpen(false));
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -221,7 +223,7 @@ export const HabitsView: React.FC = () => {
                   onClick={() => openOrCreateStudio('quran')}
                   title={isAr ? 'استوديو حفظ ومراجعة القرآن الكريم' : 'Quran Memorization Studio'}
                 >
-                  <span>📜</span>
+                  <NuqtaIcon name="mosque" className="w-4 h-4" />
                   <span>{isAr ? 'حفظ القرآن' : 'Quran Studio'}</span>
                 </button>
 
@@ -230,7 +232,7 @@ export const HabitsView: React.FC = () => {
                   onClick={() => openOrCreateStudio('reading')}
                   title={isAr ? 'استوديو ومكتبة القراءة' : 'Reading Studio & Library'}
                 >
-                  <span>📖</span>
+                  <NuqtaIcon name="book-open" className="w-4 h-4" />
                   <span>{isAr ? 'استوديو القراءة' : 'Reading Studio'}</span>
                 </button>
 
@@ -239,7 +241,7 @@ export const HabitsView: React.FC = () => {
                   onClick={() => openOrCreateStudio('workout')}
                   title={isAr ? 'استوديو التمارين واللياقة المنزلية' : 'Home Workout Studio'}
                 >
-                  <span>⚡</span>
+                  <NuqtaIcon name="dumbbell" className="w-4 h-4" />
                   <span>{isAr ? 'استوديو التمارين' : 'Workout Studio'}</span>
                 </button>
 
@@ -248,7 +250,7 @@ export const HabitsView: React.FC = () => {
                   onClick={() => openOrCreateStudio('drawing')}
                   title={isAr ? 'مرسم ومعرض الأعمال الفنية' : 'Art Studio & Vault'}
                 >
-                  <span>🎨</span>
+                  <NuqtaIcon name="brush" className="w-4 h-4" />
                   <span>{isAr ? 'مرسم الفن' : 'Art Studio'}</span>
                 </button>
 
@@ -257,7 +259,7 @@ export const HabitsView: React.FC = () => {
                   onClick={() => setActiveNavTab('archive')}
                   title={isAr ? 'فتح أرشيف وسجل العادات' : 'Open Habits Archive & History'}
                 >
-                  <span>🗄️</span>
+                  <NuqtaIcon name="archive" className="w-4 h-4" />
                   <span>{isAr ? 'الذاكرة والأرشيف' : 'Archive'}</span>
                 </button>
 
@@ -627,7 +629,7 @@ export const HabitsView: React.FC = () => {
       {/* Habit Create / Edit Modal */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
                 <h2>{editingHabit ? (isAr ? 'تعديل العادة' : 'Edit Habit') : (isAr ? 'بناء عادة ذرية جديدة' : 'New Atomic Habit')}</h2>

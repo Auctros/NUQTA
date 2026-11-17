@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { isTaskPending } from '../lib/taskStatus';
 import { NuqtaIcon } from './NuqtaIcon';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const RescueModal: React.FC = () => {
   const { isRescueModeOpen, setRescueModeOpen, tasks, executeRescueMode, profile } = useNuqtaStore();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [deferRest, setDeferRest] = useState<boolean>(true);
+
+  useEscapeKey(isRescueModeOpen, () => setRescueModeOpen(false));
 
   if (!isRescueModeOpen) return null;
 
@@ -24,7 +27,7 @@ export const RescueModal: React.FC = () => {
 
   return (
     <div className="modal-backdrop" onClick={() => setRescueModeOpen(false)} dir={isAr ? 'rtl' : 'ltr'}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>
             <div className="eyebrow">

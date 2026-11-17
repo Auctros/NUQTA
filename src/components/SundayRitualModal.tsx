@@ -2,6 +2,7 @@ import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const SundayRitualModal: React.FC = () => {
   const { isSundayRitualOpen, setSundayRitualOpen, completeSundayRitual, tasks, habits, focusSessions, profile } = useNuqtaStore();
@@ -12,6 +13,8 @@ export const SundayRitualModal: React.FC = () => {
   const [newLesson, setNewLesson] = useState('');
   const [topPriorities, setTopPriorities] = useState<string[]>(['إطلاق التحديث الجديد للمستخدمين', 'الحفاظ على 4 جلسات تركيز']);
   const [newPriority, setNewPriority] = useState('');
+
+  useEscapeKey(isSundayRitualOpen, () => setSundayRitualOpen(false));
 
   if (!isSundayRitualOpen) return null;
 
@@ -54,7 +57,7 @@ export const SundayRitualModal: React.FC = () => {
 
   return (
     <div className="modal-backdrop" onClick={() => setSundayRitualOpen(false)} dir={isAr ? 'rtl' : 'ltr'}>
-      <div className="modal wide" onClick={(e) => e.stopPropagation()}>
+      <div className="modal wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>
             <div className="eyebrow">

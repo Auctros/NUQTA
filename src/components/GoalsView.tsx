@@ -6,6 +6,7 @@ import { NuqtaIcon } from './NuqtaIcon';
 import { EmptyState, NuqtaSelect, PageHeader } from './ui';
 import { GoalDetailModal } from './GoalDetailModal';
 import { evaluateGoalProgress } from '../lib/goalProgressEngine';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const GoalsView: React.FC = () => {
   const {
@@ -24,6 +25,7 @@ export const GoalsView: React.FC = () => {
 
   // Modals state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  useEscapeKey(isFormModalOpen, () => setIsFormModalOpen(false));
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [inspectingGoal, setInspectingGoal] = useState<Goal | null>(null);
 
@@ -272,7 +274,7 @@ export const GoalsView: React.FC = () => {
                 statusFilter === 'archived' ? 'bg-[var(--brand-soft)] text-accent font-bold' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
-              {isAr ? 'المؤرشفة 🗄️' : 'Archived 🗄️'}
+              {isAr ? 'المؤرشفة' : 'Archived'}
             </button>
           </div>
 
@@ -281,7 +283,7 @@ export const GoalsView: React.FC = () => {
             className="btn subtle text-xs py-1.5 px-3 flex items-center gap-1.5"
             title={isAr ? 'فتح الأرشيف والسجل الشامل' : 'Open Universal Archive & History'}
           >
-            <span>🗄️</span>
+            <NuqtaIcon name="archive" className="w-4 h-4" />
             <span>{isAr ? 'الذاكرة والأرشيف' : 'Archive'}</span>
           </button>
 
@@ -305,7 +307,10 @@ export const GoalsView: React.FC = () => {
             placeholder={isAr ? 'بحث في الأهداف...' : 'Search goals...'}
             className="input w-full text-xs ps-8"
           />
-          <span className="absolute start-2.5 top-2.5 text-xs text-muted pointer-events-none">🔍</span>
+          <NuqtaIcon
+            name="search"
+            className="w-3.5 h-3.5 absolute start-2.5 top-2.5 text-muted pointer-events-none"
+          />
         </div>
       </div>
 
@@ -388,11 +393,11 @@ export const GoalsView: React.FC = () => {
                   <div className="space-y-1.5 pt-1">
                     <div className="flex items-center justify-between text-[11px] font-mono">
                       <span className="text-[var(--tone-success)] font-medium flex items-center gap-1">
-                        <span>🎯</span>
+                        <NuqtaIcon name="target" className="w-3.5 h-3.5" />
                         <span>{isAr ? 'النتائج:' : 'Outcome:'} {intel.outcomeProgressPercent}%</span>
                       </span>
                       <span className="text-[var(--tone-info)] font-medium flex items-center gap-1">
-                        <span>⚡</span>
+                        <NuqtaIcon name="activity" className="w-3.5 h-3.5" />
                         <span>{isAr ? 'التنفيذ:' : 'Execution:'} {intel.executionProgressPercent}%</span>
                       </span>
                     </div>
@@ -512,7 +517,7 @@ export const GoalsView: React.FC = () => {
       {/* Goal Create / Edit Modal */}
       {isFormModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsFormModalOpen(false)}>
-          <div className="modal max-w-xl w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="modal max-w-xl w-full" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
                 <h2>

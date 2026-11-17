@@ -51,7 +51,10 @@ export type IconName =
   | 'quote'
   | 'history'
   | 'mosque'
-  | 'notebook';
+  | 'notebook'
+  | 'user'
+  | 'restore'
+  | 'undo';
 
 const iconPaths: Record<IconName, React.ReactNode> = {
   grid: (
@@ -283,6 +286,24 @@ const iconPaths: Record<IconName, React.ReactNode> = {
       <rect x="5" y="3" width="15" height="18" rx="2.5" />
       <path d="M9 3v18M13 8h4M13 12h4" />
       <path d="M5 7H3M5 12H3M5 17H3" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
+    </>
+  ),
+  restore: (
+    <>
+      <path d="M3 12a9 9 0 1 0 2.6-6.3" />
+      <path d="M3 4v5h5" />
+    </>
+  ),
+  undo: (
+    <>
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10a6 6 0 0 1 6 6v1a6 6 0 0 1-6 6h-2" />
     </>
   )
 };

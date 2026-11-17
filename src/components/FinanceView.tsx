@@ -2,8 +2,9 @@ import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { ExpenseRecord } from '../types';
-import { NuqtaIcon } from './NuqtaIcon';
+import { NuqtaIcon, IconName } from './NuqtaIcon';
 import { NuqtaSelect } from './ui';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const FinanceView: React.FC = () => {
   const {
@@ -19,8 +20,9 @@ export const FinanceView: React.FC = () => {
   const isAr = profile.language === 'ar';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
-  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  useEscapeKey(isModalOpen, () => setIsModalOpen(false));
+  const [isSavingsFormOpen, setIsSavingsFormOpen] = useState(false);
+  const [isBudgetEditing, setIsBudgetEditing] = useState(false);
   const [userBudget, setUserBudget] = useState<number>(3000);
 
   // Expense form
@@ -33,6 +35,10 @@ export const FinanceView: React.FC = () => {
   const [savingName, setSavingName] = useState('');
   const [savingTarget, setSavingTarget] = useState(1000);
   const [savingInitial, setSavingInitial] = useState(0);
+  // Default a new fund to a six-month horizon, but let the user pick the date.
+  const [savingTargetDate, setSavingTargetDate] = useState(() =>
+    localDateKey(new Date(Date.now() + 180 * 86400000))
+  );
 
   const currentMonthStr = localDateKey().slice(0, 7); // YYYY-MM
   const monthExpenses = expenses.filter((e) => e.date?.startsWith(currentMonthStr));
@@ -57,14 +63,14 @@ export const FinanceView: React.FC = () => {
     savings: isAr ? 'ادخار واستثمار' : 'Savings'
   };
 
-  const categoryIcons: Record<string, string> = {
-    food: '⌁',
-    transport: '↗',
-    housing: '⌂',
-    tech: '⌘',
-    leisure: '✳',
-    health: '◔',
-    savings: '◎'
+  const categoryIcons: Record<string, IconName> = {
+    food: 'coffee',
+    transport: 'compass',
+    housing: 'grid',
+    tech: 'layers',
+    leisure: 'sparkle',
+    health: 'activity',
+    savings: 'wallet'
   };
 
   const handleCreateExpense = (e: React.FormEvent) => {
@@ -88,16 +94,22 @@ export const FinanceView: React.FC = () => {
   const handleCreateSaving = (e: React.FormEvent) => {
     e.preventDefault();
     if (!savingName.trim()) return;
+    // A fund with a non-positive target can never be reached; refuse to save it.
+    const target = Number(savingTarget);
+    if (!Number.isFinite(target) || target <= 0) return;
 
     addSavingsGoal({
       title: savingName.trim(),
-      targetAmount: Number(savingTarget) || 1000,
-      currentAmount: Number(savingInitial) || 0,
-      targetDate: localDateKey(new Date(Date.now() + 180 * 86400000))
+      targetAmount: target,
+      currentAmount: Math.max(0, Number(savingInitial) || 0),
+      targetDate: savingTargetDate || undefined
     });
 
     setSavingName('');
-    setIsSavingsModalOpen(false);
+    setSavingTarget(1000);
+    setSavingInitial(0);
+    setSavingTargetDate(localDateKey(new Date(Date.now() + 180 * 86400000)));
+    setIsSavingsFormOpen(false);
   };
 
   return (
@@ -155,9 +167,6 @@ export const FinanceView: React.FC = () => {
               <h2>{isAr ? 'المعاملات الأخيرة' : 'Recent Transactions'}</h2>
               <p>{monthExpenses.length} {isAr ? 'معاملة هذا الشهر' : 'entries this month'}</p>
             </div>
-            <button className="btn subtle small" onClick={() => setIsBudgetModalOpen(true)}>
-              {isAr ? 'تعديل الميزانية' : 'Set Budget'}
-            </button>
           </div>
 
           {expenses.length === 0 ? (
@@ -179,7 +188,10 @@ export const FinanceView: React.FC = () => {
                 return (
                   <div key={entry.id} className="expense-row">
                     <span className="expense-icon">
-                      {isInc ? '↗' : categoryIcons[entry.category] || '·'}
+                      <NuqtaIcon
+                        name={isInc ? 'arrow' : categoryIcons[entry.category] || 'wallet'}
+                        className="w-3.5 h-3.5"
+                      />
                     </span>
                     <div className="expense-detail">
                       <strong>{entry.title}</strong>
@@ -216,10 +228,44 @@ export const FinanceView: React.FC = () => {
                 <h2>{isAr ? 'ميزانية الشهر' : 'Monthly Budget'}</h2>
                 <p>{isAr ? `المنصرف: $${totalSpent}` : `Spent: $${totalSpent}`}</p>
               </div>
-              <span className={`tag ${remainingBudget < 0 ? 'red' : 'green'}`}>
-                {remainingBudget < 0 ? '−' : '+'}${Math.abs(remainingBudget).toLocaleString()}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`tag ${remainingBudget < 0 ? 'red' : 'green'}`}>
+                  {remainingBudget < 0 ? '−' : '+'}${Math.abs(remainingBudget).toLocaleString()}
+                </span>
+                <button
+                  type="button"
+                  className="mini-icon"
+                  aria-expanded={isBudgetEditing}
+                  aria-controls="budget-inline-edit"
+                  aria-label={isAr ? 'تعديل الميزانية' : 'Edit budget'}
+                  onClick={() => setIsBudgetEditing((v) => !v)}
+                >
+                  <NuqtaIcon name="edit" className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
+
+            {isBudgetEditing && (
+              <div id="budget-inline-edit" className="field" style={{ marginBottom: '13px' }}>
+                <label htmlFor="budget-inline-input">
+                  {isAr ? 'الميزانية الشهرية ($)' : 'Monthly Budget ($)'}
+                </label>
+                <input
+                  id="budget-inline-input"
+                  type="number"
+                  min="100"
+                  step="50"
+                  className="input"
+                  value={userBudget}
+                  autoFocus
+                  onChange={(e) => setUserBudget(Number(e.target.value))}
+                  onBlur={() => setIsBudgetEditing(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') setIsBudgetEditing(false);
+                  }}
+                />
+              </div>
+            )}
 
             <div className="progress-line">
               <span
@@ -263,10 +309,87 @@ export const FinanceView: React.FC = () => {
             <div>
               <h2>{isAr ? 'صناديق الادخار والحرية' : 'Savings & Reserve'}</h2>
             </div>
-            <button className="btn subtle small" onClick={() => setIsSavingsModalOpen(true)}>
-              + {isAr ? 'هدف ادخار' : 'New Goal'}
+            <button
+              className="btn subtle small"
+              aria-expanded={isSavingsFormOpen}
+              aria-controls="savings-inline-form"
+              onClick={() => setIsSavingsFormOpen((v) => !v)}
+            >
+              {isSavingsFormOpen ? (isAr ? 'إغلاق' : 'Close') : `+ ${isAr ? 'هدف ادخار' : 'New Goal'}`}
             </button>
           </div>
+
+          {isSavingsFormOpen && (
+            <form
+              id="savings-inline-form"
+              onSubmit={handleCreateSaving}
+              className="panel panel-pad"
+              style={{ marginBottom: '13px' }}
+            >
+              <div className="field">
+                <label htmlFor="saving-name">{isAr ? 'اسم الهدف' : 'Goal Name'} *</label>
+                <input
+                  id="saving-name"
+                  className="input"
+                  value={savingName}
+                  onChange={(e) => setSavingName(e.target.value)}
+                  placeholder={isAr ? 'مثال: صندوق الطوارئ، سفرة الصيف...' : 'e.g. Emergency Fund, Travel...'}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="form-grid" style={{ marginTop: '13px' }}>
+                <div className="field">
+                  <label htmlFor="saving-target">{isAr ? 'المبلغ المستهدف ($)' : 'Target Amount ($)'} *</label>
+                  <input
+                    id="saving-target"
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    step="50"
+                    required
+                    className="input"
+                    value={savingTarget}
+                    onChange={(e) => setSavingTarget(Number(e.target.value))}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="saving-initial">{isAr ? 'المبلغ الحالي ($)' : 'Initial Balance ($)'}</label>
+                  <input
+                    id="saving-initial"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="50"
+                    className="input"
+                    value={savingInitial}
+                    onChange={(e) => setSavingInitial(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="field" style={{ marginTop: '13px' }}>
+                <label htmlFor="saving-target-date">{isAr ? 'التاريخ المستهدف' : 'Target Date'}</label>
+                <input
+                  id="saving-target-date"
+                  type="date"
+                  className="input"
+                  value={savingTargetDate}
+                  onChange={(e) => setSavingTargetDate(e.target.value)}
+                />
+              </div>
+
+              <div className="form-actions">
+                <button type="button" className="btn subtle" onClick={() => setIsSavingsFormOpen(false)}>
+                  {isAr ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button type="submit" className="btn primary">
+                  {isAr ? 'إنشاء الصندوق' : 'Create Fund'}
+                </button>
+              </div>
+            </form>
+          )}
 
           {savingsGoals.length === 0 ? (
             <div className="empty-inline">
@@ -281,6 +404,11 @@ export const FinanceView: React.FC = () => {
                     <div>
                       <strong>{sg.title}</strong>
                       <small>${sg.currentAmount.toLocaleString()} / ${sg.targetAmount.toLocaleString()}</small>
+                      {sg.targetDate && (
+                        <small>
+                          {isAr ? 'الموعد المستهدف:' : 'Target:'} {sg.targetDate}
+                        </small>
+                      )}
                     </div>
                     <span className="savings-value">{pct}%</span>
                   </div>
@@ -307,7 +435,7 @@ export const FinanceView: React.FC = () => {
       {/* Transaction Modal */}
       {isModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
                 <h2>{isAr ? 'تسجيل معاملة مالية' : 'Record Transaction'}</h2>
@@ -378,98 +506,6 @@ export const FinanceView: React.FC = () => {
         </div>
       )}
 
-      {/* Savings Modal */}
-      {isSavingsModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsSavingsModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div>
-                <h2>{isAr ? 'صندوق ادخار جديد' : 'New Savings Goal'}</h2>
-                <p>{isAr ? 'حدد هدفاً مالياً مشجعاً للادخار بانتظام.' : 'Define a milestone to build peace of mind.'}</p>
-              </div>
-              <button className="modal-close" onClick={() => setIsSavingsModalOpen(false)}>×</button>
-            </div>
-
-            <form onSubmit={handleCreateSaving} className="space-y-4">
-              <div className="field">
-                <label>{isAr ? 'اسم الهدف' : 'Goal Name'} *</label>
-                <input
-                  className="input"
-                  value={savingName}
-                  onChange={(e) => setSavingName(e.target.value)}
-                  placeholder={isAr ? 'مثال: صندوق الطوارئ، سفرة الصيف...' : 'e.g. Emergency Fund, Travel...'}
-                  required
-                />
-              </div>
-
-              <div className="form-grid">
-                <div className="field">
-                  <label>{isAr ? 'المبلغ المستهدف ($)' : 'Target Amount ($)'}</label>
-                  <input
-                    type="number"
-                    min="1"
-                    className="input"
-                    value={savingTarget}
-                    onChange={(e) => setSavingTarget(Number(e.target.value))}
-                  />
-                </div>
-                <div className="field">
-                  <label>{isAr ? 'المبلغ الحالي ($)' : 'Initial Balance ($)'}</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className="input"
-                    value={savingInitial}
-                    onChange={(e) => setSavingInitial(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button type="button" className="btn subtle" onClick={() => setIsSavingsModalOpen(false)}>
-                  {isAr ? 'إلغاء' : 'Cancel'}
-                </button>
-                <button type="submit" className="btn primary">
-                  {isAr ? 'إنشاء الصندوق' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Budget Limit Modal */}
-      {isBudgetModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsBudgetModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div>
-                <h2>{isAr ? 'تعديل سقف الميزانية الشهرية' : 'Monthly Budget Cap'}</h2>
-                <p>{isAr ? 'حدد السقف الأقصى للإنفاق الشهري لمراقبة الفائض.' : 'Keep yourself anchored with a healthy boundary.'}</p>
-              </div>
-              <button className="modal-close" onClick={() => setIsBudgetModalOpen(false)}>×</button>
-            </div>
-            <div className="space-y-4">
-              <div className="field">
-                <label>{isAr ? 'الميزانية الشهرية ($)' : 'Monthly Budget ($)'}</label>
-                <input
-                  type="number"
-                  min="100"
-                  step="50"
-                  className="input"
-                  value={userBudget}
-                  onChange={(e) => setUserBudget(Number(e.target.value))}
-                />
-              </div>
-              <div className="form-actions">
-                <button className="btn primary" onClick={() => setIsBudgetModalOpen(false)}>
-                  {isAr ? 'تأكيد الحفظ ✓' : 'Save'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

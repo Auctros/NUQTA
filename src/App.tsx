@@ -24,6 +24,7 @@ import { FinanceView } from './components/FinanceView';
 import { JournalView } from './components/JournalView';
 import { InsightsView } from './components/InsightsView';
 import { SettingsView } from './components/SettingsView';
+import { ProfileView } from './components/ProfileView';
 import { WhatIfSimulator } from './components/WhatIfSimulator';
 import { QuranView } from './components/QuranView';
 import { ReadingView } from './components/ReadingView';
@@ -293,6 +294,7 @@ export default function App() {
       case 'insights': return isAr ? 'الرؤى والأنماط' : 'Insights & Patterns';
       case 'archive': return isAr ? 'الذاكرة الشاملة والأرشيف الموحد' : 'Universal Archive & History';
       case 'settings': return isAr ? 'الإعدادات والبيانات' : 'Settings & Data';
+      case 'profile': return isAr ? 'الملف الشخصي' : 'Your Profile';
       case 'simulator': return isAr ? 'محاكي التراكم' : '"What If" Simulator';
       default: return isAr ? 'نظرة عامة' : 'Overview';
     }
@@ -596,7 +598,7 @@ export default function App() {
 
         {/* Sidebar Footer Advice Card */}
         <div className="sidebar-footer-card" aria-hidden={sidebarCollapsed}>
-          <span className="footer-spark">✳</span>
+          <NuqtaIcon name="sparkle" className="w-4 h-4 footer-spark" />
           <p>
             {isAr
               ? 'ليس مطلوبًا أن تفعل كل شيء؛ ركّز على نقطة واحدة واضحة لليوم.'
@@ -609,7 +611,7 @@ export default function App() {
             className="text-link"
           >
             <span>{isAr ? 'وضع الإنقاذ' : 'Rescue Mode'}</span>
-            <span>↗</span>
+            <NuqtaIcon name="arrow" className="w-3.5 h-3.5" />
           </button>
         </div>
 
@@ -658,10 +660,11 @@ export default function App() {
             type="button"
             data-sidebar-nav="true"
             aria-label={profile.name || (isAr ? 'الملف الشخصي' : 'Local profile')}
+            aria-current={activeNavTab === 'profile' ? 'page' : undefined}
             aria-describedby={sidebarTooltip?.id === 'profile' ? 'sidebar-tip-profile' : undefined}
             onClick={() => {
               hideCollapsedTooltip();
-              setActiveNavTab('settings');
+              setActiveNavTab('profile');
               if (window.innerWidth <= 900) setSidebarOpen(false);
             }}
             onMouseEnter={(e) =>
@@ -790,9 +793,10 @@ export default function App() {
                     </strong>
                     <button
                       onClick={() => setShowNotificationModal(false)}
-                      className="text-xs text-muted hover:text-[var(--text-primary)]"
+                      aria-label={isAr ? 'إغلاق' : 'Close'}
+                      className="text-muted hover:text-[var(--text-primary)]"
                     >
-                      ✕
+                      <NuqtaIcon name="close" className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -880,6 +884,7 @@ export default function App() {
           {activeNavTab === 'insights' && <InsightsView />}
           {activeNavTab === 'archive' && <ArchiveHistoryView />}
           {activeNavTab === 'settings' && <SettingsView />}
+          {activeNavTab === 'profile' && <ProfileView />}
           {activeNavTab === 'simulator' && <WhatIfSimulator />}
         </main>
 
