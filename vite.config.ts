@@ -5,6 +5,8 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // GitHub Pages serves this project from /NUQTA/; local development stays at /.
+    base: process.env.GITHUB_PAGES === 'true' ? '/NUQTA/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
