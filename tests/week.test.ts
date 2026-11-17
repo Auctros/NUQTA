@@ -10,6 +10,7 @@ import {
   startOfWeekKey,
   endOfWeekKey,
   weekDayKeys,
+  elapsedWeekDayKeys,
   weekDayLabel,
   weekDayNarrow,
   weekDayLabels,
@@ -56,6 +57,15 @@ describe('week module (Saturday-first, Friday off)', () => {
       '2026-11-12',
       '2026-11-13'
     ]);
+  });
+
+  it('lists only the elapsed days of the current week, week-to-date', () => {
+    // Monday 2026-11-09: Sat, Sun and Mon have happened; the rest of the week has not.
+    expect(elapsedWeekDayKeys('2026-11-09')).toEqual(['2026-11-07', '2026-11-08', '2026-11-09']);
+    // On the Saturday that starts the week only that day counts.
+    expect(elapsedWeekDayKeys('2026-11-07')).toEqual(['2026-11-07']);
+    // On Friday the whole Sat..Fri week is elapsed.
+    expect(elapsedWeekDayKeys('2026-11-13')).toHaveLength(7);
   });
 
   it('crosses a month boundary without drifting', () => {

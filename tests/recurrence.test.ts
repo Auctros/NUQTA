@@ -12,9 +12,13 @@ import {
   seriesDates,
   openOccurrences,
   horizonEndKey,
+  reconcileSeries,
+  removeSeries,
+  pendingOccurrenceIds,
   SERIES_HORIZON_DAYS,
   type SeriesDraft
 } from '../src/lib/taskRecurrence';
+import { dayOfWeek } from '../src/lib/week';
 import type { RecurrenceRule, Task } from '../src/types';
 
 // 2026-11-07 = Saturday (week start); 2026-11-13 = Friday (day off).
@@ -177,5 +181,35 @@ describe('task recurrence materialisation', () => {
     ] as Task[];
     expect([...seriesDates(tasks, 's')].sort()).toEqual(['2026-11-09', '2026-11-16', '2026-11-23']);
     expect(openOccurrences(tasks, 's').map((t) => t.id)).toEqual(['b']);
+  });
+
+  it('reconcileSeries drops stale future occurrences and rebuilds them under the new rule', () => {
+    // A daily series materialised from 2026-11-07, then edited to weekly on the same day.
+    const daily: RecurrenceRule = { freq: 'daily' };
+    const existing = materializeSeries('ser-r', draft, daily, '2026-11-07', new Set(), '2026-11-07');
+    // One past occurrence is completed (must survive as history).
+    existing[0] = { ...existing[0], status: 'completed', scheduledDate: '2026-11-01' };
+
+    const weekly: RecurrenceRule = { freq: 'weekly', days: [6] }; // Saturdays
+    const rebuilt = reconcileSeries(existing, 'ser-r', weekly, '2026-11-07', '2026-11-07', 'T0', draft);
+    const open = rebuilt.filter((t) => t.seriesId === 'ser-r' && t.status !== 'completed');
+    // Every remaining open occurrence follows the weekly rule (all Saturdays).
+    expect(open.every((t) => t.scheduledDate && dayOfWeek(t.scheduledDate) === 6)).toBe(true);
+    // The completed past day is preserved untouched.
+    expect(rebuilt.find((t) => t.status === 'completed')?.scheduledDate).toBe('2026-11-01');
+    // The old daily cadence is gone: far fewer open days remain.
+    expect(open.length).toBeLessThan(existing.filter((t) => t.status !== 'completed').length);
+  });
+
+  it('removeSeries keeps completed occurrences as history but drops the rest', () => {
+    const tasks: Task[] = [
+      { id: 'a', title: 'x', seriesId: 's', scheduledDate: '2026-11-09', status: 'completed' },
+      { id: 'b', title: 'x', seriesId: 's', scheduledDate: '2026-11-16', status: 'todo' },
+      { id: 'c', title: 'x', seriesId: 's', scheduledDate: '2026-11-23', status: 'skipped' },
+      { id: 'd', title: 'y', seriesId: 'other', scheduledDate: '2026-11-10', status: 'todo' }
+    ] as Task[];
+    const left = removeSeries(tasks, 's');
+    expect(left.map((t) => t.id).sort()).toEqual(['a', 'd']);
+    expect(pendingOccurrenceIds(tasks, 's')).toEqual(['b']);
   });
 });

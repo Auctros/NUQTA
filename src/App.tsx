@@ -33,10 +33,12 @@ import { ArchiveHistoryView } from './components/ArchiveHistoryView';
 import { useNuqtaReminders } from './lib/useNuqtaReminders';
 import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
-import { NuqtaNotificationEngine } from './lib/notifications';
+import { NuqtaNotificationEngine, listenForNotificationRoutes } from './lib/notifications';
 
 export default function App() {
   useNuqtaReminders();
+
+  useEffect(() => listenForNotificationRoutes(), []);
 
   const {
     activeNavTab,

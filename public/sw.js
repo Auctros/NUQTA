@@ -21,7 +21,7 @@
  */
 
 const CACHE_PREFIX = 'nuqta-shell-';
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 const CACHE = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 const SCOPE = self.registration.scope;
 const INDEX_URL = new URL(SCOPE).toString();
@@ -177,7 +177,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
   const data = event.data;
   if (!data || data.type !== 'nuqta-notify') return;
-  const { title, body, tag, url } = data;
+  const { title, body, tag, url, route } = data;
   if (!title) return;
   event.waitUntil(
     self.registration.showNotification(title, {
@@ -185,23 +185,29 @@ self.addEventListener('message', (event) => {
       tag: tag || 'nuqta-general',
       icon: '/favicon.ico',
       badge: '/favicon.ico',
-      data: { url: url || INDEX_URL }
+      data: { url: url || INDEX_URL, route }
     })
   );
 });
 
-// Focus an existing client (or open one) at the notification's target URL.
+// Focus an existing client (or open one) and tell the page which entity to open, so a
+// reminder click lands on the exact task or habit it is about.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || INDEX_URL;
+  const data = event.notification.data || {};
+  const target = data.url || INDEX_URL;
+  const route = data.route;
   event.waitUntil(
-    self.clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clients) => {
-        for (const client of clients) {
-          if ('focus' in client) return client.focus();
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          if (route && 'postMessage' in client) {
+            client.postMessage({ type: 'nuqta-notification-click', route });
+          }
+          return client.focus();
         }
-        return self.clients.openWindow(target);
-      })
+      }
+      return self.clients.openWindow(target);
+    })
   );
 });

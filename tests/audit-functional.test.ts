@@ -15,6 +15,7 @@ import { generateUniversalHistory, getUniversalArchivedItems } from '../src/lib/
 import { computeLifeIntelligence } from '../src/lib/lifeIntelligenceEngine';
 import { parseNaturalLanguageTask } from '../src/lib/nlpParser';
 import { isHabitDueOn, computeCurrentStreak } from '../src/lib/habitSchedule';
+import { dayOfWeek } from '../src/lib/week';
 import type { Goal, Habit, Task } from '../src/types';
 
 const S = () => useNuqtaStore.getState();
@@ -798,11 +799,24 @@ describe('K. Task recurrence series', () => {
     S().createTask({ title: 'Read', priority: 2, scheduledDate: today(), recurrence: { freq: 'daily' } });
     const series = S().tasks.filter((t) => t.title === 'Read');
     const seriesId = series[0].seriesId!;
+    const anchorId = series[1].id; // the occurrence the user edited
     S().toggleTaskStatus(series[0].id); // complete the first occurrence
-    S().updateTaskSeries(seriesId, { title: 'Read deeply' });
+    S().updateTaskSeries(seriesId, anchorId, { title: 'Read deeply' });
     const after = S().tasks.filter((t) => t.seriesId === seriesId);
     expect(after.find((t) => t.id === series[0].id)!.title).toBe('Read'); // completed untouched
     expect(after.filter((t) => t.status === 'todo').every((t) => t.title === 'Read deeply')).toBe(true);
+  });
+
+  it('changing the cadence of a series re-materialises future days from the anchor', () => {
+    S().createTask({ title: 'Weekly review', priority: 2, scheduledDate: today(), recurrence: { freq: 'daily' } });
+    const series = S().tasks.filter((t) => t.title === 'Weekly review');
+    const seriesId = series[0].seriesId!;
+    // Edit the first open occurrence to a weekly rule.
+    S().updateTaskSeries(seriesId, series[0].id, { recurrence: { freq: 'weekly', days: [dayOfWeek(today())] } });
+    const after = S().tasks.filter((t) => t.seriesId === seriesId);
+    expect(after.every((t) => t.recurrence?.freq === 'weekly')).toBe(true);
+    // A weekly series has far fewer open days than the daily one had.
+    expect(after.filter((t) => t.status === 'todo').length).toBeLessThan(series.length);
   });
 
   it('deleting a series removes every occurrence', () => {

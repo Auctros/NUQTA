@@ -48,6 +48,15 @@ function recurrenceLabel(rule: RecurrenceRule, isAr: boolean): string {
   }
 }
 
+/** Seed the repeat picker from an existing rule so editing shows the real cadence. */
+function ruleToForm(rule?: RecurrenceRule): { repeat: 'none' | RecurrenceFrequency; days: number[] } {
+  if (!rule) return { repeat: 'none', days: [] };
+  if (rule.freq === 'weekly' || rule.freq === 'custom') {
+    return { repeat: 'weekly', days: rule.days ?? [] };
+  }
+  return { repeat: rule.freq, days: [] };
+}
+
 export const TasksView: React.FC = () => {
   const {
     tasks,
@@ -59,6 +68,7 @@ export const TasksView: React.FC = () => {
     addSubtask,
     createTask,
     updateTask,
+    updateTaskSeries,
     skipTaskOccurrence,
     deleteTaskSeries,
     smartBatchReschedule,
@@ -109,6 +119,8 @@ export const TasksView: React.FC = () => {
   const [formLinkedGoalId, setFormLinkedGoalId] = useState<string>('');
   const [formRepeat, setFormRepeat] = useState<'none' | RecurrenceFrequency>('none');
   const [formRepeatDays, setFormRepeatDays] = useState<number[]>([]);
+  // When editing a recurring task: rewrite only this occurrence, or the whole series.
+  const [editScope, setEditScope] = useState<'occurrence' | 'series'>('occurrence');
 
   const todayStr = localDateKey();
 
@@ -150,6 +162,10 @@ export const TasksView: React.FC = () => {
     setFormIsTopThree(task.isTopThree);
     setFormTags((task.tags || []).join(', '));
     setFormLinkedGoalId(task.linkedGoalId || '');
+    const seeded = ruleToForm(task.recurrence);
+    setFormRepeat(seeded.repeat);
+    setFormRepeatDays(seeded.days);
+    setEditScope('occurrence');
     setIsModalOpen(true);
   };
 
@@ -159,32 +175,32 @@ export const TasksView: React.FC = () => {
 
     const tagsArray = formTags.split(',').map((t) => t.trim()).filter(Boolean);
     const recurrence = buildRecurrence(formRepeat, formRepeatDays, formDate);
+    const fields = {
+      title: formTitle.trim(),
+      notes: formNotes.trim(),
+      priority: formPriority,
+      scheduledDate: formDate || undefined,
+      scheduledTime: formTime || undefined,
+      estimatedMinutes: formMinutes,
+      isTopThree: formIsTopThree,
+      tags: tagsArray,
+      linkedGoalId: formLinkedGoalId || undefined
+    };
 
     if (editingTask) {
-      updateTask(editingTask.id, {
-        title: formTitle.trim(),
-        notes: formNotes.trim(),
-        priority: formPriority,
-        scheduledDate: formDate || undefined,
-        scheduledTime: formTime || undefined,
-        estimatedMinutes: formMinutes,
-        isTopThree: formIsTopThree,
-        tags: tagsArray,
-        linkedGoalId: formLinkedGoalId || undefined
-      });
+      // A recurring series offers a scope choice: rewrite only the edited occurrence,
+      // or apply the change (and any new cadence) to the remaining series.
+      if (editingTask.seriesId) {
+        if (editScope === 'series') {
+          updateTaskSeries(editingTask.seriesId, editingTask.id, { ...fields, recurrence });
+        } else {
+          updateTask(editingTask.id, fields);
+        }
+      } else {
+        updateTask(editingTask.id, fields);
+      }
     } else {
-      createTask({
-        title: formTitle.trim(),
-        notes: formNotes.trim(),
-        priority: formPriority,
-        scheduledDate: formDate || undefined,
-        scheduledTime: formTime || undefined,
-        estimatedMinutes: formMinutes,
-        isTopThree: formIsTopThree,
-        tags: tagsArray,
-        linkedGoalId: formLinkedGoalId || undefined,
-        recurrence
-      });
+      createTask({ ...fields, recurrence });
     }
     setIsModalOpen(false);
   };
@@ -710,7 +726,7 @@ export const TasksView: React.FC = () => {
                 </div>
               </div>
 
-              {!editingTask && (
+              {(!editingTask || (editingTask.seriesId && editScope === 'series')) && (
                 <div className="field">
                   <label>{isAr ? 'التكرار' : 'Repeat'}</label>
                   <NuqtaSelect value={formRepeat} onChange={(e) => setFormRepeat(e.target.value as 'none' | RecurrenceFrequency)}>
@@ -747,6 +763,30 @@ export const TasksView: React.FC = () => {
                       })}
                     </div>
                   )}
+                </div>
+              )}
+
+              {editingTask?.seriesId && (
+                <div className="field">
+                  <label>{isAr ? 'نطاق التعديل' : 'Apply changes to'}</label>
+                  <TabBar
+                    items={[
+                      { id: 'occurrence', label: isAr ? 'هذا اليوم فقط' : 'This day only' },
+                      { id: 'series', label: isAr ? 'كل السلسلة' : 'Entire series' }
+                    ]}
+                    value={editScope}
+                    onChange={(id) => setEditScope(id as 'occurrence' | 'series')}
+                    ariaLabel={isAr ? 'نطاق التعديل' : 'Edit scope'}
+                  />
+                  <span className="text-[10px] text-[var(--text-tertiary)] mt-1 block">
+                    {editScope === 'series'
+                      ? isAr
+                        ? 'سيُطبَّق التعديل على الأيام القادمة، وتبقى الأيام المكتملة كما هي.'
+                        : 'Applies to upcoming occurrences; completed days are kept as history.'
+                      : isAr
+                      ? 'لن تتأثر بقية أيام السلسلة.'
+                      : 'The rest of the series stays unchanged.'}
+                  </span>
                 </div>
               )}
 

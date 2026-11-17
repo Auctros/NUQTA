@@ -26,8 +26,12 @@ import { computeCurrentStreak } from '../lib/habitSchedule';
 import { isTaskPending } from '../lib/taskStatus';
 import { dayOfWeek } from '../lib/week';
 import {
+  draftFromTask,
   materializeSeries,
   newSeriesId,
+  pendingOccurrenceIds,
+  reconcileSeries,
+  removeSeries,
   seriesDates,
   SERIES_HORIZON_DAYS
 } from '../lib/taskRecurrence';
@@ -125,6 +129,28 @@ const pruneGoalRelationIds = (
 };
 
 /**
+ * Fields an edit copies across every occurrence of a series. Scheduling identity
+ * (`scheduledDate`), status and lifecycle timestamps are deliberately excluded: each
+ * occurrence keeps its own day and its own completion state.
+ */
+const seriesFieldsFrom = (updates: Partial<Task>): Partial<Task> => {
+  const {
+    scheduledDate: _d,
+    status: _st,
+    completedAt: _ca,
+    cancelledAt: _xa,
+    recurrence: _r,
+    seriesId: _s,
+    occurrenceIndex: _o,
+    id: _id,
+    createdAt: _cr,
+    updatedAt: _ua,
+    ...fields
+  } = updates;
+  return fields;
+};
+
+/**
  * Recompute a Quran studio's denormalised totals from its surah states and its
  * session log, so deleting a session (or surah progress) can never leave a
  * stale aggregate behind.
@@ -183,8 +209,12 @@ interface NuqtaStoreState {
   addTaskFromNLP: (rawText: string) => Task;
   createTask: (draft: Partial<Task>) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
-  /** Apply an edit to every still-open occurrence of a recurring series. */
-  updateTaskSeries: (seriesId: string, updates: Partial<Task>) => void;
+  /**
+   * Apply an edit to every still-open occurrence of a recurring series.
+   * `anchorId` is the occurrence the user edited: its date is the series anchor, so a
+   * changed recurrence rule is re-materialised from that day forward.
+   */
+  updateTaskSeries: (seriesId: string, anchorId: string, updates: Partial<Task>) => void;
   toggleTaskStatus: (id: string) => void;
   toggleTopThree: (id: string) => { success: boolean; message?: string };
   deleteTask: (id: string) => void;
@@ -576,24 +606,38 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     set({ goals: updatedGoals });
   },
 
-  updateTaskSeries: (seriesId, updates) => {
+  updateTaskSeries: (seriesId, anchorId, updates) => {
     const now = new Date().toISOString();
-    // Only fields that describe the series are copied; each occurrence keeps its own
+    const todayStr = localDateKey();
+    const tasks = get().tasks;
+    const anchor = tasks.find((t) => t.id === anchorId);
+    const rule = updates.recurrence ?? anchor?.recurrence;
+
+    // When the rule (or the anchor date) changed, rebuild the still-open future
+    // occurrences from the anchor instead of leaving the old cadence in place.
+    if (anchor && rule && (updates.recurrence !== undefined || updates.scheduledDate !== undefined)) {
+      const anchorKey = updates.scheduledDate || anchor.scheduledDate || todayStr;
+      const draft = { ...draftFromTask(anchor), ...seriesFieldsFrom(updates) };
+      const updated = reconcileSeries(tasks, seriesId, rule, anchorKey, todayStr, now, draft);
+      NuqtaStorageEngine.saveTasks(updated);
+      set({ tasks: updated });
+      return;
+    }
+
+    // Fields that describe the series are copied; each occurrence keeps its own
     // scheduledDate/status so an edit never collapses the series onto one day or
     // resurrects a completed occurrence.
-    const { scheduledDate, status, completedAt, cancelledAt, recurrence, seriesId: _s, ...seriesFields } = updates;
-    const updated = get().tasks.map((t) =>
-      t.seriesId === seriesId && t.status !== 'completed' && t.status !== 'cancelled'
-        ? { ...t, ...seriesFields, updatedAt: now }
-        : t
+    const seriesFields = seriesFieldsFrom(updates);
+    const updated = tasks.map((t) =>
+      t.seriesId === seriesId && isTaskPending(t) ? { ...t, ...seriesFields, updatedAt: now } : t
     );
     NuqtaStorageEngine.saveTasks(updated);
     set({ tasks: updated });
   },
 
   deleteTaskSeries: (seriesId) => {
-    const ids = get().tasks.filter((t) => t.seriesId === seriesId).map((t) => t.id);
-    const updated = get().tasks.filter((t) => t.seriesId !== seriesId);
+    const ids = pendingOccurrenceIds(get().tasks, seriesId);
+    const updated = removeSeries(get().tasks, seriesId);
     NuqtaStorageEngine.saveTasks(updated);
     set({ tasks: updated });
 

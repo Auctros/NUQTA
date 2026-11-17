@@ -1,5 +1,6 @@
 import { localDateKey } from '../lib/dateKey';
-import { dayOfWeek, WEEK_DAY_ORDER, weekDayLabel, weekDayNarrow } from '../lib/week';
+import { dayOfWeek, elapsedWeekDayKeys, WEEK_DAY_ORDER, weekDayLabel, weekDayNarrow } from '../lib/week';
+import { habitCompliance, isHabitDueOn } from '../lib/habitSchedule';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, RecurrenceRule, SpecializedHabitType } from '../types';
@@ -78,13 +79,18 @@ export const HabitsView: React.FC = () => {
   const habitsDoneToday = habits.filter((h) => h.completedDates.includes(todayStr)).length;
   const bestStreak = habits.length > 0 ? Math.max(...habits.map((h) => h.currentStreak || 0)) : 0;
 
-  // Calculate weekly consistency rate
-  const totalPossible = habits.length * 7;
-  const totalCompletedWeek = habits.reduce((acc, h) => {
-    const weekCount = past7Days.filter((d) => h.completedDates.includes(d.key) || (h.freezesUsedDates || []).includes(d.key)).length;
-    return acc + weekCount;
-  }, 0);
-  const weekRate = totalPossible > 0 ? Math.round((totalCompletedWeek / totalPossible) * 100) : 0;
+  // Weekly consistency, week-to-date: NUQTA's week runs Sat..Fri, and only elapsed
+  // days count. Days a habit was not due (e.g. Friday for a weekdays habit) are
+  // excluded, so neither a rest day nor a freeze deflates the rate.
+  const weekWindow = elapsedWeekDayKeys(todayStr);
+  const weekTotals = habits.reduce(
+    (acc, h) => {
+      const c = habitCompliance(h, weekWindow);
+      return { due: acc.due + c.due, done: acc.done + c.done };
+    },
+    { due: 0, done: 0 }
+  );
+  const weekRate = weekTotals.due > 0 ? Math.round((weekTotals.done / weekTotals.due) * 100) : 0;
 
   const openNewModal = () => {
     setEditingHabit(null);
@@ -115,6 +121,8 @@ export const HabitsView: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) return;
+    // A custom schedule with no day selected would silently never come due.
+    if (formFrequency === 'custom' && formCustomDays.length === 0) return;
 
     const schedule: Pick<Habit, 'frequency' | 'customDays' | 'recurrence'> = {
       frequency: formFrequency,
@@ -518,10 +526,12 @@ export const HabitsView: React.FC = () => {
                   {past7Days.map((d) => {
                     const isDone = habit.completedDates.includes(d.key);
                     const isFrozen = (habit.freezesUsedDates || []).includes(d.key);
+                    const isDue = isHabitDueOn(habit, d.key);
+                    const state = isDone ? 'done' : isFrozen ? 'freeze' : !isDue ? 'off' : '';
                     return (
                       <span
                         key={d.key}
-                        className={`${isDone ? 'done' : isFrozen ? 'freeze' : ''} ${d.isToday ? 'today' : ''}`}
+                        className={`${state} ${d.isToday ? 'today' : ''}`}
                         title={d.key}
                       >
                         {isDone ? '✓' : isFrozen ? '❄' : d.label}
@@ -686,30 +696,37 @@ export const HabitsView: React.FC = () => {
                   <option value="custom">{isAr ? 'أيام محددة' : 'Specific days'}</option>
                 </NuqtaSelect>
                 {formFrequency === 'custom' && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {WEEK_DAY_ORDER.map((dow) => {
-                      const active = formCustomDays.includes(dow);
-                      return (
-                        <button
-                          key={dow}
-                          type="button"
-                          onClick={() =>
-                            setFormCustomDays((prev) =>
-                              prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow]
-                            )
-                          }
-                          className={`px-2 py-1 rounded-md text-[11px] font-semibold border ${
-                            active
-                              ? 'bg-[var(--brand)] text-[var(--text-on-accent)] border-[var(--brand)]'
-                              : 'bg-[var(--surface-inset)] text-[var(--text-secondary)] border-[var(--border-default)]'
-                          }`}
-                          aria-pressed={active}
-                        >
-                          {weekDayLabel(dow, isAr)}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {WEEK_DAY_ORDER.map((dow) => {
+                        const active = formCustomDays.includes(dow);
+                        return (
+                          <button
+                            key={dow}
+                            type="button"
+                            onClick={() =>
+                              setFormCustomDays((prev) =>
+                                prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow]
+                              )
+                            }
+                            className={`px-2 py-1 rounded-md text-[11px] font-semibold border ${
+                              active
+                                ? 'bg-[var(--brand)] text-[var(--text-on-accent)] border-[var(--brand)]'
+                                : 'bg-[var(--surface-inset)] text-[var(--text-secondary)] border-[var(--border-default)]'
+                            }`}
+                            aria-pressed={active}
+                          >
+                            {weekDayLabel(dow, isAr)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {formCustomDays.length === 0 && (
+                      <span className="text-[var(--fs-micro)] text-[var(--state-warning)] mt-1.5 block">
+                        {isAr ? 'اختر يوماً واحداً على الأقل.' : 'Pick at least one day.'}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -834,7 +851,11 @@ export const HabitsView: React.FC = () => {
                 <button type="button" className="btn subtle" onClick={() => setIsModalOpen(false)}>
                   {isAr ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button type="submit" className="btn primary">
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={formFrequency === 'custom' && formCustomDays.length === 0}
+                >
                   {editingHabit ? (isAr ? 'حفظ التعديل' : 'Save Changes') : (isAr ? 'إنشاء العادة' : 'Create Habit')}
                 </button>
               </div>

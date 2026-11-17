@@ -7,6 +7,8 @@
  * 4. Harmonic audio chimes via Web Audio API (no external MP3/WAV files required)
  */
 
+import { useNuqtaStore } from '../store/nuqtaStore';
+
 type ChimeType = 'focus-complete' | 'break-start' | 'task-reminder' | 'habit-cue' | 'gentle-bell';
 
 class AudioSynthesizer {
@@ -101,7 +103,33 @@ export interface NotificationPayload {
   tag?: string;
   chime?: ChimeType;
   icon?: string;
+  /** Where a click should land, e.g. `{ nav: 'tasks', entityId: 'abc' }`. */
+  route?: { nav: string; entityId?: string };
   onClick?: () => void;
+}
+
+/**
+ * Navigate to a notification's target entity. Routed clicks (from the page or the
+ * service worker) all land here so a reminder opens the exact record it is about.
+ */
+export function openNotificationRoute(route?: { nav: string; entityId?: string }): void {
+  if (!route || typeof window === 'undefined') return;
+  const store = useNuqtaStore.getState();
+  if (route.entityId) store.requestFocus(route.nav, route.entityId);
+  store.setActiveNavTab(route.nav as never);
+}
+
+/** Listen for a routed click forwarded by the service worker. */
+export function listenForNotificationRoutes(): () => void {
+  if (typeof navigator === 'undefined' || !navigator.serviceWorker) return () => {};
+  const handler = (event: MessageEvent) => {
+    const data = event.data;
+    if (data && data.type === 'nuqta-notification-click') {
+      openNotificationRoute(data.route);
+    }
+  };
+  navigator.serviceWorker.addEventListener('message', handler);
+  return () => navigator.serviceWorker.removeEventListener('message', handler);
 }
 
 export class NuqtaNotificationEngine {
@@ -139,7 +167,7 @@ export class NuqtaNotificationEngine {
    * browser that blocks registration).
    */
   static notify(payload: NotificationPayload): boolean {
-    const { title, body, tag, chime = 'gentle-bell', onClick } = payload;
+    const { title, body, tag, chime = 'gentle-bell', route, onClick } = payload;
 
     // 1. Play synthesizer chime
     try {
@@ -161,7 +189,8 @@ export class NuqtaNotificationEngine {
           type: 'nuqta-notify',
           title,
           body,
-          tag: notificationTag
+          tag: notificationTag,
+          route
         });
         return true;
       } catch (e) {
@@ -179,13 +208,12 @@ export class NuqtaNotificationEngine {
         silent: true // We handle our own pleasant audio synthesizer
       });
 
-      if (onClick) {
-        notif.onclick = () => {
-          window.focus();
-          onClick();
-          notif.close();
-        };
-      }
+      notif.onclick = () => {
+        window.focus();
+        if (route) openNotificationRoute(route);
+        if (onClick) onClick();
+        notif.close();
+      };
 
       return true;
     } catch (e) {

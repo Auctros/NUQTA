@@ -42,7 +42,8 @@ export function useNuqtaReminders() {
                 ? `الأولوية ${task.priority} · الوقت المتوقع: ${task.estimatedMinutes || 25} دقيقة`
                 : `Priority ${task.priority} · Estimated: ${task.estimatedMinutes || 25}m`,
               tag: `task-${task.id}`,
-              chime: 'task-reminder'
+              chime: 'task-reminder',
+              route: { nav: 'tasks', entityId: task.id }
             });
           }
         }
@@ -69,7 +70,8 @@ export function useNuqtaReminders() {
                 ? `لديك ${morningHabits.length} عادات صباحية جاهزة للانطلاق: ${morningHabits[0].name}`
                 : `You have ${morningHabits.length} morning habits ready: ${morningHabits[0].name}`,
               tag: 'morning-habits',
-              chime: 'habit-cue'
+              chime: 'habit-cue',
+              route: { nav: 'habits' }
             });
           }
         }
@@ -86,7 +88,8 @@ export function useNuqtaReminders() {
               ? 'سجّل ما سار على ما يرام اليوم، وامنح عقلك صفاءً قبل النوم.'
               : 'Review what went well today and clear your mind before sleep.',
             tag: 'evening-ritual',
-            chime: 'gentle-bell'
+            chime: 'gentle-bell',
+            route: { nav: 'journal' }
           });
         }
       }

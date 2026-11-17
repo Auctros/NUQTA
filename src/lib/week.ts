@@ -85,6 +85,20 @@ export function weekDayKeys(key: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDaysToKey(start, i));
 }
 
+/**
+ * The day keys of the current NUQTA week (Sat..Fri) that have already happened,
+ * i.e. from the week start up to and including `key`. Future days are excluded so a
+ * week-to-date rate is never deflated by days that cannot be done yet.
+ */
+export function elapsedWeekDayKeys(key: string): string[] {
+  const start = startOfWeekKey(key);
+  const out: string[] = [];
+  for (let cursor = start; cursor <= key; cursor = addDaysToKey(cursor, 1)) {
+    out.push(cursor);
+  }
+  return out;
+}
+
 /** Local day key of the most recent week start on or before today. */
 export function currentWeekStartKey(todayKey: string = localDateKey()): string {
   return startOfWeekKey(todayKey);

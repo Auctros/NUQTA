@@ -16,6 +16,7 @@
 import type { Task, RecurrenceRule } from '../types';
 import { addDaysToKey, isDateKey, localDateKey } from './dateKey';
 import { normalizeRule, occurrencesInRange } from './recurrence';
+import { isTaskPending } from './taskStatus';
 
 /** How far ahead a recurring series is materialised (days from the anchor/today). */
 export const SERIES_HORIZON_DAYS = 90;
@@ -110,7 +111,65 @@ export function openOccurrences(tasks: Task[], seriesId: string): Task[] {
     .sort((a, b) => (a.scheduledDate ?? '').localeCompare(b.scheduledDate ?? ''));
 }
 
+/**
+ * Delete a whole series except its finished occurrences, which are kept as history so
+ * a completed day never disappears from the log. Returns the new task list.
+ */
+export function removeSeries(tasks: Task[], seriesId: string): Task[] {
+  return tasks.filter(
+    (t) => t.seriesId !== seriesId || t.status === 'completed' || t.status === 'cancelled'
+  );
+}
+
+/** Ids of the still-pending occurrences of a series (the ones an edit rewrites). */
+export function pendingOccurrenceIds(tasks: Task[], seriesId: string): string[] {
+  return tasks.filter((t) => t.seriesId === seriesId && isTaskPending(t)).map((t) => t.id);
+}
+
 /** A new opaque series id. */
 export function newSeriesId(): string {
   return 'ser-' + crypto.randomUUID().slice(0, 8);
+}
+
+/** Copy the shared fields of an existing occurrence into a series draft. */
+export function draftFromTask(task: Task): SeriesDraft {
+  return {
+    title: task.title,
+    notes: task.notes,
+    priority: task.priority,
+    isTopThree: task.isTopThree,
+    scheduledTime: task.scheduledTime,
+    estimatedMinutes: task.estimatedMinutes,
+    tags: task.tags,
+    energyLevelRequired: task.energyLevelRequired,
+    linkedGoalId: task.linkedGoalId,
+    subtasks: task.subtasks
+  };
+}
+
+/**
+ * Rebuild a series after its rule changed. Completed/cancelled occurrences and any
+ * occurrence before `todayKey` are kept as history; still-open future occurrences are
+ * dropped and re-materialised from the anchor under the new rule, so a "daily" series
+ * edited to "weekly" does not leave stale daily records behind.
+ */
+export function reconcileSeries(
+  tasks: Task[],
+  seriesId: string,
+  rule: RecurrenceRule,
+  anchorKey: string,
+  todayKey: string,
+  nowIso: string,
+  draft: SeriesDraft
+): Task[] {
+  const kept = tasks.filter(
+    (t) =>
+      t.seriesId !== seriesId ||
+      t.status === 'completed' ||
+      t.status === 'cancelled' ||
+      (t.scheduledDate !== undefined && t.scheduledDate < todayKey)
+  );
+  const existing = seriesDates(kept, seriesId);
+  const regenerated = materializeSeries(seriesId, draft, rule, anchorKey, existing, todayKey, nowIso);
+  return [...kept, ...regenerated];
 }
