@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { WorkoutRoutine, ExerciseEntry, ExerciseSet, MuscleMovement } from '../types';
 import { Button, NuqtaSelect } from './ui';
+import { NuqtaIcon } from './NuqtaIcon';
 import {
   StudioFrame,
   StudioSection,
@@ -642,7 +643,7 @@ export const WorkoutView: React.FC = () => {
                           className="set-done"
                           onClick={() => toggleSetDone(currentIdx, si)}
                         >
-                          ✓
+                          <NuqtaIcon name="check" className="w-3.5 h-3.5" />
                         </button>
                         {ex.sets.length > 1 && (
                           <button
@@ -820,7 +821,7 @@ export const WorkoutView: React.FC = () => {
                   </p>
                 </div>
                 <span className="px-2 h-6 inline-flex items-center rounded-[var(--r-full)] border text-[var(--fs-micro)] font-[var(--fw-semibold)] text-[var(--state-success)] border-[color-mix(in_srgb,var(--state-success)_45%,transparent)]">
-                  ✓ {isAr ? 'منجزة اليوم' : 'Done today'}
+                  <NuqtaIcon name="check" className="w-3 h-3" /> {isAr ? 'منجزة اليوم' : 'Done today'}
                 </span>
               </div>
             ) : (
@@ -1201,7 +1202,7 @@ export const WorkoutView: React.FC = () => {
                 <ul className="space-y-2">
                   {personalRecords.map(([name, reps]) => (
                     <li key={name} className="flex items-center justify-between gap-2 text-[var(--fs-xs)]">
-                      <span className="text-[var(--text-primary)] truncate">🏆 {name}</span>
+                      <span className="text-[var(--text-primary)] truncate inline-flex items-center gap-1"><NuqtaIcon name="trophy" className="w-3.5 h-3.5 text-[var(--studio-accent)]" /> {name}</span>
                       <span className="font-mono text-[var(--studio-accent)] font-[var(--fw-bold)]">
                         {reps} {isAr ? 'تكرار' : 'reps'}
                       </span>

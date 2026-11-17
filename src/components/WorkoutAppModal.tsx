@@ -10,6 +10,7 @@ import {
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { EXERCISE_CATALOG, PrebuiltExercise, categoryLabel, muscleLabel } from '../lib/exerciseCatalog';
 import { NuqtaSelect } from './ui';
+import { NuqtaIcon } from './NuqtaIcon';
 import { ExerciseCard } from './workout/ExerciseCard';
 import { ExerciseDetailModal } from './workout/ExerciseDetailModal';
 
@@ -258,8 +259,8 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
         {/* ================= HEADER BAR ================= */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--d-workout-border)] bg-[var(--d-workout-chip)]">
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-[var(--tone-success-wash)] border border-[var(--tone-success-line)] flex items-center justify-center text-[var(--d-workout-accent)] font-bold text-xl shadow-inner">
-              ⚡
+            <span className="w-10 h-10 rounded-xl bg-[var(--tone-success-wash)] border border-[var(--tone-success-line)] flex items-center justify-center text-[var(--d-workout-accent)] shadow-inner">
+              <NuqtaIcon name="dumbbell" className="w-5 h-5" />
             </span>
             <div>
               <div className="flex items-center gap-2">
@@ -322,9 +323,9 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-muted hover:text-[var(--text-primary)] hover:bg-[var(--surface-faint)] transition-colors"
-              aria-label="Close"
+              aria-label={isAr ? 'إغلاق' : 'Close'}
             >
-              <span className="text-lg font-bold px-2">✕</span>
+              <NuqtaIcon name="close" className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -357,7 +358,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                       className="btn primary bg-[var(--tone-success)] hover:bg-[var(--tone-success)] text-[var(--accent-ink)] font-bold text-xs"
                     >
                       <span>{isAr ? 'بدء تمرين الآن' : 'Start Workout Session'}</span>
-                      <span>⚡</span>
+                      <NuqtaIcon name="play" className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -391,7 +392,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                   <div>
                     <span className="text-[11px] text-muted block">{isAr ? 'سلسلة الاستمرار:' : 'Habit Streak:'}</span>
                     <strong className="text-xl font-mono text-[var(--state-warning)] font-bold">
-                      {habit.currentStreak || 0} {isAr ? 'يوم' : 'd'} ♨
+                      {habit.currentStreak || 0} {isAr ? 'يوم' : 'd'}
                     </strong>
                     <small className="text-[10px] text-muted block">{isAr ? 'أفضل سلسلة:' : 'best:'} {habit.longestStreak || 0} {isAr ? 'يوم' : 'd'}</small>
                   </div>
@@ -661,9 +662,10 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                           type="button"
                           onClick={() => removeExercise(exIdx)}
                           className="text-muted hover:text-[var(--tone-danger)] text-xs px-2"
-                          title="Remove exercise"
+                          title={isAr ? 'حذف التمرين' : 'Remove exercise'}
+                          aria-label={isAr ? 'حذف التمرين' : 'Remove exercise'}
                         >
-                          ✕
+                          <NuqtaIcon name="trash" className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -738,7 +740,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                 <div className="w-full sm:w-auto">
                   {showSuccess ? (
                     <span className="text-xs text-[var(--d-workout-accent)] font-semibold flex items-center gap-1.5 animate-pulse">
-                      ✓ {isAr ? 'تم حفظ الحصة وتحديث مؤشرات اللياقة وسلسلة العادة والصحة بنجاح!' : 'Workout logged & health metrics synced!'}
+                      <NuqtaIcon name="check" className="w-3.5 h-3.5" /> {isAr ? 'تم حفظ الحصة وتحديث مؤشرات اللياقة وسلسلة العادة والصحة بنجاح!' : 'Workout logged & health metrics synced!'}
                     </span>
                   ) : (
                     <span className="text-xs text-muted">
@@ -754,12 +756,12 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                     className="btn subtle small text-xs"
                     title={isAr ? 'حفظ هذه التمارين كروتين دائم' : 'Save as routine'}
                   >
-                    💾 {isAr ? 'حفظ كروتين مخصص' : 'Save as Routine'}
+                    <NuqtaIcon name="save" className="w-3.5 h-3.5" /> {isAr ? 'حفظ كروتين مخصص' : 'Save as Routine'}
                   </button>
 
                   <button type="submit" className="btn primary bg-[var(--tone-success)] hover:bg-[var(--tone-success)] text-[var(--accent-ink)] font-bold text-xs">
                     <span>{isAr ? 'إنهاء وتأكيد التمرين' : 'Complete Workout'}</span>
-                    <span>⚡</span>
+                    <NuqtaIcon name="check" className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -946,8 +948,9 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                             onClick={() => deleteWorkoutRoutine(habit.id, rt.id)}
                             className="text-muted hover:text-[var(--tone-danger)] text-xs px-1"
                             title={isAr ? 'حذف الروتين' : 'Delete routine'}
+                            aria-label={isAr ? 'حذف الروتين' : 'Delete routine'}
                           >
-                            ✕
+                            <NuqtaIcon name="trash" className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -956,7 +959,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                       <div className="space-y-1.5 mt-3 pt-3 border-t border-[var(--d-workout-border-soft)]">
                         {rt.exercises.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-xs text-muted">
-                            <span className="text-[var(--text-primary)]">✦ {item.name}</span>
+                            <span className="text-[var(--text-primary)] inline-flex items-center gap-1"><NuqtaIcon name="sparkle" className="w-3 h-3" /> {item.name}</span>
                             <span className="font-mono text-[11px]">{item.sets.length} {isAr ? 'مجموعات' : 'sets'}</span>
                           </div>
                         ))}
@@ -970,7 +973,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                         className="btn primary small bg-[var(--tone-success)] hover:bg-[var(--tone-success)] text-[var(--accent-ink)] font-bold text-xs"
                       >
                         <span>{isAr ? 'تفعيل وبدء هذا الروتين' : 'Launch Routine'}</span>
-                        <span>⚡</span>
+                        <NuqtaIcon name="play" className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -998,7 +1001,7 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
 
               {workoutData.sessions.length === 0 ? (
                 <div className="p-12 text-center panel border border-[var(--d-workout-border)] bg-[var(--d-workout-surface)] rounded-2xl">
-                  <span className="text-3xl block mb-2">⚡</span>
+                  <span className="block mb-2 text-[var(--d-workout-accent)]"><NuqtaIcon name="dumbbell" className="w-7 h-7" /></span>
                   <strong className="text-[var(--text-primary)] block">{isAr ? 'لا توجد حصص مسجلة بعد' : 'No workout logs recorded yet'}</strong>
                   <button onClick={() => setActiveTab('session')} className="btn primary small mt-3">
                     {isAr ? 'تسجيل أول حصة' : 'Record First Workout'}

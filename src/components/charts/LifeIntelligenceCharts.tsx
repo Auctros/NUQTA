@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { NuqtaIcon } from '../NuqtaIcon';
 import { DayMetricPoint, MovementPatternDistribution, SphereEffortAllocation } from '../../lib/lifeIntelligenceEngine';
 
 // ==========================================
@@ -341,7 +342,9 @@ export const SphereAllocationBar: React.FC<SphereAllocationBarProps> = ({ alloca
             className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] flex flex-col justify-between"
           >
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+              <span className="shrink-0" style={{ color: item.color }}>
+                <NuqtaIcon name={item.icon} className="w-3.5 h-3.5" />
+              </span>
               <span className="text-[11px] text-[var(--text-secondary)] truncate font-semibold">
                 {isAr ? item.labelAr : item.labelEn}
               </span>

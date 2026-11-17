@@ -144,8 +144,19 @@ export const LifeDomainsGrid: React.FC<LifeDomainsGridProps> = ({
               <div>
                 <div className="flex items-center justify-between text-[10.5px] font-mono tabular-nums text-[var(--text-secondary)] mb-1">
                   <span>{isAr ? 'حالة السور المتابعة' : 'Surah status'}</span>
-                  <span>
-                    {faith.surahsCompleted}✓ · {faith.surahsInProgress}→ · {faith.surahsNeedsRevision}!
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-flex items-center gap-0.5 text-[var(--state-success)]">
+                      {faith.surahsCompleted}
+                      <NuqtaIcon name="check" className="w-3 h-3" />
+                    </span>
+                    <span className="inline-flex items-center gap-0.5 text-[var(--state-info)]">
+                      {faith.surahsInProgress}
+                      <NuqtaIcon name="hourglass" className="w-3 h-3" />
+                    </span>
+                    <span className="inline-flex items-center gap-0.5 text-[var(--state-warning)]">
+                      {faith.surahsNeedsRevision}
+                      <NuqtaIcon name="alert" className="w-3 h-3" />
+                    </span>
                   </span>
                 </div>
                 <div className="h-2 w-full rounded-[3px] bg-[var(--surface-track)] overflow-hidden flex">

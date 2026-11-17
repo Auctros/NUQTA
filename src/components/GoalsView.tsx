@@ -5,7 +5,7 @@ import { Goal, GoalPriority, KeyResult, KeyResultDataSource } from '../types';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
 import { EmptyState, NuqtaSelect, PageHeader } from './ui';
 import { GoalDetailModal } from './GoalDetailModal';
-import { evaluateGoalProgress } from '../lib/goalProgressEngine';
+import { evaluateGoalProgress, pacingIconName } from '../lib/goalProgressEngine';
 import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const GoalsView: React.FC = () => {
@@ -368,6 +368,7 @@ export const GoalsView: React.FC = () => {
                             : 'bg-[var(--tone-info-wash)] text-[var(--tone-info)] border-[var(--tone-info-line)]'
                         }`}
                       >
+                        <NuqtaIcon name={pacingIconName(intel.pacingStatus)} className="w-3 h-3" />
                         {isAr ? intel.pacingLabelAr : intel.pacingLabelEn}
                       </span>
                     </div>

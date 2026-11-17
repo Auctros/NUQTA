@@ -898,8 +898,8 @@ export const LifePerformanceChart: React.FC<LifePerformanceChartProps> = ({
                 )}
 
                 {activeAnnotationLabel && (
-                  <div className="font-sans text-[10.5px] font-medium text-[var(--state-warning-strong)] border-t border-[var(--border-subtle)] pt-1 mt-1">
-                    ◆ {activeAnnotationLabel}
+                  <div className="font-sans text-[10.5px] font-medium text-[var(--state-warning-strong)] border-t border-[var(--border-subtle)] pt-1 mt-1 inline-flex items-center gap-1">
+                    <NuqtaIcon name="sparkle" className="w-3 h-3" /> {activeAnnotationLabel}
                   </div>
                 )}
               </div>
@@ -936,7 +936,7 @@ export const LifePerformanceChart: React.FC<LifePerformanceChartProps> = ({
               )}
               {chart.hasAnnotations && (
                 <span className="inline-flex items-center gap-1 text-[var(--state-warning-strong)]">
-                  <span>◆</span>
+                  <NuqtaIcon name="sparkle" className="w-3 h-3" />
                   <span className="text-[var(--text-secondary)]">
                     {isAr ? 'معالم / ذروة' : 'Events / Peak'}
                   </span>

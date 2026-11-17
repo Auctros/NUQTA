@@ -146,7 +146,8 @@ export const SettingsView: React.FC = () => {
                 className={`btn small ${profile.theme === 'dark' ? 'primary' : 'subtle'}`}
                 onClick={() => setTheme(profile.theme === 'dark' ? 'light' : 'dark')}
               >
-                {profile.theme === 'dark' ? (isAr ? 'داكن ☾' : 'Dark ☾') : (isAr ? 'فاتح ☼' : 'Light ☼')}
+                <NuqtaIcon name={profile.theme === 'dark' ? 'moon' : 'sun'} className="w-3.5 h-3.5" />
+                <span>{profile.theme === 'dark' ? (isAr ? 'داكن' : 'Dark') : (isAr ? 'فاتح' : 'Light')}</span>
               </button>
             </div>
           </div>
@@ -162,9 +163,9 @@ export const SettingsView: React.FC = () => {
                   <strong>{isAr ? 'إذن إشعارات المتصفح' : 'Browser Notification Permission'}</strong>
                   <small>
                     {notifPermission === 'granted'
-                      ? (isAr ? '✓ الإشعارات مفعّلة في المتصفح' : '✓ Notifications granted')
+                      ? (isAr ? 'الإشعارات مفعّلة في المتصفح' : 'Notifications granted')
                       : notifPermission === 'denied'
-                      ? (isAr ? '✕ تم رفض الإذن من إعدادات المتصفح' : '✕ Permission blocked by browser')
+                      ? (isAr ? 'تم رفض الإذن من إعدادات المتصفح' : 'Permission blocked by browser')
                       : (isAr ? 'لم يتم تفعيل الإذن بعد' : 'Permission not requested yet')}
                   </small>
                 </div>
@@ -185,7 +186,7 @@ export const SettingsView: React.FC = () => {
                   className="btn"
                   onClick={() => {
                     NuqtaNotificationEngine.notify({
-                      title: isAr ? '🔔 تنبيه تجريبي من نقطة' : '🔔 Nuqta Test Alert',
+                      title: isAr ? 'تنبيه تجريبي من نقطة' : 'Nuqta Test Alert',
                       body: isAr
                         ? 'النظام الصوتي التخليقي وإشعارات المتصفح تعمل محلياً بكفاءة 100%!'
                         : 'Local synthesized audio and notifications are operating at 100%!',
@@ -297,15 +298,15 @@ export const SettingsView: React.FC = () => {
 
             <div className="space-y-2 mt-4 text-[11px] font-mono text-muted">
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-3.5 h-3.5 text-accent" />
                 <span>{isAr ? 'تخزين خاص على جهازك فقط' : 'Private on-device storage'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-3.5 h-3.5 text-accent" />
                 <span>{isAr ? 'بدون خوادم سحابية إلزامية' : 'Zero Cloud Surveillance'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-3.5 h-3.5 text-accent" />
                 <span>{isAr ? 'تصدير حر بصيغة قياسية مفتوحة' : 'Open JSON / CSV Portability'}</span>
               </div>
             </div>

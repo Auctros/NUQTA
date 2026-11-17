@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { NuqtaIcon } from '../NuqtaIcon';
 import {
   ConsistencyBreakdownData,
   DailyCorrelationPoint,
@@ -427,7 +428,8 @@ export const SecondaryAnalyticsSection: React.FC<SecondaryAnalyticsSectionProps>
                 onClick={onOpenInsights}
                 className="mt-3 text-[11px] font-medium text-[var(--brand-strong)] hover:underline"
               >
-                {isAr ? 'فتح صفحة الرؤى ←' : 'Open Insights →'}
+                {isAr ? 'فتح صفحة الرؤى' : 'Open Insights'}
+                <NuqtaIcon name="arrow" className="w-3 h-3 inline-block" />
               </button>
             </div>
           ) : (
@@ -603,7 +605,8 @@ export const SecondaryAnalyticsSection: React.FC<SecondaryAnalyticsSectionProps>
             onClick={onOpenInsights}
             className="text-xs font-medium text-[var(--brand-strong)] hover:underline whitespace-nowrap shrink-0"
           >
-            {isAr ? 'كل الرؤى ←' : 'Deep Insights →'}
+            {isAr ? 'كل الرؤى' : 'Deep Insights'}
+          <NuqtaIcon name="arrow" className="w-3 h-3 inline-block" />
           </button>
         </div>
       </div>

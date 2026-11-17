@@ -1,6 +1,7 @@
 import { localDateKey } from './dateKey';
 import { dayOfWeek, weekDayLabel } from './week';
 import { Task, Habit, Goal, FocusSession, MuscleMovement, ArtMedium } from '../types';
+import { IconName } from '../components/NuqtaIcon';
 import { evaluateGoalProgress } from './goalProgressEngine';
 
 export type TimeHorizon = 'today' | 'week' | 'month' | 'all';
@@ -48,7 +49,7 @@ export interface SphereEffortAllocation {
   hours: number;
   percent: number;
   color: string;
-  icon: string;
+  icon: IconName;
 }
 
 export interface GoalContributionSummary {
@@ -424,7 +425,7 @@ export function computeLifeIntelligence(
       hours: Math.round((focusMinsCurrent / 60) * 10) / 10,
       percent: totalActiveMinutes > 0 ? Math.round((focusMinsCurrent / totalActiveMinutes) * 100) : 0,
       color: '#3b82f6',
-      icon: '◷'
+      icon: 'timer'
     },
     {
       sphere: 'workout',
@@ -434,7 +435,7 @@ export function computeLifeIntelligence(
       hours: Math.round((workoutMinsCurrent / 60) * 10) / 10,
       percent: totalActiveMinutes > 0 ? Math.round((workoutMinsCurrent / totalActiveMinutes) * 100) : 0,
       color: '#10b981',
-      icon: '⚡'
+      icon: 'dumbbell'
     },
     {
       sphere: 'reading',
@@ -444,7 +445,7 @@ export function computeLifeIntelligence(
       hours: Math.round((readingMinsCurrent / 60) * 10) / 10,
       percent: totalActiveMinutes > 0 ? Math.round((readingMinsCurrent / totalActiveMinutes) * 100) : 0,
       color: '#f59e0b',
-      icon: '📖'
+      icon: 'book-open'
     },
     {
       sphere: 'drawing',
@@ -454,7 +455,7 @@ export function computeLifeIntelligence(
       hours: Math.round((drawingMinsCurrent / 60) * 10) / 10,
       percent: totalActiveMinutes > 0 ? Math.round((drawingMinsCurrent / totalActiveMinutes) * 100) : 0,
       color: '#a855f7',
-      icon: '🎨'
+      icon: 'palette'
     }
   ];
 

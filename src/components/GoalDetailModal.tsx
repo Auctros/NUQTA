@@ -2,7 +2,7 @@ import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { Goal, KeyResult, KeyResultDataSource, GoalMilestone, SpecializedHabitType } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
-import { evaluateGoalProgress } from '../lib/goalProgressEngine';
+import { evaluateGoalProgress, pacingIconName } from '../lib/goalProgressEngine';
 import { NuqtaSelect } from './ui';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
 
@@ -276,6 +276,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     : 'bg-[var(--tone-info-wash)] text-[var(--tone-info)] border-[var(--tone-info-line)]'
                 }`}
               >
+                <NuqtaIcon name={pacingIconName(intel.pacingStatus)} className="w-3 h-3" />
                 {isAr ? intel.pacingLabelAr : intel.pacingLabelEn}
               </span>
 
@@ -1240,7 +1241,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                   <div className="p-3 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)]">
                     <span className="text-muted block text-[11px]">{isAr ? 'تقييم الوتيرة والإيقاع' : 'Pacing Status'}</span>
-                    <strong className="text-sm font-semibold text-[var(--tone-success)] block mt-1">
+                    <strong className="text-sm font-semibold text-[var(--tone-success)] mt-1 inline-flex items-center gap-1.5">
+                      <NuqtaIcon name={pacingIconName(intel.pacingStatus)} className="w-3.5 h-3.5" />
                       {isAr ? intel.pacingLabelAr : intel.pacingLabelEn}
                     </strong>
                     <span className="text-[10px] text-muted">
@@ -1276,8 +1278,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-raised)] flex items-center justify-between gap-3 text-xs"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <span className="w-7 h-7 rounded-lg bg-[var(--surface-chip)] text-accent flex items-center justify-center font-bold text-sm shrink-0 border border-[var(--border-default)]">
-                            {item.icon}
+                          <span className="w-7 h-7 rounded-lg bg-[var(--surface-chip)] text-accent flex items-center justify-center shrink-0 border border-[var(--border-default)]">
+                            <NuqtaIcon name={item.icon} className="w-3.5 h-3.5" />
                           </span>
                           <div className="min-w-0">
                             <h5 className="font-bold text-[var(--text-primary)] truncate text-xs">{item.title}</h5>

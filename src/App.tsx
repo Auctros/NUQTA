@@ -857,7 +857,8 @@ export default function App() {
                       }}
                       className="text-[11px] text-accent hover:underline"
                     >
-                      {isAr ? 'الإعدادات ↗' : 'Settings ↗'}
+                      {isAr ? 'الإعدادات' : 'Settings'}
+                      <NuqtaIcon name="arrow" className="w-3 h-3 inline-block" />
                     </button>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 import { localDateKey, parseDateKey } from './dateKey';
 import { habitCompliance } from './habitSchedule';
 import { Goal, KeyResult, Task, Habit, BookItem, ArtProject } from '../types';
+import { IconName } from '../components/NuqtaIcon';
 
 export interface EvaluatedKeyResult extends KeyResult {
   evaluatedCurrentValue: number;
@@ -15,7 +16,7 @@ export interface ActivityContributionItem {
   title: string;
   date: string; // YYYY-MM-DD
   contributionNote: string;
-  icon: string;
+  icon: IconName;
 }
 
 export interface GoalIntelligenceSummary {
@@ -50,6 +51,22 @@ export interface GoalIntelligenceSummary {
   linkedBooksCount: number;
   linkedArtProjectsCount: number;
 }
+
+/** Icon that pairs with each pacing status, for consistent status chips. */
+export const pacingIconName = (status: GoalIntelligenceSummary['pacingStatus']): IconName => {
+  switch (status) {
+    case 'completed':
+      return 'trophy';
+    case 'ahead':
+      return 'rocket';
+    case 'behind':
+      return 'hourglass';
+    case 'dormant':
+      return 'alert';
+    default:
+      return 'check';
+  }
+};
 
 /**
  * Calculates dynamic live intelligence for a single Goal against real tasks and habits domain data.
@@ -503,7 +520,7 @@ export function evaluateGoalProgress(
         title: t.title,
         date: localDateKey(new Date(t.completedAt)),
         contributionNote: 'إنجاز مهمة تنفيذية مرتبطة بالهدف',
-        icon: '✓'
+        icon: 'check'
       });
     }
   });
@@ -520,7 +537,7 @@ export function evaluateGoalProgress(
             title: `قراءة ${s.pagesRead} صفحة في "${s.bookTitle}"`,
             date: s.date,
             contributionNote: `${s.durationMinutes} دقيقة قراءة (${s.speedPagesPerHour || 0} ص/س)`,
-            icon: '📖'
+            icon: 'book-open'
           });
         }
       });
@@ -537,7 +554,7 @@ export function evaluateGoalProgress(
           title: s.title,
           date: s.date,
           contributionNote: `${s.totalReps || 0} تكرار · ${s.durationMinutes} دقيقة تدريب`,
-          icon: '⚡'
+          icon: 'dumbbell'
         });
       });
     }
@@ -554,7 +571,7 @@ export function evaluateGoalProgress(
             title: p.title,
             date: p.completedDate,
             contributionNote: `${p.durationMinutes} دقيقة رسم (${p.medium})`,
-            icon: '🎨'
+            icon: 'palette'
           });
         }
       });
@@ -571,7 +588,7 @@ export function evaluateGoalProgress(
           title: `${s.type === 'new_memorization' ? 'حفظ' : 'مراجعة'} سورة ${s.surahName} (الآيات ${s.ayahStart}-${s.ayahEnd})`,
           date: s.date,
           contributionNote: `${s.ayahCount} آيات · ${s.durationMinutes} دقيقة (${s.quality})`,
-          icon: '📜'
+          icon: 'mosque'
         });
       });
     }
@@ -588,7 +605,7 @@ export function evaluateGoalProgress(
           title: h.name,
           date: d,
           contributionNote: 'إنجاز عادة',
-          icon: '🔁'
+          icon: 'repeat'
         });
       });
   });
@@ -617,25 +634,25 @@ export function evaluateGoalProgress(
 
   if (overallProgressPercent >= 100 || goal.status === 'completed') {
     pacingStatus = 'completed';
-    pacingLabelAr = 'مكتمل بنجاح 🏆';
-    pacingLabelEn = 'Completed 🏆';
+    pacingLabelAr = 'مكتمل بنجاح';
+    pacingLabelEn = 'Completed';
   } else if (isDormant) {
     pacingStatus = 'dormant';
-    pacingLabelAr = 'يحتاج تنشيطاً (ركود ٧ أيام) ⚠️';
-    pacingLabelEn = 'Needs Momentum ⚠️';
+    pacingLabelAr = 'يحتاج تنشيطاً (ركود ٧ أيام)';
+    pacingLabelEn = 'Needs Momentum';
   } else if (timeElapsedPercent !== null) {
     if (overallProgressPercent >= timeElapsedPercent + 5) {
       pacingStatus = 'ahead';
-      pacingLabelAr = 'متقدم على الجدول الزمني 🚀';
-      pacingLabelEn = 'Ahead of Schedule 🚀';
+      pacingLabelAr = 'متقدم على الجدول الزمني';
+      pacingLabelEn = 'Ahead of Schedule';
     } else if (overallProgressPercent <= timeElapsedPercent - 15) {
       pacingStatus = 'behind';
-      pacingLabelAr = 'متأخر عن الخطة الزمنية ⏳';
-      pacingLabelEn = 'Behind Schedule ⏳';
+      pacingLabelAr = 'متأخر عن الخطة الزمنية';
+      pacingLabelEn = 'Behind Schedule';
     } else {
       pacingStatus = 'on_track';
-      pacingLabelAr = 'متوازن مع الخطة الزمنية ✓';
-      pacingLabelEn = 'Balanced Pacing ✓';
+      pacingLabelAr = 'متوازن مع الخطة الزمنية';
+      pacingLabelEn = 'Balanced Pacing';
     }
   } else {
     pacingStatus = 'on_track';
