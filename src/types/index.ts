@@ -1,6 +1,30 @@
 export type PriorityLevel = 1 | 2 | 3 | 4; // 1: Urgent & Important, 2: Important, 3: Urgent, 4: Neither (Eisenhower)
 
-export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'deferred' | 'archived' | 'cancelled';
+export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'deferred' | 'archived' | 'cancelled' | 'skipped';
+
+/**
+ * How an item repeats. Shared by tasks (each occurrence is a real record) and habits
+ * (evaluated on the fly, never stored per day):
+ *   - daily     every day
+ *   - weekdays  every working day (NUQTA's week: Saturday..Thursday; Friday is off)
+ *   - weekly    chosen weekday(s) once per week
+ *   - custom    chosen weekday(s) — the legacy spelling of `weekly`
+ *   - monthly   the same day-of-month each month
+ *   - interval  every N days from the anchor
+ */
+export type RecurrenceFrequency = 'daily' | 'weekdays' | 'weekly' | 'custom' | 'monthly' | 'interval';
+
+export interface RecurrenceRule {
+  freq: RecurrenceFrequency;
+  /** Weekday numbers (0=Sun..6=Sat) for `weekly` / `custom`. */
+  days?: number[];
+  /** Day of month (1..31) for `monthly`. Defaults to the anchor's day-of-month. */
+  monthDay?: number;
+  /** Every N days (>=1) for `interval`. */
+  intervalDays?: number;
+  /** Last day the series may produce an occurrence (YYYY-MM-DD, inclusive). */
+  until?: string;
+}
 
 export interface Subtask {
   id: string;
@@ -29,6 +53,16 @@ export interface Task {
   cancelledAt?: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Recurrence for a repeating task. When present, `seriesId` groups the generated
+   * occurrences: each one is an ordinary Task record, so completing, editing or
+   * deleting one occurrence never touches the others.
+   */
+  recurrence?: RecurrenceRule;
+  /** Identifies the recurring series. Absent for one-off tasks. */
+  seriesId?: string;
+  /** 0-based position of this occurrence inside its series. */
+  occurrenceIndex?: number;
 }
 
 export type SpecializedHabitType = 'standard' | 'reading' | 'workout' | 'drawing' | 'quran';
@@ -284,6 +318,13 @@ export interface Habit {
   timeOfDay: 'morning' | 'afternoon' | 'evening' | 'anytime';
   frequency: 'daily' | 'weekdays' | 'custom';
   customDays?: number[]; // 0=Sun, 1=Mon, etc.
+  /**
+   * Optional richer schedule. When present it takes precedence over `frequency`
+   * (which is kept for backward compatibility) and adds weekly/monthly/interval
+   * support. Habits are evaluated on the fly — never materialised per day — so a
+   * change here re-scores past compliance without rewriting stored records.
+   */
+  recurrence?: RecurrenceRule;
   category: 'health' | 'mind' | 'productivity' | 'learning' | 'relationships';
   targetPerDay: number;
   unit?: string;

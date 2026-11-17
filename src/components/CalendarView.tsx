@@ -1,4 +1,6 @@
 import { localDateKey, parseDateKey } from '../lib/dateKey';
+import { indexFromWeekStart, weekDayLabels } from '../lib/week';
+import { isTaskPending } from '../lib/taskStatus';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
@@ -25,11 +27,11 @@ export const CalendarView: React.FC = () => {
     setSelectedDate(localDateKey(today));
   };
 
-  // Build 42 grid days for current month view
+  // Build 42 grid days for current month view, weeks starting on Saturday.
   const year = currentMonthDate.getFullYear();
   const month = currentMonthDate.getMonth();
   const firstDayOfMonth = new Date(year, month, 1);
-  const startDayIndex = firstDayOfMonth.getDay(); // 0 is Sunday
+  const startDayIndex = indexFromWeekStart(firstDayOfMonth); // 0 = Saturday
   const startDate = new Date(year, month, 1 - startDayIndex);
 
   const cells = Array.from({ length: 42 }).map((_, idx) => {
@@ -39,7 +41,7 @@ export const CalendarView: React.FC = () => {
     const isCurrentMonth = d.getMonth() === month;
     const isToday = key === todayStr;
     const isSelected = key === selectedDate;
-    const dayTasks = tasks.filter((t) => !t.isArchived && t.status !== 'archived' && t.scheduledDate === key && t.status !== 'completed');
+    const dayTasks = tasks.filter((t) => isTaskPending(t) && t.scheduledDate === key);
 
     return {
       date: d,
@@ -52,9 +54,7 @@ export const CalendarView: React.FC = () => {
     };
   });
 
-  const dayNamesAr = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-  const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dayNames = isAr ? dayNamesAr : dayNamesEn;
+  const dayNames = weekDayLabels(isAr);
 
   const monthLabel = currentMonthDate.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
     month: 'long',
@@ -63,7 +63,7 @@ export const CalendarView: React.FC = () => {
 
   // Selected date agenda tasks
   const agendaTasks = tasks
-    .filter((t) => !t.isArchived && t.status !== 'archived' && t.scheduledDate === selectedDate && t.status !== 'completed')
+    .filter((t) => isTaskPending(t) && t.scheduledDate === selectedDate)
     .sort((a, b) => (a.scheduledTime || '99:99').localeCompare(b.scheduledTime || '99:99'));
 
   // Selected date historical life events (sessions & achievements)
@@ -153,7 +153,7 @@ export const CalendarView: React.FC = () => {
 
   // Heuristic auto-scheduler: assigns unassigned tasks to open time slots
   const handleAutoSchedule = () => {
-    const unassigned = tasks.filter((t) => t.status === 'todo' && !t.scheduledTime);
+    const unassigned = tasks.filter((t) => isTaskPending(t) && !t.scheduledTime);
     let startHour = 9;
     unassigned.forEach((t) => {
       if (startHour <= 17) {

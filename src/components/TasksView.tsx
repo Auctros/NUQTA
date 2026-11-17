@@ -1,10 +1,52 @@
-import { localDateKey } from '../lib/dateKey';
+import { localDateKey, parseDateKey } from '../lib/dateKey';
+import { isTaskDone, isTaskPending } from '../lib/taskStatus';
+import { dayOfWeek, WEEK_DAY_ORDER, weekDayLabel } from '../lib/week';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
-import { PriorityLevel, Task, TaskStatus } from '../types';
+import { PriorityLevel, RecurrenceFrequency, RecurrenceRule, Task, TaskStatus } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
 import { EmptyState, NuqtaSelect, PageHeader, Surface, TabBar } from './ui';
 import { suggestSmartReschedule } from '../lib/energyAlgorithm';
+
+/**
+ * Turn the repeat picker into a recurrence rule. `weekdays` maps to NUQTA's
+ * working week (Sat..Thu) and a custom selection with no days falls back to the
+ * scheduled weekday so a rule is never empty.
+ */
+function buildRecurrence(
+  repeat: 'none' | RecurrenceFrequency,
+  days: number[],
+  scheduledDate: string
+): RecurrenceRule | undefined {
+  if (repeat === 'none') return undefined;
+  if (repeat === 'weekly' || repeat === 'custom') {
+    const anchorDow = scheduledDate && parseDateKey(scheduledDate) ? dayOfWeek(scheduledDate) : undefined;
+    const chosen = days.length > 0 ? days : anchorDow !== undefined ? [anchorDow] : [];
+    return { freq: 'weekly', days: chosen };
+  }
+  return { freq: repeat };
+}
+
+/** Localised, compact label for a task's recurrence rule. */
+function recurrenceLabel(rule: RecurrenceRule, isAr: boolean): string {
+  switch (rule.freq) {
+    case 'daily':
+      return isAr ? 'يومياً' : 'Daily';
+    case 'weekdays':
+      return isAr ? 'أيام العمل' : 'Weekdays';
+    case 'monthly':
+      return isAr ? 'شهرياً' : 'Monthly';
+    case 'interval':
+      return isAr ? `كل ${rule.intervalDays ?? 1} يوم` : `Every ${rule.intervalDays ?? 1}d`;
+    case 'weekly':
+    case 'custom': {
+      const days = (rule.days ?? []).map((d) => weekDayLabel(d, isAr)).join(', ');
+      return days || (isAr ? 'أسبوعياً' : 'Weekly');
+    }
+    default:
+      return isAr ? 'متكرر' : 'Repeats';
+  }
+}
 
 export const TasksView: React.FC = () => {
   const {
@@ -17,6 +59,8 @@ export const TasksView: React.FC = () => {
     addSubtask,
     createTask,
     updateTask,
+    skipTaskOccurrence,
+    deleteTaskSeries,
     smartBatchReschedule,
     profile,
     goals,
@@ -63,12 +107,14 @@ export const TasksView: React.FC = () => {
   const [formIsTopThree, setFormIsTopThree] = useState(false);
   const [formTags, setFormTags] = useState('');
   const [formLinkedGoalId, setFormLinkedGoalId] = useState<string>('');
+  const [formRepeat, setFormRepeat] = useState<'none' | RecurrenceFrequency>('none');
+  const [formRepeatDays, setFormRepeatDays] = useState<number[]>([]);
 
   const todayStr = localDateKey();
 
   // Overdue detection
   const overdueTasks = tasks.filter(
-    (t) => t.status === 'todo' && t.scheduledDate && t.scheduledDate < todayStr
+    (t) => isTaskPending(t) && t.scheduledDate && t.scheduledDate < todayStr
   );
   const smartSuggestions = suggestSmartReschedule(overdueTasks, energyScore);
 
@@ -88,6 +134,8 @@ export const TasksView: React.FC = () => {
     setFormIsTopThree(false);
     setFormTags('');
     setFormLinkedGoalId('');
+    setFormRepeat('none');
+    setFormRepeatDays([]);
     setIsModalOpen(true);
   };
 
@@ -110,6 +158,7 @@ export const TasksView: React.FC = () => {
     if (!formTitle.trim()) return;
 
     const tagsArray = formTags.split(',').map((t) => t.trim()).filter(Boolean);
+    const recurrence = buildRecurrence(formRepeat, formRepeatDays, formDate);
 
     if (editingTask) {
       updateTask(editingTask.id, {
@@ -133,7 +182,8 @@ export const TasksView: React.FC = () => {
         estimatedMinutes: formMinutes,
         isTopThree: formIsTopThree,
         tags: tagsArray,
-        linkedGoalId: formLinkedGoalId || undefined
+        linkedGoalId: formLinkedGoalId || undefined,
+        recurrence
       });
     }
     setIsModalOpen(false);
@@ -141,7 +191,7 @@ export const TasksView: React.FC = () => {
 
   // Filter & sort tasks
   const filtered = tasks.filter((t) => {
-    const isArch = t.isArchived || t.status === 'archived';
+    const isArch = t.isArchived || t.status === 'archived' || t.status === 'skipped';
     if (statusFilter === 'archived') {
       if (!isArch) return false;
     } else {
@@ -307,7 +357,7 @@ export const TasksView: React.FC = () => {
             ) : (
               sorted.map((task) => {
                 const pInfo = priorityMeta(task.priority);
-                const isCompleted = task.status === 'completed';
+                const isCompleted = isTaskDone(task);
                 const subtasks = task.subtasks || [];
                 const subtasksDone = subtasks.filter((s) => s.completed).length;
                 const isExpanded = expandedTaskId === task.id;
@@ -327,6 +377,11 @@ export const TasksView: React.FC = () => {
                           {task.isTopThree && (
                             <span className="tag green text-[9px] py-0 px-1.5" title={isAr ? 'ضمن أهم 3 اليوم' : 'Daily Top 3'}>
                               ★ {isAr ? 'أهم 3' : 'Top 3'}
+                            </span>
+                          )}
+                          {task.recurrence && (
+                            <span className="tag text-[9px] py-0 px-1.5 bg-accent/10 text-accent border border-accent/20" title={recurrenceLabel(task.recurrence, isAr)}>
+                              🔁 {recurrenceLabel(task.recurrence, isAr)}
                             </span>
                           )}
                         </div>
@@ -374,6 +429,15 @@ export const TasksView: React.FC = () => {
                           <NuqtaIcon name="edit" className="w-4 h-4" />
                         </button>
 
+                        {task.recurrence && isTaskPending(task) && (
+                          <button
+                            className="mini-icon hover:text-[var(--tone-warning)]"
+                            onClick={() => skipTaskOccurrence(task.id)}
+                            title={isAr ? 'تخطّي هذا التكرار فقط' : 'Skip this occurrence'}
+                          >
+                            ⏭
+                          </button>
+                        )}
                         {task.isArchived || task.status === 'archived' ? (
                           <button
                             className="mini-icon text-[var(--tone-info)] hover:text-[var(--text-primary)]"
@@ -394,8 +458,12 @@ export const TasksView: React.FC = () => {
 
                         <button
                           className="mini-icon"
-                          onClick={() => deleteTask(task.id)}
-                          title={isAr ? 'حذف' : 'Delete'}
+                          onClick={() =>
+                            task.seriesId
+                              ? deleteTaskSeries(task.seriesId)
+                              : deleteTask(task.id)
+                          }
+                          title={task.seriesId ? (isAr ? 'حذف السلسلة بالكامل' : 'Delete whole series') : (isAr ? 'حذف' : 'Delete')}
                         >
                           <NuqtaIcon name="trash" className="w-4 h-4" />
                         </button>
@@ -543,7 +611,7 @@ export const TasksView: React.FC = () => {
                         {task.title}
                       </button>
                       <button
-                        className={`check-circle ${task.status === 'completed' ? 'checked' : ''} shrink-0`}
+                        className={`check-circle ${isTaskDone(task) ? 'checked' : ''} shrink-0`}
                         onClick={() => toggleTaskStatus(task.id)}
                       />
                     </div>
@@ -641,6 +709,46 @@ export const TasksView: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {!editingTask && (
+                <div className="field">
+                  <label>{isAr ? 'التكرار' : 'Repeat'}</label>
+                  <NuqtaSelect value={formRepeat} onChange={(e) => setFormRepeat(e.target.value as 'none' | RecurrenceFrequency)}>
+                    <option value="none">{isAr ? 'بدون تكرار (مرة واحدة)' : 'Does not repeat'}</option>
+                    <option value="daily">{isAr ? 'كل يوم' : 'Daily'}</option>
+                    <option value="weekdays">{isAr ? 'أيام العمل (السبت–الخميس)' : 'Weekdays (Sat–Thu)'}</option>
+                    <option value="weekly">{isAr ? 'أسبوعياً' : 'Weekly'}</option>
+                    <option value="monthly">{isAr ? 'شهرياً' : 'Monthly'}</option>
+                  </NuqtaSelect>
+
+                  {(formRepeat === 'weekly' || formRepeat === 'custom') && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {WEEK_DAY_ORDER.map((dow) => {
+                        const active = formRepeatDays.includes(dow);
+                        return (
+                          <button
+                            key={dow}
+                            type="button"
+                            onClick={() =>
+                              setFormRepeatDays((prev) =>
+                                prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow]
+                              )
+                            }
+                            className={`px-2 py-1 rounded-md text-[11px] font-semibold border ${
+                              active
+                                ? 'bg-[var(--brand)] text-[var(--text-on-accent)] border-[var(--brand)]'
+                                : 'bg-[var(--surface-inset)] text-[var(--text-secondary)] border-[var(--border-default)]'
+                            }`}
+                            aria-pressed={active}
+                          >
+                            {weekDayLabel(dow, isAr)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="field">
                 <label>{isAr ? 'الهدف الاستراتيجي المرتبط' : 'Linked Strategic Goal'}</label>

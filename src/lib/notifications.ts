@@ -132,6 +132,11 @@ export class NuqtaNotificationEngine {
   /**
    * Dispatches a notification to the browser or OS if permitted,
    * alongside playing an acoustic synth chime.
+   *
+   * Prefers the service worker registration (when present) so the notification is
+   * shown through the OS channel and survives a backgrounded tab; falls back to a
+   * page-level `Notification` when no service worker is registered (e.g. dev, or a
+   * browser that blocks registration).
    */
   static notify(payload: NotificationPayload): boolean {
     const { title, body, tag, chime = 'gentle-bell', onClick } = payload;
@@ -141,29 +146,50 @@ export class NuqtaNotificationEngine {
       nuqtaAudio.play(chime);
     } catch {}
 
-    // 2. Dispatch native Notification if allowed
-    if (this.isSupported() && Notification.permission === 'granted') {
+    if (!this.isSupported() || Notification.permission !== 'granted') return false;
+
+    const notificationTag = tag || 'nuqta-general';
+
+    // 2. Prefer the service worker so the OS notification channel is used.
+    const controller =
+      typeof navigator !== 'undefined' && navigator.serviceWorker
+        ? navigator.serviceWorker.controller
+        : null;
+    if (controller) {
       try {
-        const notif = new Notification(title, {
+        controller.postMessage({
+          type: 'nuqta-notify',
+          title,
           body,
-          tag: tag || 'nuqta-general',
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
-          silent: true // We handle our own pleasant audio synthesizer
+          tag: notificationTag
         });
-
-        if (onClick) {
-          notif.onclick = () => {
-            window.focus();
-            onClick();
-            notif.close();
-          };
-        }
-
         return true;
       } catch (e) {
-        console.warn('Native notification dispatch failed:', e);
+        console.warn('Service worker notification dispatch failed:', e);
       }
+    }
+
+    // 3. Fallback: a page-level notification.
+    try {
+      const notif = new Notification(title, {
+        body,
+        tag: notificationTag,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        silent: true // We handle our own pleasant audio synthesizer
+      });
+
+      if (onClick) {
+        notif.onclick = () => {
+          window.focus();
+          onClick();
+          notif.close();
+        };
+      }
+
+      return true;
+    } catch (e) {
+      console.warn('Native notification dispatch failed:', e);
     }
 
     return false;

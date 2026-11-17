@@ -20,7 +20,7 @@ with an IndexedDB mirror for recovery.
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(15 rules). Add a rule whenever a new safety property must never regress.
+(16 rules). Add a rule whenever a new safety property must never regress.
 
 ## Theming (light / dark)
 
@@ -40,6 +40,41 @@ with an IndexedDB mirror for recovery.
   one exists.
 - Verify with `scripts/e2e/views.py` (both themes, all widths) — a change that reads well in
   dark but leaves a dark panel in light mode is a regression.
+
+## Week / date rules (NUQTA week)
+
+- **NUQTA's week starts on Saturday and Friday is the weekly day off**
+  (Sat · Sun · Mon · Tue · Wed · Thu · Fri). `src/lib/week.ts` is the single source of
+  truth: `WEEK_DAY_ORDER`, `WEEKDAY_DOW`, `indexFromWeekStart`, `dayOfWeek`,
+  `isWorkingDay` / `isWeekOff`, `startOfWeekKey` / `endOfWeekKey` / `weekDayKeys`, and the
+  localised `weekDayLabel(s)` / `weekDayNarrow(s)` helpers.
+- Never call `Date.getDay()` and compare against a literal weekday number at a call site —
+  that is how the old Sunday-first behaviour drifted. Read the weekday through `week.ts`
+  (it is the only module allowed to call `getDay()`).
+- "Weekdays" everywhere means the working week (Sat–Thu), not Mon–Fri. The heatmap grid,
+  weekday-rhythm strip and 42-day calendar all align through `indexFromWeekStart`.
+
+## Recurrence engine
+
+- `src/lib/recurrence.ts` is the shared rule vocabulary (`RecurrenceRule`,
+  `RecurrenceFrequency` in `src/types/index.ts`). `isRuleDueOn` / `nextOccurrenceKey` /
+  `occurrencesInRange` are pure and day-key based (no raw `Date` arithmetic).
+- Tasks **materialise** (`src/lib/taskRecurrence.ts`): `materializeSeries` emits one real
+  `Task` per due date over a bounded horizon (`SERIES_HORIZON_DAYS`), sharing a `seriesId`
+  and a deterministic `occurrenceIndex`; `topUpRecurringTasks` (run from `initializeStore`)
+  tops the horizon up idempotently. Completing / skipping / editing / deleting one
+  occurrence is an ordinary task operation. Store actions: `updateTaskSeries`,
+  `deleteTaskSeries`, `skipTaskOccurrence`.
+- Habits **evaluate** (`src/lib/habitSchedule.ts`): a habit's `recurrence` (when present)
+  takes precedence over the legacy `frequency` field and nothing is stored per day, so
+  changing the rule re-scores past compliance without rewriting records.
+
+## Task status model
+
+- `src/lib/taskStatus.ts` owns the lifecycle vocabulary (`isTaskActive`, `isTaskDone`,
+  `isTaskClosed`, `isTaskPending`, `isTaskActiveDone`). Use these instead of inline
+  `status !== 'completed'` checks so a new status (e.g. `skipped`) cannot start counting as
+  pending in one view while being excluded in another. `skipped` is closed, not completed.
 
 ## Shared UI primitives
 
@@ -114,3 +149,9 @@ with an IndexedDB mirror for recovery.
 script/link assets). The cache name is versioned (`nuqta-shell-v<N>`) — bump
 `CACHE_VERSION` on every change. The fetch handler never writes to the cache, so dynamic
 requests and user data are never stored, and only NUQTA-owned caches are ever deleted.
+
+Notifications are routed through the service worker: `NuqtaNotificationEngine.notify`
+posts a `nuqta-notify` message to `navigator.serviceWorker.controller` when present (falling
+back to a page-level `Notification`), and the worker renders it and focuses/opens a client
+on `notificationclick`. This is NOT background push — with no server the page must be open
+for a reminder to fire; the worker only renders and routes the click.

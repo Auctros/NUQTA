@@ -1,6 +1,7 @@
 import { NuqtaStorageEngine } from './lib/storage';
 import { StorageIssueBanner } from './components/StorageIssueBanner';
 import { localDateKey } from './lib/dateKey';
+import { isTaskPending } from './lib/taskStatus';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from './store/nuqtaStore';
 import { NuqtaIcon, IconName } from './components/NuqtaIcon';
@@ -142,7 +143,7 @@ export default function App() {
 
   const isAr = profile.language === 'ar';
   const todayStr = localDateKey();
-  const todayDueCount = tasks.filter((t) => t.status !== 'completed' && t.scheduledDate === todayStr).length;
+  const todayDueCount = tasks.filter((t) => isTaskPending(t) && t.scheduledDate === todayStr).length;
 
   useEffect(() => {
     if (!sidebarCollapsed) {

@@ -1,11 +1,26 @@
 import { localDateKey } from '../lib/dateKey';
+import { dayOfWeek, WEEK_DAY_ORDER, weekDayLabel, weekDayNarrow } from '../lib/week';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
-import { Habit, SpecializedHabitType } from '../types';
+import { Habit, RecurrenceRule, SpecializedHabitType } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
 import { EmptyState, NuqtaSelect, PageHeader, TabBar } from './ui';
 import { ReadingAppModal } from './ReadingAppModal';
 import { WorkoutAppModal } from './WorkoutAppModal';
+
+/**
+ * Map the habit frequency picker to a recurrence rule. `weekdays` means NUQTA's
+ * working week (Sat..Thu, Friday off); `custom` becomes a weekly rule over the
+ * chosen days. Daily habits keep the plain `frequency` path.
+ */
+function buildHabitRecurrence(
+  frequency: 'daily' | 'weekdays' | 'custom',
+  customDays: number[]
+): RecurrenceRule | undefined {
+  if (frequency === 'weekdays') return { freq: 'weekdays' };
+  if (frequency === 'custom' && customDays.length > 0) return { freq: 'weekly', days: customDays };
+  return undefined;
+}
 
 export const HabitsView: React.FC = () => {
   const {
@@ -37,21 +52,18 @@ export const HabitsView: React.FC = () => {
   const [formCategory, setFormCategory] = useState<Habit['category']>('health');
   const [formSpecializedType, setFormSpecializedType] = useState<SpecializedHabitType>('standard');
   const [formLinkedGoalId, setFormLinkedGoalId] = useState<string>('');
+  const [formFrequency, setFormFrequency] = useState<'daily' | 'weekdays' | 'custom'>('daily');
+  const [formCustomDays, setFormCustomDays] = useState<number[]>([]);
 
   const todayStr = localDateKey();
-
-  // Past 7 days calculation
-  const dayLabelsAr = ['أح', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب'];
-  const dayLabelsEn = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
   const past7Days = Array.from({ length: 7 }).map((_, idx) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - idx));
     const key = localDateKey(d);
-    const dayIndex = d.getDay();
     return {
       key,
-      label: isAr ? dayLabelsAr[dayIndex] : dayLabelsEn[dayIndex],
+      label: weekDayNarrow(dayOfWeek(d), isAr),
       isToday: key === todayStr
     };
   });
@@ -82,6 +94,8 @@ export const HabitsView: React.FC = () => {
     setFormCategory('health');
     setFormSpecializedType('standard');
     setFormLinkedGoalId('');
+    setFormFrequency('daily');
+    setFormCustomDays([]);
     setIsModalOpen(true);
   };
 
@@ -93,12 +107,20 @@ export const HabitsView: React.FC = () => {
     setFormCategory(habit.category);
     setFormSpecializedType(habit.specializedType || 'standard');
     setFormLinkedGoalId(habit.linkedGoalId || '');
+    setFormFrequency(habit.frequency || 'daily');
+    setFormCustomDays(habit.customDays || []);
     setIsModalOpen(true);
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) return;
+
+    const schedule: Pick<Habit, 'frequency' | 'customDays' | 'recurrence'> = {
+      frequency: formFrequency,
+      customDays: formFrequency === 'custom' ? formCustomDays : undefined,
+      recurrence: buildHabitRecurrence(formFrequency, formCustomDays)
+    };
 
     if (editingHabit) {
       updateHabit(editingHabit.id, {
@@ -107,7 +129,8 @@ export const HabitsView: React.FC = () => {
         timeOfDay: formTimeOfDay,
         category: formCategory,
         specializedType: formSpecializedType,
-        linkedGoalId: formLinkedGoalId || undefined
+        linkedGoalId: formLinkedGoalId || undefined,
+        ...schedule
       });
     } else {
       createHabit({
@@ -117,7 +140,8 @@ export const HabitsView: React.FC = () => {
         category: formCategory,
         specializedType: formSpecializedType,
         linkedGoalId: formLinkedGoalId || undefined,
-        targetPerDay: 1
+        targetPerDay: 1,
+        ...schedule
       });
     }
     setIsModalOpen(false);
@@ -652,6 +676,41 @@ export const HabitsView: React.FC = () => {
                     <option value="relationships">{isAr ? 'علاقات وتواصل' : 'Relationships'}</option>
                   </NuqtaSelect>
                 </div>
+              </div>
+
+              <div className="field">
+                <label>{isAr ? 'التكرار' : 'Frequency'}</label>
+                <NuqtaSelect value={formFrequency} onChange={(e) => setFormFrequency(e.target.value as 'daily' | 'weekdays' | 'custom')}>
+                  <option value="daily">{isAr ? 'كل يوم' : 'Every day'}</option>
+                  <option value="weekdays">{isAr ? 'أيام العمل (السبت–الخميس)' : 'Weekdays (Sat–Thu)'}</option>
+                  <option value="custom">{isAr ? 'أيام محددة' : 'Specific days'}</option>
+                </NuqtaSelect>
+                {formFrequency === 'custom' && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {WEEK_DAY_ORDER.map((dow) => {
+                      const active = formCustomDays.includes(dow);
+                      return (
+                        <button
+                          key={dow}
+                          type="button"
+                          onClick={() =>
+                            setFormCustomDays((prev) =>
+                              prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow]
+                            )
+                          }
+                          className={`px-2 py-1 rounded-md text-[11px] font-semibold border ${
+                            active
+                              ? 'bg-[var(--brand)] text-[var(--text-on-accent)] border-[var(--brand)]'
+                              : 'bg-[var(--surface-inset)] text-[var(--text-secondary)] border-[var(--border-default)]'
+                          }`}
+                          aria-pressed={active}
+                        >
+                          {weekDayLabel(dow, isAr)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Linked Strategic Goal Selector */}

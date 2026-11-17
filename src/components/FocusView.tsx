@@ -1,4 +1,5 @@
 import { localDateKey } from '../lib/dateKey';
+import { isTaskPending } from '../lib/taskStatus';
 import React, { useState, useEffect } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
@@ -211,7 +212,7 @@ export const FocusView: React.FC = () => {
             <NuqtaSelect value={taskId} onChange={(e) => setTaskId(e.target.value)}>
               <option value="">{isAr ? '— بدون ربط مهمة —' : '— No linked task —'}</option>
               {tasks
-                .filter((t) => t.status !== 'completed')
+                .filter(isTaskPending)
                 .map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.title}

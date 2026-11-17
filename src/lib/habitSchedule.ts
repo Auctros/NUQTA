@@ -1,5 +1,7 @@
 import type { Habit } from '../types';
 import { localDateKey, parseDateKey, addDaysToKey } from './dateKey';
+import { dayOfWeek, isWorkingDay } from './week';
+import { isRuleDueOn } from './recurrence';
 
 /** Is the habit expected on this calendar day (YYYY-MM-DD, local)? */
 export function isHabitDueOn(habit: Habit, dateKey: string): boolean {
@@ -13,12 +15,18 @@ export function isHabitDueOn(habit: Habit, dateKey: string): boolean {
   }
   if ((habit.freezesUsedDates || []).includes(dateKey)) return false;
 
-  const dow = day.getDay(); // 0 = Sunday
+  // A richer rule (weekly/monthly/interval) takes precedence when present.
+  if (habit.recurrence) {
+    const anchor = habit.createdAt ? localDateKey(new Date(habit.createdAt)) : dateKey;
+    return isRuleDueOn(habit.recurrence, anchor, dateKey);
+  }
+
   switch (habit.frequency) {
     case 'weekdays':
-      return dow >= 1 && dow <= 5;
+      // NUQTA's working week: Saturday..Thursday. Friday is the day off.
+      return isWorkingDay(dateKey);
     case 'custom':
-      return (habit.customDays || []).includes(dow);
+      return (habit.customDays || []).includes(dayOfWeek(day));
     case 'daily':
     default:
       return true;

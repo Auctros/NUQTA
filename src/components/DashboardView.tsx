@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, Goal, Task } from '../types';
 import { localDateKey, localDayFrom, localTimeKey } from '../lib/dateKey';
+import { isTaskActive, isTaskDone, isTaskPending } from '../lib/taskStatus';
 import {
   buildActivityAllocation,
   buildConsistencyBreakdown,
@@ -159,18 +160,18 @@ export const DashboardView: React.FC = () => {
   // =========================================================================
   // 2. Daily Command Center Data
   // =========================================================================
-  const activeTasks = tasks.filter((t) => !t.isArchived && t.status !== 'archived' && t.status !== 'cancelled');
+  const activeTasks = tasks.filter(isTaskActive);
   const topThree = activeTasks.filter((t) => t.isTopThree);
   const activeHabits = habits.filter((h) => !h.isArchived && h.status !== 'archived' && h.status !== 'paused');
 
   const todayTasks = activeTasks.filter(
     (t) => t.scheduledDate === todayStr || (t.completedAt && localDayFrom(t.completedAt) === todayStr)
   );
-  const pendingTodayTasks = todayTasks.filter((t) => t.status !== 'completed');
-  const doneTodayTasks = todayTasks.filter((t) => t.status === 'completed');
+  const pendingTodayTasks = todayTasks.filter(isTaskPending);
+  const doneTodayTasks = todayTasks.filter(isTaskDone);
 
   const overdueTasks = activeTasks.filter((t) => {
-    if (t.status === 'completed') return false;
+    if (isTaskDone(t)) return false;
     if (t.scheduledDate && t.scheduledDate < todayStr) return true;
     if (t.scheduledDate === todayStr && t.scheduledTime && t.scheduledTime < currentTimeHHMM) return true;
     return false;
@@ -178,7 +179,7 @@ export const DashboardView: React.FC = () => {
 
   const upcomingTasks = activeTasks
     .filter((t) => {
-      if (t.status === 'completed') return false;
+      if (isTaskDone(t)) return false;
       if (t.scheduledDate === todayStr) {
         if (!t.scheduledTime) return true;
         return t.scheduledTime >= currentTimeHHMM;
@@ -238,7 +239,7 @@ export const DashboardView: React.FC = () => {
       productivityScore: focusDistractions === 0 ? 5 : focusDistractions <= 2 ? 4 : 3
     });
 
-    if (markTaskDone && focusingTask && focusingTask.status !== 'completed') {
+    if (markTaskDone && focusingTask && isTaskPending(focusingTask)) {
       toggleTaskStatus(focusingTask.id);
     }
 
@@ -571,7 +572,7 @@ export const DashboardView: React.FC = () => {
               ) : (
                 <div className="divide-y divide-[var(--border-subtle)]">
                   {topThree.map((task) => {
-                    const isDone = task.status === 'completed';
+                    const isDone = isTaskDone(task);
                     return (
                       <div
                         key={task.id}
@@ -932,13 +933,13 @@ export const DashboardView: React.FC = () => {
             </div>
 
             <div className="max-h-[60vh] overflow-y-auto space-y-2 pe-1">
-              {activeTasks.filter((t) => t.status !== 'completed').length === 0 ? (
+              {activeTasks.filter(isTaskPending).length === 0 ? (
                 <div className="p-6 text-center text-xs text-[var(--text-secondary)]">
                   {isAr ? 'لا توجد مهام معلقة للاختيار.' : 'No pending tasks available.'}
                 </div>
               ) : (
                 activeTasks
-                  .filter((t) => t.status !== 'completed')
+                  .filter(isTaskPending)
                   .map((task) => {
                     const isPinned = task.isTopThree;
                     return (

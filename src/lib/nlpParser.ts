@@ -1,4 +1,5 @@
 import { PriorityLevel } from '../types';
+import { dayOfWeek, WEEKDAY_DOW } from './week';
 
 export interface ParsedTaskDraft {
   title: string;
@@ -79,19 +80,10 @@ export function parseNaturalLanguageTask(raw: string): ParsedTaskDraft {
     text = text.replace(/\btomorrow\b/gi, '');
   } else {
     // Check for days of week (e.g. "on friday", "monday")
-    const daysMap: Record<string, number> = {
-      sunday: 0,
-      monday: 1,
-      tuesday: 2,
-      wednesday: 3,
-      thursday: 4,
-      friday: 5,
-      saturday: 6
-    };
     const dayMatch = text.match(/\b(on\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i);
     if (dayMatch) {
-      const targetDay = daysMap[dayMatch[2].toLowerCase()];
-      const currentDay = now.getDay();
+      const targetDay = WEEKDAY_DOW[dayMatch[2].toLowerCase()];
+      const currentDay = dayOfWeek(now);
       let diff = targetDay - currentDay;
       if (diff <= 0) diff += 7;
       const targetDate = new Date(now);

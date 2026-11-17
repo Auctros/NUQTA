@@ -56,9 +56,10 @@ export const SecondaryAnalyticsSection: React.FC<SecondaryAnalyticsSectionProps>
   const [hoveredDailyPt, setHoveredDailyPt] = useState<DailyCorrelationPoint | null>(null);
   const [hoveredFocusPt, setHoveredFocusPt] = useState<FocusScatterPoint | null>(null);
 
+  // Heatmap rows run top-to-bottom in NUQTA week order: Sat, Sun, Mon, Tue, Wed, Thu, Fri.
   const dayNames = isAr
-    ? ['أح', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب']
-    : ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    ? ['سب', 'أح', 'إث', 'ثل', 'أر', 'خم', 'جم']
+    : ['S', 'S', 'M', 'T', 'W', 'T', 'F'];
 
   const completionsDeltaPct =
     data.priorCompletions30 > 0

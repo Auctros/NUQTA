@@ -1,4 +1,5 @@
 import { localDateKey } from './dateKey';
+import { dayOfWeek, weekDayLabel } from './week';
 import { Task, Habit, Goal, FocusSession, MuscleMovement, ArtMedium } from '../types';
 import { evaluateGoalProgress } from './goalProgressEngine';
 
@@ -482,15 +483,11 @@ export function computeLifeIntelligence(
 
   // 9. DAILY TREND TIME-SERIES (Last 7 or 14 or 30 days based on horizon)
   const trendDaysCount = horizon === 'today' ? 7 : horizon === 'week' ? 7 : 14;
-  const dayNamesAr = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
-  const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
   const dailyTrend: DayMetricPoint[] = Array.from({ length: trendDaysCount }).map((_, idx) => {
     const d = new Date(now);
     d.setDate(d.getDate() - (trendDaysCount - 1 - idx));
     const dtStr = formatYmd(d);
-    const dayIndex = d.getDay();
-    const dayLabel = isAr ? dayNamesAr[dayIndex] : dayNamesEn[dayIndex];
+    const dayLabel = weekDayLabel(dayOfWeek(d), isAr);
 
     const dayTasks = tasks.filter((t) => t.status === 'completed' && isTaskInPeriod(t, new Set([dtStr]))).length;
     const dayHabits = habits.filter((h) => (h.completedDates || []).includes(dtStr)).length;
@@ -543,8 +540,7 @@ export function computeLifeIntelligence(
     const d = new Date(now);
     d.setDate(d.getDate() - (heatmapTotalDays - 1 - idx));
     const dtStr = formatYmd(d);
-    const dayIndex = d.getDay();
-    const dayLabel = isAr ? dayNamesAr[dayIndex] : dayNamesEn[dayIndex];
+    const dayLabel = weekDayLabel(dayOfWeek(d), isAr);
 
     const dayTasks = tasks.filter((t) => t.status === 'completed' && isTaskInPeriod(t, new Set([dtStr]))).length;
     const dayHabits = habits.filter((h) => (h.completedDates || []).includes(dtStr)).length;

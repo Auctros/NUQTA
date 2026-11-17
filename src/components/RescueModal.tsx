@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { isTaskPending } from '../lib/taskStatus';
 import { NuqtaIcon } from './NuqtaIcon';
 
 export const RescueModal: React.FC = () => {
@@ -11,7 +12,7 @@ export const RescueModal: React.FC = () => {
   if (!isRescueModeOpen) return null;
 
   const isAr = profile.language === 'ar';
-  const pendingTasks = tasks.filter((t) => t.status !== 'completed');
+  const pendingTasks = tasks.filter(isTaskPending);
 
   const handleExecute = () => {
     const anchorId = selectedTaskId || (pendingTasks[0] ? pendingTasks[0].id : '');

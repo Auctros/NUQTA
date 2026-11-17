@@ -96,9 +96,10 @@ const optional =
     v === undefined || check(v);
 
 // Allowed-value sets, mirrored from src/types.
-const TASK_STATUS = ['todo', 'in_progress', 'completed', 'deferred', 'archived', 'cancelled'];
+const TASK_STATUS = ['todo', 'in_progress', 'completed', 'deferred', 'archived', 'cancelled', 'skipped'];
 const TASK_PRIORITY_LEGACY = ['P1', 'P2', 'P3', 'P4'];
 const ENERGY_LEVEL = ['low', 'medium', 'high'];
+const RECURRENCE_FREQ = ['daily', 'weekdays', 'weekly', 'custom', 'monthly', 'interval'];
 const HABIT_TIME_OF_DAY = ['morning', 'afternoon', 'evening', 'anytime'];
 const HABIT_FREQUENCY = ['daily', 'weekdays', 'custom'];
 const HABIT_CATEGORY = ['health', 'mind', 'productivity', 'learning', 'relationships'];
@@ -196,6 +197,17 @@ function isSubtask(v: unknown): boolean {
   return isPlainObject(v) && isNonEmptyString(v.id) && isString(v.title) && isBoolean(v.completed);
 }
 
+/** Recurrence rule shared by tasks and habits; every field is optional but typed. */
+function isRecurrenceRule(v: unknown): boolean {
+  if (!isPlainObject(v)) return false;
+  if (!oneOf(RECURRENCE_FREQ)(v.freq)) return false;
+  if (!optional((x) => Array.isArray(x) && x.every((d) => isIntBetween(d, 0, 6)))(v.days)) return false;
+  if (!optional((x) => isIntBetween(x, 1, 31))(v.monthDay)) return false;
+  if (!optional((x) => isIntBetween(x, 1, 3660))(v.intervalDays)) return false;
+  if (!optional(isString)(v.until)) return false;
+  return true;
+}
+
 function isTask(v: unknown): boolean {
   if (!isPlainObject(v)) return false;
   if (!isNonEmptyString(v.id)) return false;
@@ -218,6 +230,9 @@ function isTask(v: unknown): boolean {
   if (!optional(isString)(v.cancelledAt)) return false;
   if (!optional(isString)(v.createdAt)) return false;
   if (!optional(isString)(v.updatedAt)) return false;
+  if (!optional(isRecurrenceRule)(v.recurrence)) return false;
+  if (!optional(isString)(v.seriesId)) return false;
+  if (!optional(isNumber)(v.occurrenceIndex)) return false;
   return true;
 }
 
@@ -543,6 +558,7 @@ function isHabit(v: unknown): boolean {
   if (!optional(isString)(v.anchor)) return false;
   if (!optional(isString)(v.location)) return false;
   if (!optional((x) => Array.isArray(x) && x.every((d) => isIntBetween(d, 0, 6)))(v.customDays)) return false;
+  if (!optional(isRecurrenceRule)(v.recurrence)) return false;
   if (!optional(isString)(v.unit)) return false;
   if (!optional(isNumber)(v.currentStreak)) return false;
   if (!optional(isNumber)(v.longestStreak)) return false;

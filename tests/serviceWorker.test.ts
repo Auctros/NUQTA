@@ -134,8 +134,8 @@ describe('service worker install', () => {
     const sw = loadServiceWorker({ fetchImpl: happyFetch });
     await sw.runInstall();
 
-    expect([...sw.caches._stores.keys()]).toEqual(['nuqta-shell-v3']);
-    const urls = sw.caches.entries('nuqta-shell-v3').sort();
+    expect([...sw.caches._stores.keys()]).toEqual(['nuqta-shell-v4']);
+    const urls = sw.caches.entries('nuqta-shell-v4').sort();
     expect(urls).toEqual(
       [`${ORIGIN}/`, `${ORIGIN}/assets/font-abc.woff2`, `${ORIGIN}/assets/index-abc.css`, `${ORIGIN}/assets/index-abc.js`].sort()
     );
@@ -145,41 +145,41 @@ describe('service worker install', () => {
   it('never caches a dynamic URL it did not discover in the shell', async () => {
     const sw = loadServiceWorker({ fetchImpl: happyFetch });
     await sw.runInstall();
-    expect(sw.caches.has('nuqta-shell-v3', `${ORIGIN}/api/user-data`)).toBe(false);
-    expect(sw.caches.entries('nuqta-shell-v3').some((u) => u.includes('/api/'))).toBe(false);
+    expect(sw.caches.has('nuqta-shell-v4', `${ORIGIN}/api/user-data`)).toBe(false);
+    expect(sw.caches.entries('nuqta-shell-v4').some((u) => u.includes('/api/'))).toBe(false);
   });
 
   it('removes only its own candidate cache when installation fails, keeping the working version', async () => {
     // A previously working version is present; this install fails on the JS asset.
     const sw = loadServiceWorker({
-      initialCaches: ['nuqta-shell-v2'],
+      initialCaches: ['nuqta-shell-v3'],
       fetchImpl: (url) => {
         if (url.endsWith('.js')) return 'reject';
         return happyFetch(url);
       }
     });
-    sw.caches._stores.get('nuqta-shell-v2')!.set(`${ORIGIN}/`, { url: `${ORIGIN}/`, body: 'previous' });
+    sw.caches._stores.get('nuqta-shell-v3')!.set(`${ORIGIN}/`, { url: `${ORIGIN}/`, body: 'previous' });
 
     await expect(sw.runInstall()).rejects.toThrow();
-    expect(sw.caches._stores.has('nuqta-shell-v3')).toBe(false); // candidate removed
-    expect(sw.caches._stores.has('nuqta-shell-v2')).toBe(true); // working version intact
-    expect(sw.caches.has('nuqta-shell-v2', `${ORIGIN}/`)).toBe(true);
+    expect(sw.caches._stores.has('nuqta-shell-v4')).toBe(false); // candidate removed
+    expect(sw.caches._stores.has('nuqta-shell-v3')).toBe(true); // working version intact
+    expect(sw.caches.has('nuqta-shell-v3', `${ORIGIN}/`)).toBe(true);
   });
 });
 
 describe('service worker activate', () => {
   it('deletes only obsolete NUQTA caches and leaves other applications alone', async () => {
     const sw = loadServiceWorker({
-      initialCaches: ['nuqta-shell-v1', 'nuqta-shell-v2', 'other-app-cache', 'workbox-precache'],
+      initialCaches: ['nuqta-shell-v1', 'nuqta-shell-v3', 'other-app-cache', 'workbox-precache'],
       fetchImpl: happyFetch
     });
-    await sw.runInstall(); // creates nuqta-shell-v3
+    await sw.runInstall(); // creates nuqta-shell-v4
     await sw.runActivate();
 
     const remaining = [...sw.caches._stores.keys()].sort();
-    expect(remaining).toContain('nuqta-shell-v3');
+    expect(remaining).toContain('nuqta-shell-v4');
     expect(remaining).not.toContain('nuqta-shell-v1');
-    expect(remaining).not.toContain('nuqta-shell-v2');
+    expect(remaining).not.toContain('nuqta-shell-v3');
     expect(remaining).toContain('other-app-cache');
     expect(remaining).toContain('workbox-precache');
     expect(sw.claimed).toHaveLength(1);
@@ -190,22 +190,22 @@ describe('service worker fetch handler', () => {
   it('serves a precached asset from the cache and never writes to the cache', async () => {
     const sw = loadServiceWorker({ fetchImpl: happyFetch });
     await sw.runInstall();
-    const before = sw.caches.entries('nuqta-shell-v3').length;
+    const before = sw.caches.entries('nuqta-shell-v4').length;
 
     const res = (await sw.runFetch({ url: `${ORIGIN}/assets/index-abc.js` })) as { ok: boolean };
     expect(res.ok).toBe(true);
-    expect(sw.caches.entries('nuqta-shell-v3').length).toBe(before);
+    expect(sw.caches.entries('nuqta-shell-v4').length).toBe(before);
   });
 
   it('does NOT cache a dynamic (non-precached) request', async () => {
     const sw = loadServiceWorker({ fetchImpl: () => ({ ok: true, body: '{"secret":"user"}' }) });
     await sw.runInstall();
-    const before = sw.caches.entries('nuqta-shell-v3').length;
+    const before = sw.caches.entries('nuqta-shell-v4').length;
 
     const res = (await sw.runFetch({ url: `${ORIGIN}/api/user-data` })) as { ok: boolean };
     expect(res.ok).toBe(true);
-    expect(sw.caches.has('nuqta-shell-v3', `${ORIGIN}/api/user-data`)).toBe(false);
-    expect(sw.caches.entries('nuqta-shell-v3').length).toBe(before);
+    expect(sw.caches.has('nuqta-shell-v4', `${ORIGIN}/api/user-data`)).toBe(false);
+    expect(sw.caches.entries('nuqta-shell-v4').length).toBe(before);
   });
 
   it('does NOT cache the network response of a navigation', async () => {
@@ -220,7 +220,7 @@ describe('service worker fetch handler', () => {
       }
     });
     await sw.runInstall();
-    const cachedIndex = sw.caches._stores.get('nuqta-shell-v3')!.get(`${ORIGIN}/`)!.body;
+    const cachedIndex = sw.caches._stores.get('nuqta-shell-v4')!.get(`${ORIGIN}/`)!.body;
     expect(cachedIndex).toBe(INDEX_HTML);
 
     // A later navigation returns a different (dynamic) document from the network.
@@ -228,6 +228,6 @@ describe('service worker fetch handler', () => {
     const res = (await sw.runFetch({ url: `${ORIGIN}/`, mode: 'navigate' })) as { text: () => Promise<string> };
     expect(await res.text()).toBe('<html>fresh-network</html>');
     // The precached shell is unchanged: the navigation response was not written.
-    expect(sw.caches._stores.get('nuqta-shell-v3')!.get(`${ORIGIN}/`)!.body).toBe(INDEX_HTML);
+    expect(sw.caches._stores.get('nuqta-shell-v4')!.get(`${ORIGIN}/`)!.body).toBe(INDEX_HTML);
   });
 });

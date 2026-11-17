@@ -183,8 +183,21 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 16. The NUQTA week has one definition. Weekday reads must go through src/lib/week.ts
+//     (the only module allowed to call Date.getDay()); an inline `getDay()` comparison at
+//     a call site is how the old Sunday-first behaviour silently drifted from Saturday-first.
+{
+  const hits = grep(/\.getDay\(\)/, { except: ['src/lib/week.ts'] });
+  if (hits.length) {
+    fail(
+      'Weekday read outside src/lib/week.ts — use dayOfWeek()/indexFromWeekStart() from the week module',
+      hits.slice(0, 8).join('\n    ')
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (15 rules).');
+console.log('Invariant check passed (16 rules).');
