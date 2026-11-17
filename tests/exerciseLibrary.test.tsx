@@ -6,7 +6,8 @@ import { MuscleMap, MUSCLE_IDS } from '../src/components/workout/MuscleMap';
 import { ExerciseIllustration } from '../src/components/workout/illustration/ExerciseIllustration';
 import { WorkoutAppModal } from '../src/components/WorkoutAppModal';
 import { useNuqtaStore } from '../src/store/nuqtaStore';
-import { EXERCISE_CATALOG } from '../src/lib/exerciseCatalog';
+import { EXERCISE_CATALOG, recentlyPerformedExercises } from '../src/lib/exerciseCatalog';
+import { ExerciseCatalog } from '../src/components/workout/ExerciseCatalog';
 import { ILLUSTRATION_KEYS, getIllustration } from '../src/components/workout/illustration/registry';
 
 const pushUp = EXERCISE_CATALOG.find((e) => e.illustrationKey === 'push-up')!;
@@ -221,5 +222,76 @@ describe('WorkoutAppModal library tab', () => {
     fireEvent.click(document.querySelector('.ex-card button') as HTMLElement);
     expect(document.querySelector('.ex-detail')).toBeTruthy();
     expect(document.querySelectorAll('.ex-mm-primary').length).toBeGreaterThan(0);
+  });
+});
+
+describe('recentlyPerformedExercises', () => {
+  const session = (date: string, names: string[]) => ({
+    id: `s-${date}`,
+    date,
+    title: 'x',
+    workoutType: 'strength' as const,
+    durationMinutes: 20,
+    volumeKg: 0,
+    intensityRating: 3 as const,
+    exercises: names.map((name, i) => ({ id: `${date}-${i}`, name, category: 'chest' as const, sets: [] }))
+  });
+
+  it('returns catalog matches newest first, deduplicated', () => {
+    const result = recentlyPerformedExercises([
+      session('2026-01-01', ['Standard Push-up', 'Pull-up']),
+      session('2026-01-03', ['Standard Push-up', 'Bodyweight Air Squat'])
+    ]);
+    expect(result.map((e) => e.illustrationKey)).toEqual(['push-up', 'air-squat', 'pull-up']);
+  });
+
+  it('skips names that are not in the catalog and respects the limit', () => {
+    const result = recentlyPerformedExercises([session('2026-01-01', ['Made-up Move', 'Pull-up', 'Bodyweight Air Squat'])], 1);
+    expect(result).toHaveLength(1);
+    expect(result[0].illustrationKey).toBe('pull-up');
+  });
+
+  it('returns nothing for an empty history', () => {
+    expect(recentlyPerformedExercises([])).toEqual([]);
+  });
+});
+
+describe('ExerciseCatalog', () => {
+  it('filters by query and clears back to the full catalog', () => {
+    render(<ExerciseCatalog isAr={false} />);
+    expect(document.querySelectorAll('.ex-card').length).toBe(EXERCISE_CATALOG.length);
+    fireEvent.change(screen.getByLabelText('Search the library'), { target: { value: 'squat' } });
+    expect(document.querySelectorAll('.ex-card').length).toBeLessThan(EXERCISE_CATALOG.length);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(document.querySelectorAll('.ex-card').length).toBe(EXERCISE_CATALOG.length);
+  });
+
+  it('adds an exercise through the quick-add action', () => {
+    let added: string | null = null;
+    render(<ExerciseCatalog isAr={false} onAdd={(e) => (added = e.id)} addLabel="Add" />);
+    fireEvent.click(screen.getAllByRole('button', { name: /Add/ })[0]);
+    expect(added).toBeTruthy();
+  });
+
+  it('shows a recently-performed quick pick from session history', () => {
+    const session: any = {
+      id: 's1',
+      date: '2026-01-01',
+      title: 'x',
+      workoutType: 'strength',
+      durationMinutes: 20,
+      volumeKg: 0,
+      intensityRating: 3,
+      exercises: [{ id: 'e1', name: 'Standard Push-up', category: 'chest', sets: [] }]
+    };
+    render(<ExerciseCatalog isAr={false} recentSessions={[session]} />);
+    expect(screen.getByText('Recently performed')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Standard Push-up' }).length).toBeGreaterThan(1);
+  });
+
+  it('omits the filter row in the inline variant', () => {
+    render(<ExerciseCatalog isAr={false} variant="inline" />);
+    expect(screen.queryByLabelText('Region')).toBeNull();
+    expect(document.querySelectorAll('.ex-card').length).toBe(EXERCISE_CATALOG.length);
   });
 });

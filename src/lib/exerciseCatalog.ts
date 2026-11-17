@@ -1,4 +1,4 @@
-import { MuscleMovement, HomeEquipment, ExerciseEntry } from '../types';
+import { MuscleMovement, HomeEquipment, ExerciseEntry, WorkoutSessionLog } from '../types';
 import { PrebuiltExercise, MuscleId } from './exerciseTypes';
 import { UPPER_BODY } from './catalog/upperBody';
 import { LOWER_BODY } from './catalog/lowerBody';
@@ -214,3 +214,29 @@ export const CATALOG_EQUIPMENT: HomeEquipment[] = Array.from(new Set(EXERCISE_CA
 export const CATALOG_PATTERNS: PrebuiltExercise['pattern'][] = Array.from(
   new Set(EXERCISE_CATALOG.map((e) => e.pattern))
 );
+
+/** Resolve a logged exercise name (either language) back to its catalog entry. */
+export const catalogExerciseByName = (name: string): PrebuiltExercise | undefined =>
+  EXERCISE_CATALOG.find((e) => e.nameAr === name || e.nameEn === name);
+
+/**
+ * The catalog exercises a user actually trained most recently, newest first,
+ * deduplicated by catalog id. Logged entries only carry a name, so matching is
+ * by name — an unknown/renamed exercise is simply skipped.
+ */
+export const recentlyPerformedExercises = (sessions: WorkoutSessionLog[], limit = 6): PrebuiltExercise[] => {
+  const seen = new Set<string>();
+  const out: PrebuiltExercise[] = [];
+  const newestFirst = [...sessions].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  for (const session of newestFirst) {
+    for (const entry of session.exercises) {
+      const cat = catalogExerciseByName(entry.name);
+      if (cat && !seen.has(cat.id)) {
+        seen.add(cat.id);
+        out.push(cat);
+        if (out.length >= limit) return out;
+      }
+    }
+  }
+  return out;
+};

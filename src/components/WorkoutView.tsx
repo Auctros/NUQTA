@@ -12,24 +12,8 @@ import {
   StudioEmpty,
   StudioTab
 } from './studios/StudioKit';
-import {
-  EXERCISE_CATALOG,
-  PrebuiltExercise,
-  MuscleGroup,
-  MovementPattern,
-  exerciseEntryFromCatalog,
-  movementLabel,
-  equipmentLabel,
-  categoryLabel,
-  patternLabel,
-  difficultyLabel,
-  muscleLabel,
-  CATALOG_CATEGORIES,
-  CATALOG_EQUIPMENT,
-  CATALOG_PATTERNS
-} from '../lib/exerciseCatalog';
-import { ExerciseCard } from './workout/ExerciseCard';
-import { ExerciseDetailModal } from './workout/ExerciseDetailModal';
+import { PrebuiltExercise, exerciseEntryFromCatalog, movementLabel } from '../lib/exerciseCatalog';
+import { ExerciseCatalog } from './workout/ExerciseCatalog';
 
 type WTab = 'today' | 'programs' | 'exercises' | 'history' | 'progress';
 
@@ -134,13 +118,6 @@ export const WorkoutView: React.FC = () => {
   const [routineMinutes, setRoutineMinutes] = useState(25);
   const [routineSaved, setRoutineSaved] = useState(false);
 
-  // ---------- Exercise library ----------
-  const [libQuery, setLibQuery] = useState('');
-  const [libCategory, setLibCategory] = useState<'all' | MuscleGroup>('all');
-  const [libPattern, setLibPattern] = useState<'all' | MovementPattern>('all');
-  const [libEquipment, setLibEquipment] = useState<'all' | string>('all');
-  const [libDifficulty, setLibDifficulty] = useState<'all' | string>('all');
-  const [openExercise, setOpenExercise] = useState<PrebuiltExercise | null>(null);
 
   // ---------- Progress ----------
   const [progressMetric, setProgressMetric] = useState<'reps' | 'volume' | 'minutes'>('reps');
@@ -374,23 +351,6 @@ export const WorkoutView: React.FC = () => {
     setTargetsSaved(true);
     window.setTimeout(() => setTargetsSaved(false), 2000);
   };
-
-  const filteredCatalog = EXERCISE_CATALOG.filter((e) => {
-    if (libCategory !== 'all' && e.category !== libCategory) return false;
-    if (libPattern !== 'all' && e.pattern !== libPattern) return false;
-    if (libEquipment !== 'all' && e.equipment !== libEquipment) return false;
-    if (libDifficulty !== 'all' && e.difficulty !== libDifficulty) return false;
-    if (libQuery.trim()) {
-      const q = libQuery.trim().toLowerCase();
-      const inName = e.nameAr.toLowerCase().includes(q) || e.nameEn.toLowerCase().includes(q);
-      const inMuscle =
-        e.primary.some((m) => muscleLabel(m, isAr).toLowerCase().includes(q)) ||
-        e.secondary.some((m) => muscleLabel(m, isAr).toLowerCase().includes(q));
-      const inRegion = categoryLabel(e.category, isAr).toLowerCase().includes(q);
-      if (!inName && !inMuscle && !inRegion) return false;
-    }
-    return true;
-  });
 
   if (!workoutHabit) {
     return (
@@ -745,29 +705,14 @@ export const WorkoutView: React.FC = () => {
               </Button>
             }
           >
-            <input
-              type="search"
-              value={libQuery}
-              onChange={(e) => setLibQuery(e.target.value)}
-              placeholder={isAr ? 'ابحث بالاسم أو العضلة…' : 'Search by name or muscle…'}
-              aria-label={isAr ? 'بحث في المكتبة' : 'Search the library'}
-              className="input w-full mb-3 text-[var(--fs-xs)]"
+            <ExerciseCatalog
+              isAr={isAr}
+              variant="inline"
+              onAdd={addCatalogExercise}
+              addLabel={isAr ? 'إضافة' : 'Add'}
             />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredCatalog.map((e) => (
-                <ExerciseCard key={e.id} exercise={e} isAr={isAr} onOpen={setOpenExercise} onAdd={addCatalogExercise} addLabel={isAr ? 'إضافة' : 'Add'} />
-              ))}
-            </div>
           </StudioSection>
         )}
-
-        <ExerciseDetailModal
-          exercise={openExercise}
-          isAr={isAr}
-          onClose={() => setOpenExercise(null)}
-          onAdd={addCatalogExercise}
-          addLabel={isAr ? 'أضف للتمرين' : 'Add to workout'}
-        />
       </div>
     );
   }
@@ -999,10 +944,8 @@ export const WorkoutView: React.FC = () => {
               </div>
             </form>
             {showCatalog && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-3">
-                {filteredCatalog.map((e) => (
-                  <ExerciseCard key={e.id} exercise={e} isAr={isAr} onOpen={setOpenExercise} onAdd={addCatalogExercise} addLabel={isAr ? 'إضافة' : 'Add'} />
-                ))}
+              <div className="mt-3">
+                <ExerciseCatalog isAr={isAr} variant="inline" onAdd={addCatalogExercise} addLabel={isAr ? 'إضافة' : 'Add'} />
               </div>
             )}
             {routineSaved && (
@@ -1016,101 +959,15 @@ export const WorkoutView: React.FC = () => {
 
       {/* ---------------- EXERCISES ---------------- */}
       {activeTab === 'exercises' && (
-        <div className="space-y-[var(--sp-4)]">
-          <StudioSection>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="search"
-                value={libQuery}
-                onChange={(e) => setLibQuery(e.target.value)}
-                placeholder={isAr ? 'ابحث بالاسم أو العضلة…' : 'Search by name or muscle…'}
-                aria-label={isAr ? 'بحث في المكتبة' : 'Search the library'}
-                className="input flex-1 min-w-[160px] text-[var(--fs-xs)]"
-              />
-              <NuqtaSelect value={libCategory} onChange={(e) => setLibCategory(e.target.value as typeof libCategory)} aria-label={isAr ? 'المنطقة' : 'Region'} className="text-[var(--fs-xs)]">
-                <option value="all">{isAr ? 'كل المناطق' : 'All regions'}</option>
-                {CATALOG_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {categoryLabel(c, isAr)}
-                  </option>
-                ))}
-              </NuqtaSelect>
-              <NuqtaSelect value={libPattern} onChange={(e) => setLibPattern(e.target.value as typeof libPattern)} aria-label={isAr ? 'النمط' : 'Pattern'} className="text-[var(--fs-xs)]">
-                <option value="all">{isAr ? 'كل الأنماط' : 'All patterns'}</option>
-                {CATALOG_PATTERNS.map((pp) => (
-                  <option key={pp} value={pp}>
-                    {patternLabel(pp, isAr)}
-                  </option>
-                ))}
-              </NuqtaSelect>
-              <NuqtaSelect value={libEquipment} onChange={(e) => setLibEquipment(e.target.value)} aria-label={isAr ? 'الأدوات' : 'Equipment'} className="text-[var(--fs-xs)]">
-                <option value="all">{isAr ? 'كل الأدوات' : 'All equipment'}</option>
-                {CATALOG_EQUIPMENT.map((eq) => (
-                  <option key={eq} value={eq}>
-                    {equipmentLabel(eq, isAr)}
-                  </option>
-                ))}
-              </NuqtaSelect>
-              <NuqtaSelect value={libDifficulty} onChange={(e) => setLibDifficulty(e.target.value)} aria-label={isAr ? 'المستوى' : 'Difficulty'} className="text-[var(--fs-xs)]">
-                <option value="all">{isAr ? 'كل المستويات' : 'All levels'}</option>
-                <option value="beginner">{isAr ? 'مبتدئ' : 'Beginner'}</option>
-                <option value="intermediate">{isAr ? 'متوسط' : 'Intermediate'}</option>
-                <option value="advanced">{isAr ? 'متقدم' : 'Advanced'}</option>
-              </NuqtaSelect>
-              {(libQuery || libCategory !== 'all' || libPattern !== 'all' || libEquipment !== 'all' || libDifficulty !== 'all') && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon="close"
-                  onClick={() => {
-                    setLibQuery('');
-                    setLibCategory('all');
-                    setLibPattern('all');
-                    setLibEquipment('all');
-                    setLibDifficulty('all');
-                  }}
-                >
-                  {isAr ? 'مسح' : 'Clear'}
-                </Button>
-              )}
-            </div>
-          </StudioSection>
-
-          <StudioSection
-            title={isAr ? 'مكتبة التمارين' : 'Exercise library'}
-            action={
-              <span className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono">
-                {filteredCatalog.length} / {EXERCISE_CATALOG.length}
-              </span>
-            }
-          >
-            {filteredCatalog.length === 0 ? (
-              <StudioEmpty icon="search" title={isAr ? 'لا نتائج' : 'No matches'} />
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredCatalog.map((e) => (
-                  <ExerciseCard key={e.id} exercise={e} isAr={isAr} onOpen={setOpenExercise} />
-                ))}
-              </div>
-            )}
-          </StudioSection>
-        </div>
+        <StudioSection title={isAr ? 'مكتبة التمارين' : 'Exercise library'}>
+          <ExerciseCatalog
+            isAr={isAr}
+            recentSessions={sessions}
+            onAdd={(ex) => startWorkout(isAr ? ex.nameAr : ex.nameEn, [exerciseEntryFromCatalog(ex, isAr)])}
+            addLabel={isAr ? 'ابدأ هذا التمرين' : 'Start this exercise'}
+          />
+        </StudioSection>
       )}
-
-      <ExerciseDetailModal
-        exercise={openExercise}
-        isAr={isAr}
-        onClose={() => setOpenExercise(null)}
-        onAdd={
-          openExercise
-            ? (ex) => {
-                startWorkout(isAr ? ex.nameAr : ex.nameEn, [exerciseEntryFromCatalog(ex, isAr)]);
-                setOpenExercise(null);
-              }
-            : undefined
-        }
-        addLabel={isAr ? 'ابدأ هذا التمرين' : 'Start this exercise'}
-      />
 
       {/* ---------------- HISTORY ---------------- */}
       {activeTab === 'history' && (

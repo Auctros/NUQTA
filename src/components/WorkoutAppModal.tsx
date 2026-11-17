@@ -8,11 +8,10 @@ import {
   FitnessDifficulty
 } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
-import { EXERCISE_CATALOG, PrebuiltExercise, categoryLabel, muscleLabel } from '../lib/exerciseCatalog';
+import { PrebuiltExercise } from '../lib/exerciseCatalog';
 import { NuqtaSelect } from './ui';
 import { NuqtaIcon } from './NuqtaIcon';
-import { ExerciseCard } from './workout/ExerciseCard';
-import { ExerciseDetailModal } from './workout/ExerciseDetailModal';
+import { ExerciseCatalog } from './workout/ExerciseCatalog';
 
 interface WorkoutAppModalProps {
   habit: Habit;
@@ -96,9 +95,6 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
   const [tempMonthlyReps, setTempMonthlyReps] = useState(workoutData.monthlyTargetReps || 500);
 
   // Exercise Library Filtering
-  const [libraryMovementFilter, setLibraryMovementFilter] = useState<'all' | MuscleMovement>('all');
-  const [libraryQuery, setLibraryQuery] = useState('');
-  const [openExercise, setOpenExercise] = useState<PrebuiltExercise | null>(null);
 
   // Routine Creator State
   const [isCreatingRoutine, setIsCreatingRoutine] = useState(false);
@@ -109,7 +105,6 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
 
   // Home Exercises Catalog
   // Exercise catalog is shared with the Workout Studio (single source of truth).
-  const exerciseCatalog: PrebuiltExercise[] = EXERCISE_CATALOG;
 
   // Helper calculations
   const past7DaysStart = new Date();
@@ -782,63 +777,12 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
                 </div>
               </div>
 
-              {/* Search + movement filters */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <input
-                  type="search"
-                  value={libraryQuery}
-                  onChange={(e) => setLibraryQuery(e.target.value)}
-                  placeholder={isAr ? 'ابحث بالاسم أو العضلة…' : 'Search by name or muscle…'}
-                  aria-label={isAr ? 'بحث في المكتبة' : 'Search the library'}
-                  className="input flex-1 min-w-[160px] text-xs"
-                />
-                {[
-                  { key: 'all', labelAr: isAr ? 'الكل' : 'All' },
-                  { key: 'push', labelAr: isAr ? 'الدفع' : 'Push' },
-                  { key: 'legs', labelAr: isAr ? 'الأرجل' : 'Legs' },
-                  { key: 'core', labelAr: isAr ? 'البطن والجذع' : 'Core' },
-                  { key: 'mobility', labelAr: isAr ? 'المرونة' : 'Mobility' },
-                  { key: 'cardio', labelAr: isAr ? 'الكارديو' : 'Cardio' }
-                ].map((item) => (
-                  <button
-                    key={item.key}
-                    onClick={() => setLibraryMovementFilter(item.key as any)}
-                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                      libraryMovementFilter === item.key
-                        ? 'bg-[var(--d-workout-raised)] text-[var(--d-workout-accent-strong)] font-bold'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                    }`}
-                  >
-                    {item.labelAr}
-                  </button>
-                ))}
-              </div>
-
-              {/* Exercises Catalog Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {exerciseCatalog
-                  .filter((ex) => libraryMovementFilter === 'all' || ex.movement === libraryMovementFilter)
-                  .filter((ex) => {
-                    const q = libraryQuery.trim().toLowerCase();
-                    if (!q) return true;
-                    return (
-                      ex.nameAr.toLowerCase().includes(q) ||
-                      ex.nameEn.toLowerCase().includes(q) ||
-                      categoryLabel(ex.category, isAr).toLowerCase().includes(q) ||
-                      ex.primary.some((m) => muscleLabel(m, isAr).toLowerCase().includes(q))
-                    );
-                  })
-                  .map((ex) => (
-                    <ExerciseCard
-                      key={ex.id}
-                      exercise={ex}
-                      isAr={isAr}
-                      onOpen={setOpenExercise}
-                      onAdd={handleApplyCatalogExercise}
-                      addLabel={isAr ? 'إدراج للتمرين' : 'Add to workout'}
-                    />
-                  ))}
-              </div>
+              <ExerciseCatalog
+                isAr={isAr}
+                recentSessions={workoutData.sessions}
+                onAdd={handleApplyCatalogExercise}
+                addLabel={isAr ? 'إدراج للتمرين' : 'Add to workout'}
+              />
             </div>
           )}
 
@@ -1061,13 +1005,6 @@ export const WorkoutAppModal: React.FC<WorkoutAppModalProps> = ({ habit, onClose
           )}
         </div>
 
-        <ExerciseDetailModal
-          exercise={openExercise}
-          isAr={isAr}
-          onClose={() => setOpenExercise(null)}
-          onAdd={handleApplyCatalogExercise}
-          addLabel={isAr ? 'إدراج للتمرين' : 'Add to workout'}
-        />
       </div>
     </div>
   );

@@ -133,6 +133,15 @@ with an IndexedDB mirror for recovery.
   Add a key → it appears on the card and in the detail view. Entries marked `animated`
   must have phases that actually differ, and every pose must stay inside the 200×200
   viewBox — `tests/exerciseLibrary.test.tsx` enforces both.
+- **The exercise browser is one component: `ExerciseCatalog`**
+  (`src/components/workout/ExerciseCatalog.tsx`). It owns the search box, the filter row,
+  the result grid, the detail sheet, and the "recently performed" quick-pick; the Workout
+  Studio "Exercises" tab and the `WorkoutAppModal` "Exercise Catalog" tab both render it, so
+  the two entry points can never drift. Callers only supply `isAr`, `recentSessions`, and
+  what "add" means (`onAdd`/`addLabel`). `variant="inline"` drops the filter row for the
+  session drawer. Do not re-implement a second grid — extend this component instead.
+  `recentlyPerformedExercises(sessions)` in `exerciseCatalog.ts` resolves logged names back
+  to catalog entries; it is pure and name-based (an unknown/renamed exercise is skipped).
 - `MuscleMap` draws front/back anatomical views and highlights primary/secondary muscles;
   `ExerciseCard` and `ExerciseDetailModal` compose the illustration, muscle map, cues and
   variations. Both `WorkoutView` (Exercises tab) and `WorkoutAppModal` use the same card.
