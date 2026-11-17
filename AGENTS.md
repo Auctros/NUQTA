@@ -161,6 +161,20 @@ with an IndexedDB mirror for recovery.
 - Wipe clears the mirror first; if the mirror cannot be cleared, localStorage is kept so a
   later recovery cannot resurrect deleted data.
 
+## Insights engine
+
+- `src/lib/insightsEngine.ts` is the single source of truth for every Insights figure.
+  `computeInsightsReport(range, …)` returns the whole report (timeline, per-domain
+  summaries, weekday rhythm, correlations, streaks); `InsightsView` only renders it and
+  must not re-derive series of its own.
+- Honesty rule: a metric with no underlying record is `null`, never `0`, and the view
+  renders an explicit "no data" state. A flat line must mean "recorded flat", not "empty".
+- Timeline bucketing: `week` → daily (weekday-name labels), `30d` → daily (labels are the
+  day of month, because weekday names repeat across 30 columns), `90d` → Sat–Fri weeks,
+  `year`/`all-time` → months. Read the weekday through `week.ts`; never `Date.getDay()`.
+- `src/components/charts/InsightsCharts.tsx` holds the visual primitives (trend chart,
+  domain bars, weekday-rhythm strip) on the `--tone-*` / `--heat-*` tokens.
+
 ## Service worker
 
 `public/sw.js` precaches ONLY the discovered shell assets (index.html + its same-origin
