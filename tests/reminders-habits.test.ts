@@ -26,9 +26,10 @@ const habit = (over: Partial<Habit>): Habit => ({
 const week = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08']; // Mon..Sun
 
 describe('habit schedule', () => {
-  it('weekday habit is not due on weekends', () => {
+  it('weekday habit is due on the working week (Sat–Thu) and not on Friday', () => {
     const h = habit({ frequency: 'weekdays' });
-    expect(isHabitDueOn(h, '2026-11-07')).toBe(false); // Saturday
+    expect(isHabitDueOn(h, '2026-11-06')).toBe(false); // Friday is the day off
+    expect(isHabitDueOn(h, '2026-11-07')).toBe(true); // Saturday is a working day
     expect(isHabitDueOn(h, '2026-11-09')).toBe(true); // Monday
   });
   it('a 4-days-a-week habit done every due day is 100%, not 4/7', () => {
@@ -42,8 +43,37 @@ describe('habit schedule', () => {
     expect(isHabitDueOn(h, '2026-11-07')).toBe(true);
   });
   it('a bonus completion on a non-due day never lowers the rate', () => {
-    const h = habit({ frequency: 'weekdays', completedDates: ['2026-11-07'] });
-    const c = habitCompliance(h, ['2026-11-07']);
+    // Friday is the weekly day off; completing it is a bonus, not a requirement.
+    const h = habit({ frequency: 'weekdays', completedDates: ['2026-11-06'] });
+    const c = habitCompliance(h, ['2026-11-06']);
     expect(c.done).toBe(c.due);
+  });
+
+  it('a recurrence rule takes precedence over the legacy frequency field', () => {
+    // frequency says daily, but the rule restricts to Mondays only.
+    const h = habit({ frequency: 'daily', recurrence: { freq: 'weekly', days: [1] }, createdAt: '2026-11-01T00:00:00.000Z' });
+    expect(isHabitDueOn(h, '2026-11-02')).toBe(true); // Mon
+    expect(isHabitDueOn(h, '2026-11-03')).toBe(false); // Tue
+    expect(isHabitDueOn(h, '2026-11-09')).toBe(true); // next Mon
+  });
+
+  it('a weekdays recurrence rule matches the working week', () => {
+    const h = habit({ frequency: 'daily', recurrence: { freq: 'weekdays' }, createdAt: '2026-11-01T00:00:00.000Z' });
+    expect(isHabitDueOn(h, '2026-11-06')).toBe(false); // Friday
+    expect(isHabitDueOn(h, '2026-11-07')).toBe(true); // Saturday
+  });
+
+  it('an interval rule is due every N days from the anchor', () => {
+    const h = habit({ frequency: 'daily', recurrence: { freq: 'interval', intervalDays: 3 }, createdAt: '2026-11-01T00:00:00.000Z' });
+    expect(isHabitDueOn(h, '2026-11-01')).toBe(true); // anchor
+    expect(isHabitDueOn(h, '2026-11-02')).toBe(false);
+    expect(isHabitDueOn(h, '2026-11-04')).toBe(true); // +3
+  });
+
+  it('re-scores compliance from the rule without stored per-day records', () => {
+    // Same completions, different rule => different due count.
+    const h = habit({ frequency: 'daily', recurrence: { freq: 'weekly', days: [1] }, completedDates: ['2026-11-02', '2026-11-09'], createdAt: '2026-11-01T00:00:00.000Z' });
+    const c = habitCompliance(h, week); // Mon..Sun
+    expect(c).toEqual({ due: 1, done: 1 }); // only Mon 11-02 falls in the week
   });
 });

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { isTaskPending } from '../lib/taskStatus';
 import { NuqtaIcon } from './NuqtaIcon';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const RescueModal: React.FC = () => {
   const { isRescueModeOpen, setRescueModeOpen, tasks, executeRescueMode, profile } = useNuqtaStore();
@@ -8,10 +10,12 @@ export const RescueModal: React.FC = () => {
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [deferRest, setDeferRest] = useState<boolean>(true);
 
+  useEscapeKey(isRescueModeOpen, () => setRescueModeOpen(false));
+
   if (!isRescueModeOpen) return null;
 
   const isAr = profile.language === 'ar';
-  const pendingTasks = tasks.filter((t) => t.status !== 'completed');
+  const pendingTasks = tasks.filter(isTaskPending);
 
   const handleExecute = () => {
     const anchorId = selectedTaskId || (pendingTasks[0] ? pendingTasks[0].id : '');
@@ -23,7 +27,7 @@ export const RescueModal: React.FC = () => {
 
   return (
     <div className="modal-backdrop" onClick={() => setRescueModeOpen(false)} dir={isAr ? 'rtl' : 'ltr'}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>
             <div className="eyebrow">
@@ -55,7 +59,7 @@ export const RescueModal: React.FC = () => {
 
             <div className="space-y-2 text-xs text-muted">
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-4 h-4 text-accent" />
                 <span>
                   {isAr
                     ? 'ترحيل المهام المتبقية لصباح الغد تلقائياً دون أي شعور بالذنب.'
@@ -63,7 +67,7 @@ export const RescueModal: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-4 h-4 text-accent" />
                 <span>
                   {isAr
                     ? 'اختيار مهمة محورية واحدة فقط، إذا أنجزتها يعتبر اليوم كافياً وناجحاً.'
@@ -133,7 +137,7 @@ export const RescueModal: React.FC = () => {
                 {isAr ? 'رجوع' : 'Back'}
               </button>
               <button className="btn primary" onClick={handleExecute}>
-                {isAr ? 'تنفيذ خطة الإنقاذ ✓' : 'Execute Rescue Plan'}
+                {isAr ? 'تنفيذ خطة الإنقاذ' : 'Execute Rescue Plan'}
               </button>
             </div>
           </div>

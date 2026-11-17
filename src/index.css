@@ -380,6 +380,30 @@ body {
   font-size: 13.5px;
   padding: 10px 13px;
 }
+/* Native date/time controls follow the active theme so the picker glyph stays visible. */
+.input[type="date"],
+.input[type="time"],
+.input[type="datetime-local"] {
+  color-scheme: dark;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  min-width: 0;
+}
+.light-mode .input[type="date"],
+.light-mode .input[type="time"],
+.light-mode .input[type="datetime-local"] {
+  color-scheme: light;
+}
+.input[type="date"]::-webkit-calendar-picker-indicator,
+.input[type="time"]::-webkit-calendar-picker-indicator,
+.input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.65;
+}
+.input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.input[type="time"]::-webkit-calendar-picker-indicator:hover,
+.input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
 .field label, .field-label {
   font-size: 12px;
   font-weight: 600;
@@ -563,6 +587,25 @@ body.light-mode {
   background: #e5f4e9;
   color: var(--accent);
 }
+
+/* Mood indicator: five ascending bars, `n` lit for mood level `n`. */
+.mood-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 20px;
+}
+.mood-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+.mood-bar:nth-child(1) { height: 6px; }
+.mood-bar:nth-child(2) { height: 9px; }
+.mood-bar:nth-child(3) { height: 12px; }
+.mood-bar:nth-child(4) { height: 15px; }
+.mood-bar:nth-child(5) { height: 18px; }
+.mood-bar.on { background: var(--accent); }
 .light-mode .empty-icon {
   background: #e5f3e9;
   color: var(--accent-strong);
@@ -1714,7 +1757,8 @@ html.light-mode .glass-surface,
     padding-bottom var(--dur-sidebar) var(--ease-spring),
     background-color 180ms ease,
     color 160ms ease,
-    box-shadow 200ms ease;
+    box-shadow 200ms ease,
+    transform 140ms var(--ease-standard);
 }
 
 .sidebar .nav-item .nav-icon {
@@ -1791,6 +1835,13 @@ html.light-mode .glass-surface,
 .sidebar button:focus-visible {
   box-shadow: var(--glow-brand);
   outline: none;
+}
+
+/* Tactile press feedback: a light dip on click, guarded for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar .nav-item:active {
+    transform: translateY(1px) scale(0.985);
+  }
 }
 
 /* Smooth footer card collapse */

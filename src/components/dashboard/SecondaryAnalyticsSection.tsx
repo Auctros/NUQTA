@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { NuqtaIcon } from '../NuqtaIcon';
 import {
   ConsistencyBreakdownData,
   DailyCorrelationPoint,
@@ -56,9 +57,10 @@ export const SecondaryAnalyticsSection: React.FC<SecondaryAnalyticsSectionProps>
   const [hoveredDailyPt, setHoveredDailyPt] = useState<DailyCorrelationPoint | null>(null);
   const [hoveredFocusPt, setHoveredFocusPt] = useState<FocusScatterPoint | null>(null);
 
+  // Heatmap rows run top-to-bottom in NUQTA week order: Sat, Sun, Mon, Tue, Wed, Thu, Fri.
   const dayNames = isAr
-    ? ['أح', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب']
-    : ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    ? ['سب', 'أح', 'إث', 'ثل', 'أر', 'خم', 'جم']
+    : ['S', 'S', 'M', 'T', 'W', 'T', 'F'];
 
   const completionsDeltaPct =
     data.priorCompletions30 > 0
@@ -426,7 +428,8 @@ export const SecondaryAnalyticsSection: React.FC<SecondaryAnalyticsSectionProps>
                 onClick={onOpenInsights}
                 className="mt-3 text-[11px] font-medium text-[var(--brand-strong)] hover:underline"
               >
-                {isAr ? 'فتح صفحة الرؤى ←' : 'Open Insights →'}
+                {isAr ? 'فتح صفحة الرؤى' : 'Open Insights'}
+                <NuqtaIcon name="arrow" className="w-3 h-3 inline-block" />
               </button>
             </div>
           ) : (
@@ -602,7 +605,8 @@ export const SecondaryAnalyticsSection: React.FC<SecondaryAnalyticsSectionProps>
             onClick={onOpenInsights}
             className="text-xs font-medium text-[var(--brand-strong)] hover:underline whitespace-nowrap shrink-0"
           >
-            {isAr ? 'كل الرؤى ←' : 'Deep Insights →'}
+            {isAr ? 'كل الرؤى' : 'Deep Insights'}
+          <NuqtaIcon name="arrow" className="w-3 h-3 inline-block" />
           </button>
         </div>
       </div>

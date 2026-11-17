@@ -126,7 +126,7 @@ export const HealthView: React.FC = () => {
       <div className="health-summary">
         <div className="panel health-tile">
           <div className="health-tile-head">
-            <span className="health-tile-icon">◔</span>
+            <span className="health-tile-icon"><NuqtaIcon name="moon" className="w-4 h-4" /></span>
             <span className="small-muted">{isAr ? 'اليوم' : 'Today'}</span>
           </div>
           <strong>
@@ -139,7 +139,7 @@ export const HealthView: React.FC = () => {
 
         <div className="panel health-tile">
           <div className="health-tile-head">
-            <span className="health-tile-icon">≈</span>
+            <span className="health-tile-icon"><NuqtaIcon name="leaf" className="w-4 h-4" /></span>
             <span className="small-muted">{isAr ? 'اليوم' : 'Today'}</span>
           </div>
           <strong>
@@ -152,11 +152,11 @@ export const HealthView: React.FC = () => {
 
         <div className="panel health-tile">
           <div className="health-tile-head">
-            <span className="health-tile-icon">↟</span>
+            <span className="health-tile-icon"><NuqtaIcon name="dumbbell" className="w-4 h-4" /></span>
             <span className="small-muted">{isAr ? 'اليوم' : 'Today'}</span>
           </div>
           <strong>
-            {today.workoutMinutes ?? (today.workoutLogged ? '✓' : '0')}
+            {today.workoutMinutes ?? (today.workoutLogged ? <NuqtaIcon name="check" className="w-4 h-4" /> : '0')}
             <small style={{ display: 'inline', marginInlineStart: '5px' }}>{isAr ? 'د' : 'min'}</small>
           </strong>
           <small>{isAr ? 'الحركة والتمرين' : 'Movement'}</small>
@@ -165,7 +165,7 @@ export const HealthView: React.FC = () => {
 
         <div className="panel health-tile">
           <div className="health-tile-head">
-            <span className="health-tile-icon">⌁</span>
+            <span className="health-tile-icon"><NuqtaIcon name="activity" className="w-4 h-4" /></span>
             <span className="small-muted">{isAr ? 'اليوم' : 'Today'}</span>
           </div>
           <strong>

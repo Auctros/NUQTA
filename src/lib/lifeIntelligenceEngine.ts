@@ -1,5 +1,7 @@
 import { localDateKey } from './dateKey';
+import { dayOfWeek, weekDayLabel } from './week';
 import { Task, Habit, Goal, FocusSession, MuscleMovement, ArtMedium } from '../types';
+import { IconName } from '../components/NuqtaIcon';
 import { evaluateGoalProgress } from './goalProgressEngine';
 
 export type TimeHorizon = 'today' | 'week' | 'month' | 'all';
@@ -47,7 +49,7 @@ export interface SphereEffortAllocation {
   hours: number;
   percent: number;
   color: string;
-  icon: string;
+  icon: IconName;
 }
 
 export interface GoalContributionSummary {
@@ -423,7 +425,7 @@ export function computeLifeIntelligence(
       hours: Math.round((focusMinsCurrent / 60) * 10) / 10,
       percent: totalActiveMinutes > 0 ? Math.round((focusMinsCurrent / totalActiveMinutes) * 100) : 0,
       color: '#3b82f6',
-      icon: '◷'
+      icon: 'timer'
     },
     {
       sphere: 'workout',
@@ -433,7 +435,7 @@ export function computeLifeIntelligence(
       hours: Math.round((workoutMinsCurrent / 60) * 10) / 10,
       percent: totalActiveMinutes > 0 ? Math.round((workoutMinsCurrent / totalActiveMinutes) * 100) : 0,
       color: '#10b981',
-      icon: '⚡'
+      icon: 'dumbbell'
     },
     {
       sphere: 'reading',
@@ -443,7 +445,7 @@ export function computeLifeIntelligence(
       hours: Math.round((readingMinsCurrent / 60) * 10) / 10,
       percent: totalActiveMinutes > 0 ? Math.round((readingMinsCurrent / totalActiveMinutes) * 100) : 0,
       color: '#f59e0b',
-      icon: '📖'
+      icon: 'book-open'
     },
     {
       sphere: 'drawing',
@@ -453,7 +455,7 @@ export function computeLifeIntelligence(
       hours: Math.round((drawingMinsCurrent / 60) * 10) / 10,
       percent: totalActiveMinutes > 0 ? Math.round((drawingMinsCurrent / totalActiveMinutes) * 100) : 0,
       color: '#a855f7',
-      icon: '🎨'
+      icon: 'palette'
     }
   ];
 
@@ -482,15 +484,11 @@ export function computeLifeIntelligence(
 
   // 9. DAILY TREND TIME-SERIES (Last 7 or 14 or 30 days based on horizon)
   const trendDaysCount = horizon === 'today' ? 7 : horizon === 'week' ? 7 : 14;
-  const dayNamesAr = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
-  const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
   const dailyTrend: DayMetricPoint[] = Array.from({ length: trendDaysCount }).map((_, idx) => {
     const d = new Date(now);
     d.setDate(d.getDate() - (trendDaysCount - 1 - idx));
     const dtStr = formatYmd(d);
-    const dayIndex = d.getDay();
-    const dayLabel = isAr ? dayNamesAr[dayIndex] : dayNamesEn[dayIndex];
+    const dayLabel = weekDayLabel(dayOfWeek(d), isAr);
 
     const dayTasks = tasks.filter((t) => t.status === 'completed' && isTaskInPeriod(t, new Set([dtStr]))).length;
     const dayHabits = habits.filter((h) => (h.completedDates || []).includes(dtStr)).length;
@@ -543,8 +541,7 @@ export function computeLifeIntelligence(
     const d = new Date(now);
     d.setDate(d.getDate() - (heatmapTotalDays - 1 - idx));
     const dtStr = formatYmd(d);
-    const dayIndex = d.getDay();
-    const dayLabel = isAr ? dayNamesAr[dayIndex] : dayNamesEn[dayIndex];
+    const dayLabel = weekDayLabel(dayOfWeek(d), isAr);
 
     const dayTasks = tasks.filter((t) => t.status === 'completed' && isTaskInPeriod(t, new Set([dtStr]))).length;
     const dayHabits = habits.filter((h) => (h.completedDates || []).includes(dtStr)).length;

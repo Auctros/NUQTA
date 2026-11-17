@@ -1,6 +1,6 @@
 import { defaultProfile } from '../lib/storage';
 import { emptyHealthRecord } from '../lib/healthDefaults';
-import { localDateKey } from '../lib/dateKey';
+import { localDateKey, addDaysToKey } from '../lib/dateKey';
 import { create } from 'zustand';
 import {
   Task,
@@ -23,6 +23,18 @@ import { NuqtaStorageEngine } from '../lib/storage';
 import { parseNaturalLanguageTask } from '../lib/nlpParser';
 import { computeDailyEnergyScore } from '../lib/energyAlgorithm';
 import { computeCurrentStreak } from '../lib/habitSchedule';
+import { isTaskPending } from '../lib/taskStatus';
+import { isWeeklyReviewDay } from '../lib/week';
+import {
+  draftFromTask,
+  materializeSeries,
+  newSeriesId,
+  pendingOccurrenceIds,
+  reconcileSeries,
+  removeSeries,
+  seriesDates,
+  SERIES_HORIZON_DAYS
+} from '../lib/taskRecurrence';
 import { runLiquidThemeTransition } from '../lib/themeTransition';
 import {
   generateEmptyQuranSurahs,
@@ -117,6 +129,28 @@ const pruneGoalRelationIds = (
 };
 
 /**
+ * Fields an edit copies across every occurrence of a series. Scheduling identity
+ * (`scheduledDate`), status and lifecycle timestamps are deliberately excluded: each
+ * occurrence keeps its own day and its own completion state.
+ */
+const seriesFieldsFrom = (updates: Partial<Task>): Partial<Task> => {
+  const {
+    scheduledDate: _d,
+    status: _st,
+    completedAt: _ca,
+    cancelledAt: _xa,
+    recurrence: _r,
+    seriesId: _s,
+    occurrenceIndex: _o,
+    id: _id,
+    createdAt: _cr,
+    updatedAt: _ua,
+    ...fields
+  } = updates;
+  return fields;
+};
+
+/**
  * Recompute a Quran studio's denormalised totals from its surah states and its
  * session log, so deleting a session (or surah progress) can never leave a
  * stale aggregate behind.
@@ -156,7 +190,7 @@ interface NuqtaStoreState {
   isRescueModeOpen: boolean;
   isQuickCaptureOpen: boolean;
   isSundayRitualOpen: boolean;
-  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'settings' | 'quran' | 'reading' | 'workout' | 'drawing' | 'archive';
+  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'settings' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'archive';
   searchQuery: string;
   selectedTagFilter: string | null;
 
@@ -175,9 +209,21 @@ interface NuqtaStoreState {
   addTaskFromNLP: (rawText: string) => Task;
   createTask: (draft: Partial<Task>) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
+  /**
+   * Apply an edit to every still-open occurrence of a recurring series.
+   * `anchorId` is the occurrence the user edited: its date is the series anchor, so a
+   * changed recurrence rule is re-materialised from that day forward.
+   */
+  updateTaskSeries: (seriesId: string, anchorId: string, updates: Partial<Task>) => void;
   toggleTaskStatus: (id: string) => void;
   toggleTopThree: (id: string) => { success: boolean; message?: string };
   deleteTask: (id: string) => void;
+  /** Delete every occurrence of a recurring series. */
+  deleteTaskSeries: (seriesId: string) => void;
+  /** Skip one occurrence without completing it (leaves the rest of the series). */
+  skipTaskOccurrence: (id: string) => void;
+  /** Materialise recurring-task occurrences up to the rolling horizon. */
+  topUpRecurringTasks: () => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   addSubtask: (taskId: string, title: string) => void;
   smartBatchReschedule: (tasksToReschedule: { taskId: string; date: string }[]) => void;
@@ -312,10 +358,9 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
     const energy = computeDailyEnergyScore(todayHealth, tasks);
 
-    // Check if Sunday review is due (if Sunday and not done today)
-    const isSunday = new Date().getDay() === 0;
+    // The weekly review closes the week on the weekly day off (Friday).
     const reviewedToday = sundayReviews.some((r) => r.date === todayStr);
-    const weeklySundayReviewDue = isSunday && !reviewedToday;
+    const weeklySundayReviewDue = isWeeklyReviewDay(todayStr) && !reviewedToday;
 
     set({
       tasks,
@@ -331,6 +376,10 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       historyAuditLogs,
       energyScore: energy
     });
+
+    // Roll the recurrence horizon forward on every load so a series always has the
+    // upcoming occurrences materialised without unbounded growth.
+    get().topUpRecurringTasks();
   },
 
   setActiveNavTab: (tab) => set({ activeNavTab: tab }),
@@ -373,34 +422,68 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   createTask: (draft) => {
     const todayStr = localDateKey();
-    const newTask: Task = {
-      id: 't-' + crypto.randomUUID().slice(0, 8),
+    const base = {
       title: draft.title || 'Untitled Action',
       notes: draft.notes || '',
       priority: draft.priority || 3,
-      status: 'todo',
       isTopThree: draft.isTopThree || false,
-      scheduledDate: draft.scheduledDate || todayStr,
       scheduledTime: draft.scheduledTime,
       estimatedMinutes: draft.estimatedMinutes || 30,
       tags: draft.tags || [],
       energyLevelRequired: draft.energyLevelRequired || 'medium',
       subtasks: draft.subtasks || [],
-      linkedGoalId: draft.linkedGoalId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      linkedGoalId: draft.linkedGoalId
+    } as const;
 
-    const updated = [newTask, ...get().tasks];
+    // A recurring task becomes a bounded series of real occurrence records. The
+    // first occurrence is the anchor date; the rest are topped up to the horizon.
+    let newTasks: Task[];
+    if (draft.recurrence) {
+      const seriesId = newSeriesId();
+      const anchor = draft.scheduledDate || todayStr;
+      const nowIso = new Date().toISOString();
+      newTasks = materializeSeries(seriesId, base, draft.recurrence, anchor, new Set(), todayStr, nowIso);
+      if (newTasks.length === 0) {
+        // A rule that produces nothing in range still needs one anchor occurrence.
+        newTasks = [
+          {
+            id: 't-' + crypto.randomUUID().slice(0, 8),
+            ...base,
+            status: 'todo',
+            scheduledDate: anchor,
+            recurrence: draft.recurrence,
+            seriesId,
+            occurrenceIndex: 0,
+            createdAt: nowIso,
+            updatedAt: nowIso
+          }
+        ];
+      }
+    } else {
+      newTasks = [
+        {
+          id: 't-' + crypto.randomUUID().slice(0, 8),
+          ...base,
+          status: 'todo',
+          scheduledDate: draft.scheduledDate || todayStr,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+    }
+
+    const updated = [...newTasks, ...get().tasks];
     NuqtaStorageEngine.saveTasks(updated);
     set({ tasks: updated });
 
-    if (newTask.linkedGoalId) {
+    const linkedGoalId = base.linkedGoalId;
+    if (linkedGoalId) {
       const updatedGoals = get().goals.map((g) => {
-        if (g.id === newTask.linkedGoalId) {
+        if (g.id === linkedGoalId) {
           const currentIds = g.linkedTaskIds || [];
-          if (!currentIds.includes(newTask.id)) {
-            return { ...g, linkedTaskIds: [...currentIds, newTask.id], updatedAt: new Date().toISOString() };
+          const added = newTasks.map((t) => t.id).filter((id) => !currentIds.includes(id));
+          if (added.length > 0) {
+            return { ...g, linkedTaskIds: [...currentIds, ...added], updatedAt: new Date().toISOString() };
           }
         }
         return g;
@@ -492,7 +575,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     if (!task) return { success: false, message: 'Task not found' };
 
     const currentTopThreeCount = get().tasks.filter(
-      (t) => t.isTopThree && t.status !== 'completed'
+      (t) => t.isTopThree && isTaskPending(t)
     ).length;
 
     // Strict Behavioral Science Guard: No more than 3 active focus items
@@ -520,6 +603,98 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const updatedGoals = pruneGoalRelationIds(get().goals, { taskIds: [id] });
     NuqtaStorageEngine.saveGoals(updatedGoals);
     set({ goals: updatedGoals });
+  },
+
+  updateTaskSeries: (seriesId, anchorId, updates) => {
+    const now = new Date().toISOString();
+    const todayStr = localDateKey();
+    const tasks = get().tasks;
+    const anchor = tasks.find((t) => t.id === anchorId);
+    const rule = updates.recurrence ?? anchor?.recurrence;
+
+    // When the rule (or the anchor date) changed, rebuild the still-open future
+    // occurrences from the anchor instead of leaving the old cadence in place.
+    if (anchor && rule && (updates.recurrence !== undefined || updates.scheduledDate !== undefined)) {
+      const anchorKey = updates.scheduledDate || anchor.scheduledDate || todayStr;
+      const draft = { ...draftFromTask(anchor), ...seriesFieldsFrom(updates) };
+      const updated = reconcileSeries(tasks, seriesId, rule, anchorKey, todayStr, now, draft);
+      NuqtaStorageEngine.saveTasks(updated);
+      set({ tasks: updated });
+      return;
+    }
+
+    // Fields that describe the series are copied; each occurrence keeps its own
+    // scheduledDate/status so an edit never collapses the series onto one day or
+    // resurrects a completed occurrence.
+    const seriesFields = seriesFieldsFrom(updates);
+    const updated = tasks.map((t) =>
+      t.seriesId === seriesId && isTaskPending(t) ? { ...t, ...seriesFields, updatedAt: now } : t
+    );
+    NuqtaStorageEngine.saveTasks(updated);
+    set({ tasks: updated });
+  },
+
+  deleteTaskSeries: (seriesId) => {
+    const ids = pendingOccurrenceIds(get().tasks, seriesId);
+    const updated = removeSeries(get().tasks, seriesId);
+    NuqtaStorageEngine.saveTasks(updated);
+    set({ tasks: updated });
+
+    if (ids.length > 0) {
+      const updatedGoals = pruneGoalRelationIds(get().goals, { taskIds: ids });
+      NuqtaStorageEngine.saveGoals(updatedGoals);
+      set({ goals: updatedGoals });
+    }
+  },
+
+  skipTaskOccurrence: (id) => {
+    // Skip one occurrence only: the rest of the series is untouched, and a skipped
+    // day is not counted as completed.
+    const updated = get().tasks.map((t) =>
+      t.id === id
+        ? { ...t, status: 'skipped' as const, isTopThree: false, updatedAt: new Date().toISOString() }
+        : t
+    );
+    NuqtaStorageEngine.saveTasks(updated);
+    set({ tasks: updated });
+  },
+
+  topUpRecurringTasks: () => {
+    const todayStr = localDateKey();
+    const tasks = get().tasks;
+    const seriesIds = [...new Set(tasks.filter((t) => t.seriesId && t.recurrence).map((t) => t.seriesId!))];
+    if (seriesIds.length === 0) return;
+
+    const additions: Task[] = [];
+    for (const seriesId of seriesIds) {
+      const members = tasks.filter((t) => t.seriesId === seriesId);
+      // Anchor = the earliest occurrence (its date is the series start).
+      const anchorTask = members
+        .filter((t) => t.scheduledDate)
+        .sort((a, b) => (a.scheduledDate ?? '').localeCompare(b.scheduledDate ?? ''))[0];
+      const rule = anchorTask?.recurrence;
+      if (!anchorTask?.scheduledDate || !rule) continue;
+
+      const draft = {
+        title: anchorTask.title,
+        notes: anchorTask.notes,
+        priority: anchorTask.priority,
+        isTopThree: anchorTask.isTopThree,
+        scheduledTime: anchorTask.scheduledTime,
+        estimatedMinutes: anchorTask.estimatedMinutes,
+        tags: anchorTask.tags,
+        energyLevelRequired: anchorTask.energyLevelRequired,
+        linkedGoalId: anchorTask.linkedGoalId,
+        subtasks: anchorTask.subtasks
+      };
+      const existing = seriesDates(tasks, seriesId);
+      additions.push(...materializeSeries(seriesId, draft, rule, anchorTask.scheduledDate, existing, todayStr));
+    }
+
+    if (additions.length === 0) return;
+    const updated = [...tasks, ...additions];
+    NuqtaStorageEngine.saveTasks(updated);
+    set({ tasks: updated });
   },
 
   toggleSubtask: (taskId, subtaskId) => {

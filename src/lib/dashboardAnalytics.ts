@@ -11,6 +11,8 @@ import {
 import { addDaysToKey, isDateKey, localDateKey, localDayFrom, parseDateKey } from './dateKey';
 import { evaluateGoalProgress, GoalIntelligenceSummary } from './goalProgressEngine';
 import { habitCompliance, isHabitDueOn } from './habitSchedule';
+import { isTaskActive, isTaskDone, isTaskPending } from './taskStatus';
+import { WEEK_DAY_ORDER, weekDayLabel, indexFromWeekStart, dayOfWeek } from './week';
 
 export interface DashboardAnalyticsInput {
   tasks: Task[];
@@ -244,7 +246,7 @@ function getActiveHabits(habits: Habit[]): Habit[] {
 }
 
 function getActiveTasks(tasks: Task[]): Task[] {
-  return tasks.filter((t) => !t.isArchived && t.status !== 'archived' && t.status !== 'cancelled');
+  return tasks.filter(isTaskActive);
 }
 
 function buildDailyKeyRange(endKey: string, length: number): string[] {
@@ -407,9 +409,9 @@ export function computeDashboardKPIs(
       t.scheduledDate === todayKey ||
       (t.status === 'completed' && t.completedAt && localDayFrom(t.completedAt) === todayKey)
   );
-  const todayDone = todayTasks.filter((t) => t.status === 'completed').length;
+  const todayDone = todayTasks.filter(isTaskDone).length;
   const overdueCount = activeTasks.filter(
-    (t) => t.status !== 'completed' && Boolean(t.scheduledDate) && t.scheduledDate! < todayKey
+    (t) => isTaskPending(t) && Boolean(t.scheduledDate) && t.scheduledDate! < todayKey
   ).length;
 
   const last7Keys = buildDailyKeyRange(todayKey, 7);
@@ -418,18 +420,18 @@ export function computeDashboardKPIs(
   const prior7Set = new Set(prior7Keys);
 
   const inWindow = (t: Task, win: Set<string>) => {
-    const doneDay = t.status === 'completed' && t.completedAt ? localDayFrom(t.completedAt) : null;
+    const doneDay = isTaskDone(t) && t.completedAt ? localDayFrom(t.completedAt) : null;
     if (doneDay && win.has(doneDay)) return true;
     if (t.scheduledDate && win.has(t.scheduledDate)) return true;
     return false;
   };
 
   const tasks7d = activeTasks.filter((t) => inWindow(t, last7Set));
-  const done7d = tasks7d.filter((t) => t.status === 'completed').length;
+  const done7d = tasks7d.filter(isTaskDone).length;
   const rate7d = tasks7d.length > 0 ? Math.round((done7d / tasks7d.length) * 100) : null;
 
   const priorTasks7d = activeTasks.filter((t) => inWindow(t, prior7Set));
-  const priorDone7d = priorTasks7d.filter((t) => t.status === 'completed').length;
+  const priorDone7d = priorTasks7d.filter(isTaskDone).length;
   const priorRate7d = priorTasks7d.length > 0 ? Math.round((priorDone7d / priorTasks7d.length) * 100) : null;
 
   // 2. Consistency (Habit compliance via habitSchedule)
@@ -1083,12 +1085,11 @@ export function buildSecondaryAnalytics(
   }
   const earliestTrackedDate = trackingDates.length > 0 ? trackingDates.sort()[0] : null;
 
-  // Build 14 full weeks (98 days) aligned so each column is Sun..Sat (7 rows)
-  const todayDt = parseDateKey(todayKey) || new Date();
-  const dow = todayDt.getDay(); // 0 = Sun
-  const weekEndSaturday = addDaysToKey(todayKey, 6 - dow);
+  // Build 14 full weeks (98 days) aligned so each column is Sat..Fri (7 rows),
+  // matching NUQTA's Saturday-start week.
+  const weekEndFriday = addDaysToKey(todayKey, 6 - indexFromWeekStart(todayKey));
   const totalWeeks = 14;
-  const gridStartKey = addDaysToKey(weekEndSaturday, -(totalWeeks * 7 - 1));
+  const gridStartKey = addDaysToKey(weekEndFriday, -(totalWeeks * 7 - 1));
 
   const countsForScale: number[] = [];
   interface RawCell {
@@ -1858,25 +1859,25 @@ export function buildConsistencyBreakdown(
   const dailyMap = indexDailyAggregates(input);
   const activeHabits = getActiveHabits(input.habits);
 
-  const dowLabelsAr = ['أح', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب'];
-  const dowLabelsEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const keys98 = buildDailyKeyRange(todayKey, 98);
 
-  const dowBuckets = Array.from({ length: 7 }, (_, dow) => ({
+  // Buckets are ordered in NUQTA's week (Sat..Fri), not Sun..Sat, so the weekday
+  // strip reads left-to-right the same way the week does.
+  const dowBuckets = WEEK_DAY_ORDER.map((dow) => ({
     dow,
-    labelAr: dowLabelsAr[dow],
-    labelEn: dowLabelsEn[dow],
+    labelAr: weekDayLabel(dow, true),
+    labelEn: weekDayLabel(dow, false),
     dueCount: 0,
     doneCount: 0,
     minsSum: 0,
     minsDays: 0
   }));
+  const dowIndex = new Map(dowBuckets.map((b, i) => [b.dow, i]));
 
   for (const k of keys98) {
     const dt = parseDateKey(k);
     if (!dt) continue;
-    const dow = dt.getDay();
-    const bucket = dowBuckets[dow];
+    const bucket = dowBuckets[dowIndex.get(dayOfWeek(dt)) ?? 0];
     for (const h of activeHabits) {
       const c = habitCompliance(h, [k]);
       bucket.dueCount += c.due;

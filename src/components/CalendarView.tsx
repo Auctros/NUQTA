@@ -1,7 +1,9 @@
 import { localDateKey, parseDateKey } from '../lib/dateKey';
+import { indexFromWeekStart, weekDayLabels } from '../lib/week';
+import { isTaskPending } from '../lib/taskStatus';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
-import { NuqtaIcon } from './NuqtaIcon';
+import { NuqtaIcon, IconName } from './NuqtaIcon';
 
 export const CalendarView: React.FC = () => {
   const { tasks, habits, focusSessions, goals, toggleTaskStatus, updateTask, profile, setActiveNavTab } = useNuqtaStore();
@@ -25,11 +27,11 @@ export const CalendarView: React.FC = () => {
     setSelectedDate(localDateKey(today));
   };
 
-  // Build 42 grid days for current month view
+  // Build 42 grid days for current month view, weeks starting on Saturday.
   const year = currentMonthDate.getFullYear();
   const month = currentMonthDate.getMonth();
   const firstDayOfMonth = new Date(year, month, 1);
-  const startDayIndex = firstDayOfMonth.getDay(); // 0 is Sunday
+  const startDayIndex = indexFromWeekStart(firstDayOfMonth); // 0 = Saturday
   const startDate = new Date(year, month, 1 - startDayIndex);
 
   const cells = Array.from({ length: 42 }).map((_, idx) => {
@@ -39,7 +41,7 @@ export const CalendarView: React.FC = () => {
     const isCurrentMonth = d.getMonth() === month;
     const isToday = key === todayStr;
     const isSelected = key === selectedDate;
-    const dayTasks = tasks.filter((t) => !t.isArchived && t.status !== 'archived' && t.scheduledDate === key && t.status !== 'completed');
+    const dayTasks = tasks.filter((t) => isTaskPending(t) && t.scheduledDate === key);
 
     return {
       date: d,
@@ -52,9 +54,7 @@ export const CalendarView: React.FC = () => {
     };
   });
 
-  const dayNamesAr = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-  const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dayNames = isAr ? dayNamesAr : dayNamesEn;
+  const dayNames = weekDayLabels(isAr);
 
   const monthLabel = currentMonthDate.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
     month: 'long',
@@ -63,11 +63,11 @@ export const CalendarView: React.FC = () => {
 
   // Selected date agenda tasks
   const agendaTasks = tasks
-    .filter((t) => !t.isArchived && t.status !== 'archived' && t.scheduledDate === selectedDate && t.status !== 'completed')
+    .filter((t) => isTaskPending(t) && t.scheduledDate === selectedDate)
     .sort((a, b) => (a.scheduledTime || '99:99').localeCompare(b.scheduledTime || '99:99'));
 
   // Selected date historical life events (sessions & achievements)
-  const dayHistoricalEvents: Array<{ id: string; title: string; meta: string; icon: string; color: string }> = [];
+  const dayHistoricalEvents: Array<{ id: string; title: string; meta: string; icon: IconName; color: string }> = [];
 
   // A. Quran Sessions
   habits.forEach((h) => {
@@ -77,7 +77,7 @@ export const CalendarView: React.FC = () => {
           id: `qs-${qs.id}`,
           title: `${qs.surahName} (${qs.ayahStart}-${qs.ayahEnd})`,
           meta: `${qs.durationMinutes} دقيقة • ${qs.type === 'new_memorization' ? 'حفظ' : 'مراجعة'}`,
-          icon: '📖',
+          icon: 'book-open',
           color: 'text-[var(--tone-success)] bg-[var(--tone-success-wash)] border-[var(--tone-success-line)]'
         });
       }
@@ -90,7 +90,7 @@ export const CalendarView: React.FC = () => {
           id: `rs-${rs.id}`,
           title: rs.bookTitle,
           meta: `${rs.pagesRead} صفحة • ${rs.durationMinutes} دقيقة`,
-          icon: '📚',
+          icon: 'book',
           color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]'
         });
       }
@@ -103,7 +103,7 @@ export const CalendarView: React.FC = () => {
           id: `ws-${ws.id}`,
           title: ws.title,
           meta: `${ws.durationMinutes} دقيقة • حجم ${ws.volumeKg} كغ`,
-          icon: '⚡',
+          icon: 'dumbbell',
           color: 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)] border-[var(--tone-warning-line)]'
         });
       }
@@ -116,7 +116,7 @@ export const CalendarView: React.FC = () => {
           id: `ap-${ap.id}`,
           title: ap.title,
           meta: `${ap.durationMinutes} دقيقة • وسيط ${ap.medium}`,
-          icon: '🎨',
+          icon: 'brush',
           color: 'text-[var(--tone-purple)] bg-[var(--tone-purple-wash)] border-[var(--tone-purple-line)]'
         });
       }
@@ -130,7 +130,7 @@ export const CalendarView: React.FC = () => {
         id: `fs-${fs.id}`,
         title: fs.taskTitle ? `جلسة تركيز: ${fs.taskTitle}` : 'جلسة عمل عميق',
         meta: `${fs.durationMinutes} دقيقة • إنتاجية ${fs.productivityScore}/5`,
-        icon: '⏱️',
+        icon: 'timer',
         color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]'
       });
     }
@@ -144,7 +144,7 @@ export const CalendarView: React.FC = () => {
           id: `ms-${m.id}`,
           title: `مرحلة منجزة: ${m.title}`,
           meta: `ضمن هدف: ${g.title}`,
-          icon: '🚩',
+          icon: 'flag',
           color: 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)] border-[var(--tone-warning-line)]'
         });
       }
@@ -153,7 +153,7 @@ export const CalendarView: React.FC = () => {
 
   // Heuristic auto-scheduler: assigns unassigned tasks to open time slots
   const handleAutoSchedule = () => {
-    const unassigned = tasks.filter((t) => t.status === 'todo' && !t.scheduledTime);
+    const unassigned = tasks.filter((t) => isTaskPending(t) && !t.scheduledTime);
     let startHour = 9;
     unassigned.forEach((t) => {
       if (startHour <= 17) {
@@ -187,11 +187,11 @@ export const CalendarView: React.FC = () => {
             {isAr ? 'اليوم' : 'Today'}
           </button>
           <button className="btn primary" onClick={handleAutoSchedule}>
-            <span>✳</span>
+            <NuqtaIcon name="sparkle" className="w-4 h-4" />
             <span>{isAr ? 'جدولة ذكية للمهام' : 'Auto Schedule'}</span>
           </button>
           <button className="btn subtle" onClick={() => setActiveNavTab('archive')}>
-            <span>🗄️</span>
+            <NuqtaIcon name="archive" className="w-4 h-4" />
             <span>{isAr ? 'الذاكرة والأرشيف' : 'Archive'}</span>
           </button>
           <button className="btn subtle" onClick={() => setActiveNavTab('tasks')}>
@@ -299,14 +299,14 @@ export const CalendarView: React.FC = () => {
                     <strong>{t.title}</strong>
                     <small>
                       {t.estimatedMinutes ? `${t.estimatedMinutes} ${isAr ? 'دقيقة' : 'mins'}` : (isAr ? 'بدون تقدير وقت' : 'untimed')}
-                      {t.isTopThree ? ` · ★ ${isAr ? 'أهم 3' : 'Top 3'}` : ''}
+                      {t.isTopThree ? <span className="inline-flex items-center gap-1"> · <NuqtaIcon name="star" className="w-3 h-3" /> {isAr ? 'أهم 3' : 'Top 3'}</span> : ''}
                     </small>
                     <div style={{ marginTop: '7px', display: 'flex', gap: '6px' }}>
                       <button
                         className="btn small subtle"
                         onClick={() => toggleTaskStatus(t.id)}
                       >
-                        ✓ {isAr ? 'تم' : 'Done'}
+                        <NuqtaIcon name="check" className="w-3.5 h-3.5" /> {isAr ? 'تم' : 'Done'}
                       </button>
                     </div>
                   </div>
@@ -328,7 +328,7 @@ export const CalendarView: React.FC = () => {
                     className={`p-2 rounded-lg border text-xs flex items-center justify-between ${ev.color}`}
                   >
                     <div className="flex items-center gap-1.5 truncate">
-                      <span>{ev.icon}</span>
+                      <NuqtaIcon name={ev.icon} className="w-3.5 h-3.5" />
                       <span className="font-semibold truncate">{ev.title}</span>
                     </div>
                     <span className="font-mono text-[10px] shrink-0 opacity-80">{ev.meta}</span>

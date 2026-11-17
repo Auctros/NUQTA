@@ -2,6 +2,8 @@ import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
+import { useEscapeKey } from '../lib/useEscapeKey';
+import { useModalFocus } from '../lib/useModalFocus';
 
 export const SundayRitualModal: React.FC = () => {
   const { isSundayRitualOpen, setSundayRitualOpen, completeSundayRitual, tasks, habits, focusSessions, profile } = useNuqtaStore();
@@ -12,6 +14,9 @@ export const SundayRitualModal: React.FC = () => {
   const [newLesson, setNewLesson] = useState('');
   const [topPriorities, setTopPriorities] = useState<string[]>(['إطلاق التحديث الجديد للمستخدمين', 'الحفاظ على 4 جلسات تركيز']);
   const [newPriority, setNewPriority] = useState('');
+
+  useEscapeKey(isSundayRitualOpen, () => setSundayRitualOpen(false));
+  const panelRef = useModalFocus<HTMLDivElement>(isSundayRitualOpen);
 
   if (!isSundayRitualOpen) return null;
 
@@ -54,7 +59,7 @@ export const SundayRitualModal: React.FC = () => {
 
   return (
     <div className="modal-backdrop" onClick={() => setSundayRitualOpen(false)} dir={isAr ? 'rtl' : 'ltr'}>
-      <div className="modal wide" onClick={(e) => e.stopPropagation()}>
+      <div ref={panelRef} tabIndex={-1} className="modal wide" role="dialog" aria-modal="true" aria-label={isAr ? 'طقس المراجعة الأسبوعية' : 'The Weekly Review Ritual'} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>
             <div className="eyebrow">
@@ -68,8 +73,12 @@ export const SundayRitualModal: React.FC = () => {
                 : 'Close out open loops, celebrate genuine wins, and architect your next 7 days.'}
             </p>
           </div>
-          <button className="modal-close" onClick={() => setSundayRitualOpen(false)}>
-            ×
+          <button
+            className="modal-close"
+            onClick={() => setSundayRitualOpen(false)}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
+          >
+            <NuqtaIcon name="close" className="w-4 h-4" />
           </button>
         </div>
 
@@ -98,7 +107,7 @@ export const SundayRitualModal: React.FC = () => {
             <div className="space-y-1.5">
               {wins.map((w, i) => (
                 <div key={i} className="task-row py-2 text-xs">
-                  <span className="text-accent font-bold">✓</span>
+                  <NuqtaIcon name="check" className="w-3.5 h-3.5 text-accent" />
                   <span className="flex-1">{w}</span>
                 </div>
               ))}
@@ -135,7 +144,7 @@ export const SundayRitualModal: React.FC = () => {
             <div className="space-y-1.5">
               {lessons.map((l, i) => (
                 <div key={i} className="task-row py-2 text-xs">
-                  <span className="text-orange font-bold">!</span>
+                  <NuqtaIcon name="alert" className="w-3.5 h-3.5 text-orange" />
                   <span className="flex-1">{l}</span>
                 </div>
               ))}
@@ -175,7 +184,7 @@ export const SundayRitualModal: React.FC = () => {
             <div className="space-y-1.5">
               {topPriorities.map((p, i) => (
                 <div key={i} className="task-row py-2 text-xs">
-                  <span className="text-accent font-bold">★</span>
+                  <NuqtaIcon name="star" className="w-3.5 h-3.5 text-accent" />
                   <span className="flex-1">{p}</span>
                 </div>
               ))}
@@ -199,7 +208,7 @@ export const SundayRitualModal: React.FC = () => {
                 {isAr ? 'السابق' : 'Back'}
               </button>
               <button className="btn primary" onClick={handleFinish}>
-                {isAr ? 'إتمام المراجعة الأسبوعية ✓' : 'Complete Ritual ✓'}
+                {isAr ? 'إتمام المراجعة الأسبوعية' : 'Complete Ritual'}
               </button>
             </div>
           </div>

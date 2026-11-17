@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Input, Modal } from './ui';
+import { NuqtaIcon } from './NuqtaIcon';
 
 /* ============================================================
    NUQTA — Command Palette
@@ -149,8 +150,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, i
         </div>
 
         <div className="mt-3 pt-2 border-t border-[var(--border-subtle)] flex items-center gap-3 text-[var(--fs-micro)] text-[var(--text-tertiary)]">
-          <span>↑↓ {isAr ? 'تنقّل' : 'navigate'}</span>
-          <span>↵ {isAr ? 'اختيار' : 'select'}</span>
+          <span className="inline-flex items-center gap-1"><NuqtaIcon name="chevronDown" className="w-3 h-3" /> {isAr ? 'تنقّل' : 'navigate'}</span>
+          <span className="inline-flex items-center gap-1"><NuqtaIcon name="arrow" className="w-3 h-3" /> {isAr ? 'اختيار' : 'select'}</span>
           <span>Esc {isAr ? 'إغلاق' : 'close'}</span>
         </div>
       </div>

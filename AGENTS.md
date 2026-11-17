@@ -20,7 +20,7 @@ with an IndexedDB mirror for recovery.
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(15 rules). Add a rule whenever a new safety property must never regress.
+(16 rules). Add a rule whenever a new safety property must never regress.
 
 ## Theming (light / dark)
 
@@ -41,6 +41,41 @@ with an IndexedDB mirror for recovery.
 - Verify with `scripts/e2e/views.py` (both themes, all widths) — a change that reads well in
   dark but leaves a dark panel in light mode is a regression.
 
+## Week / date rules (NUQTA week)
+
+- **NUQTA's week starts on Saturday and Friday is the weekly day off**
+  (Sat · Sun · Mon · Tue · Wed · Thu · Fri). `src/lib/week.ts` is the single source of
+  truth: `WEEK_DAY_ORDER`, `WEEKDAY_DOW`, `indexFromWeekStart`, `dayOfWeek`,
+  `isWorkingDay` / `isWeekOff`, `startOfWeekKey` / `endOfWeekKey` / `weekDayKeys`, and the
+  localised `weekDayLabel(s)` / `weekDayNarrow(s)` helpers.
+- Never call `Date.getDay()` and compare against a literal weekday number at a call site —
+  that is how the old Sunday-first behaviour drifted. Read the weekday through `week.ts`
+  (it is the only module allowed to call `getDay()`).
+- "Weekdays" everywhere means the working week (Sat–Thu), not Mon–Fri. The heatmap grid,
+  weekday-rhythm strip and 42-day calendar all align through `indexFromWeekStart`.
+
+## Recurrence engine
+
+- `src/lib/recurrence.ts` is the shared rule vocabulary (`RecurrenceRule`,
+  `RecurrenceFrequency` in `src/types/index.ts`). `isRuleDueOn` / `nextOccurrenceKey` /
+  `occurrencesInRange` are pure and day-key based (no raw `Date` arithmetic).
+- Tasks **materialise** (`src/lib/taskRecurrence.ts`): `materializeSeries` emits one real
+  `Task` per due date over a bounded horizon (`SERIES_HORIZON_DAYS`), sharing a `seriesId`
+  and a deterministic `occurrenceIndex`; `topUpRecurringTasks` (run from `initializeStore`)
+  tops the horizon up idempotently. Completing / skipping / editing / deleting one
+  occurrence is an ordinary task operation. Store actions: `updateTaskSeries`,
+  `deleteTaskSeries`, `skipTaskOccurrence`.
+- Habits **evaluate** (`src/lib/habitSchedule.ts`): a habit's `recurrence` (when present)
+  takes precedence over the legacy `frequency` field and nothing is stored per day, so
+  changing the rule re-scores past compliance without rewriting records.
+
+## Task status model
+
+- `src/lib/taskStatus.ts` owns the lifecycle vocabulary (`isTaskActive`, `isTaskDone`,
+  `isTaskClosed`, `isTaskPending`, `isTaskActiveDone`). Use these instead of inline
+  `status !== 'completed'` checks so a new status (e.g. `skipped`) cannot start counting as
+  pending in one view while being excluded in another. `skipped` is closed, not completed.
+
 ## Shared UI primitives
 
 - `src/components/ui/` exports the kit: `primitives`, `layout`, `forms`, `overlays`, and
@@ -49,6 +84,15 @@ with an IndexedDB mirror for recovery.
   whose `target.value` is the chosen option's value) and accepts `<option>` children, so it
   is a drop-in swap. It is portal-rendered, RTL-aware, keyboard-accessible and theme-aware.
   Do not add a new native `<select>`; the styling and behaviour would drift.
+- **Icons come from `NuqtaIcon` only.** `IconName` (exported from `./NuqtaIcon`) is the single
+  icon union; interface controls, nav items, tiles and status markers must render a
+  `NuqtaIcon`, never a bare emoji or a text glyph. Emoji that is *user content* (journal
+  mood, illustrations, studio vault imagery) is intentionally kept.
+- **Escape closes overlays.** Any overlay that renders its own backdrop (legacy `.modal`
+  markup and the kit `Modal`/`Sheet`) closes on Escape via `useEscapeKey(open, onClose)`
+  from `src/lib/useEscapeKey.ts`, and exposes `role="dialog"` + `aria-modal="true"`.
+- **Prefer inline panels over popups.** Reserve modals for genuinely modal tasks; savings
+  and budget editing live in inline panels toggled with `aria-expanded`/`aria-controls`.
 
 ## Layout / responsive rules
 
@@ -89,6 +133,15 @@ with an IndexedDB mirror for recovery.
   Add a key → it appears on the card and in the detail view. Entries marked `animated`
   must have phases that actually differ, and every pose must stay inside the 200×200
   viewBox — `tests/exerciseLibrary.test.tsx` enforces both.
+- **The exercise browser is one component: `ExerciseCatalog`**
+  (`src/components/workout/ExerciseCatalog.tsx`). It owns the search box, the filter row,
+  the result grid, the detail sheet, and the "recently performed" quick-pick; the Workout
+  Studio "Exercises" tab and the `WorkoutAppModal` "Exercise Catalog" tab both render it, so
+  the two entry points can never drift. Callers only supply `isAr`, `recentSessions`, and
+  what "add" means (`onAdd`/`addLabel`). `variant="inline"` drops the filter row for the
+  session drawer. Do not re-implement a second grid — extend this component instead.
+  `recentlyPerformedExercises(sessions)` in `exerciseCatalog.ts` resolves logged names back
+  to catalog entries; it is pure and name-based (an unknown/renamed exercise is skipped).
 - `MuscleMap` draws front/back anatomical views and highlights primary/secondary muscles;
   `ExerciseCard` and `ExerciseDetailModal` compose the illustration, muscle map, cues and
   variations. Both `WorkoutView` (Exercises tab) and `WorkoutAppModal` use the same card.
@@ -108,9 +161,29 @@ with an IndexedDB mirror for recovery.
 - Wipe clears the mirror first; if the mirror cannot be cleared, localStorage is kept so a
   later recovery cannot resurrect deleted data.
 
+## Insights engine
+
+- `src/lib/insightsEngine.ts` is the single source of truth for every Insights figure.
+  `computeInsightsReport(range, …)` returns the whole report (timeline, per-domain
+  summaries, weekday rhythm, correlations, streaks); `InsightsView` only renders it and
+  must not re-derive series of its own.
+- Honesty rule: a metric with no underlying record is `null`, never `0`, and the view
+  renders an explicit "no data" state. A flat line must mean "recorded flat", not "empty".
+- Timeline bucketing: `week` → daily (weekday-name labels), `30d` → daily (labels are the
+  day of month, because weekday names repeat across 30 columns), `90d` → Sat–Fri weeks,
+  `year`/`all-time` → months. Read the weekday through `week.ts`; never `Date.getDay()`.
+- `src/components/charts/InsightsCharts.tsx` holds the visual primitives (trend chart,
+  domain bars, weekday-rhythm strip) on the `--tone-*` / `--heat-*` tokens.
+
 ## Service worker
 
 `public/sw.js` precaches ONLY the discovered shell assets (index.html + its same-origin
 script/link assets). The cache name is versioned (`nuqta-shell-v<N>`) — bump
 `CACHE_VERSION` on every change. The fetch handler never writes to the cache, so dynamic
 requests and user data are never stored, and only NUQTA-owned caches are ever deleted.
+
+Notifications are routed through the service worker: `NuqtaNotificationEngine.notify`
+posts a `nuqta-notify` message to `navigator.serviceWorker.controller` when present (falling
+back to a page-level `Notification`), and the worker renders it and focuses/opens a client
+on `notificationclick`. This is NOT background push — with no server the page must be open
+for a reminder to fire; the worker only renders and routes the click.

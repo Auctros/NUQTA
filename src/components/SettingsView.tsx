@@ -8,8 +8,7 @@ import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 import { NuqtaSelect } from './ui';
 
 export const SettingsView: React.FC = () => {
-  const { profile, setLanguage, setTheme, updateProfileName } = useNuqtaStore();
-  const [nameInput, setNameInput] = useState(profile.name);
+  const { profile, setLanguage, setTheme, setActiveNavTab } = useNuqtaStore();
   const [importStatus, setImportStatus] = useState<string>('');
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
 
@@ -46,14 +45,6 @@ export const SettingsView: React.FC = () => {
     if (!file) return;
     const result = await restoreBackupFromFile(file, isAr, setImportStatus);
     if (result && result.ok) setTimeout(() => window.location.reload(), 1000);
-  };
-
-  const handleSaveName = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (nameInput.trim()) {
-      updateProfileName(nameInput.trim());
-      alert(isAr ? 'تم حفظ الاسم بنجاح' : 'Name updated successfully');
-    }
   };
 
   const handleWipeData = async () => {
@@ -105,40 +96,29 @@ export const SettingsView: React.FC = () => {
       <div className="settings-layout">
         {/* Left Column: Profile, Appearance, Data */}
         <section>
-          {/* Profile Section */}
+          {/* Profile lives on its own page; Settings links to it instead of duplicating the form. */}
           <div className="panel settings-section">
             <div className="panel-heading">
               <div>
                 <h2>{isAr ? 'الملف الشخصي' : 'Your Profile'}</h2>
-                <p>{isAr ? 'ملف محلي محفوظ على هذا الجهاز فقط.' : 'Local profile saved on this device only.'}</p>
+                <p>{isAr ? 'هويتك وتقدّمك في صفحة مستقلة.' : 'Your identity and progress live on their own page.'}</p>
               </div>
             </div>
 
             <div className="settings-profile">
               <span className="settings-avatar">{(profile.name || 'ع').charAt(0)}</span>
               <div>
-                <strong>{profile.name || (isAr ? 'علي' : 'User')}</strong>
+                <strong>{profile.name || (isAr ? 'مستخدم نقطة' : 'NUQTA User')}</strong>
                 <small>{isAr ? 'بيانات محفوظة محلياً وبشكل خاص' : 'Stored locally and privately'}</small>
               </div>
             </div>
 
-            <form onSubmit={handleSaveName} className="space-y-3">
-              <div className="field">
-                <label htmlFor="profile-name-input">{isAr ? 'اسم العرض' : 'Display Name'}</label>
-                <input
-                  id="profile-name-input"
-                  className="input"
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  maxLength={60}
-                />
-              </div>
-              <div className="form-actions">
-                <button type="submit" className="btn primary">
-                  {isAr ? 'حفظ الاسم' : 'Save'}
-                </button>
-              </div>
-            </form>
+            <div className="settings-actions">
+              <button type="button" className="btn" onClick={() => setActiveNavTab('profile')}>
+                <NuqtaIcon name="compass" className="w-4 h-4" />
+                <span>{isAr ? 'فتح الملف الشخصي' : 'Open Profile'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Preferences Section */}
@@ -166,7 +146,8 @@ export const SettingsView: React.FC = () => {
                 className={`btn small ${profile.theme === 'dark' ? 'primary' : 'subtle'}`}
                 onClick={() => setTheme(profile.theme === 'dark' ? 'light' : 'dark')}
               >
-                {profile.theme === 'dark' ? (isAr ? 'داكن ☾' : 'Dark ☾') : (isAr ? 'فاتح ☼' : 'Light ☼')}
+                <NuqtaIcon name={profile.theme === 'dark' ? 'moon' : 'sun'} className="w-3.5 h-3.5" />
+                <span>{profile.theme === 'dark' ? (isAr ? 'داكن' : 'Dark') : (isAr ? 'فاتح' : 'Light')}</span>
               </button>
             </div>
           </div>
@@ -182,9 +163,9 @@ export const SettingsView: React.FC = () => {
                   <strong>{isAr ? 'إذن إشعارات المتصفح' : 'Browser Notification Permission'}</strong>
                   <small>
                     {notifPermission === 'granted'
-                      ? (isAr ? '✓ الإشعارات مفعّلة في المتصفح' : '✓ Notifications granted')
+                      ? (isAr ? 'الإشعارات مفعّلة في المتصفح' : 'Notifications granted')
                       : notifPermission === 'denied'
-                      ? (isAr ? '✕ تم رفض الإذن من إعدادات المتصفح' : '✕ Permission blocked by browser')
+                      ? (isAr ? 'تم رفض الإذن من إعدادات المتصفح' : 'Permission blocked by browser')
                       : (isAr ? 'لم يتم تفعيل الإذن بعد' : 'Permission not requested yet')}
                   </small>
                 </div>
@@ -205,7 +186,7 @@ export const SettingsView: React.FC = () => {
                   className="btn"
                   onClick={() => {
                     NuqtaNotificationEngine.notify({
-                      title: isAr ? '🔔 تنبيه تجريبي من نقطة' : '🔔 Nuqta Test Alert',
+                      title: isAr ? 'تنبيه تجريبي من نقطة' : 'Nuqta Test Alert',
                       body: isAr
                         ? 'النظام الصوتي التخليقي وإشعارات المتصفح تعمل محلياً بكفاءة 100%!'
                         : 'Local synthesized audio and notifications are operating at 100%!',
@@ -317,15 +298,15 @@ export const SettingsView: React.FC = () => {
 
             <div className="space-y-2 mt-4 text-[11px] font-mono text-muted">
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-3.5 h-3.5 text-accent" />
                 <span>{isAr ? 'تخزين خاص على جهازك فقط' : 'Private on-device storage'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-3.5 h-3.5 text-accent" />
                 <span>{isAr ? 'بدون خوادم سحابية إلزامية' : 'Zero Cloud Surveillance'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-3.5 h-3.5 text-accent" />
                 <span>{isAr ? 'تصدير حر بصيغة قياسية مفتوحة' : 'Open JSON / CSV Portability'}</span>
               </div>
             </div>

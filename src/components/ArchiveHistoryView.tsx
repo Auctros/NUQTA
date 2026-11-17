@@ -13,8 +13,9 @@ import {
   UniversalHistoryItem,
   ArchivedItemSummary
 } from '../types';
-import { NuqtaIcon } from './NuqtaIcon';
+import { NuqtaIcon, IconName } from './NuqtaIcon';
 import { NuqtaSelect } from './ui';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const ArchiveHistoryView: React.FC = () => {
   const {
@@ -56,6 +57,7 @@ export const ArchiveHistoryView: React.FC = () => {
     historyItem?: UniversalHistoryItem;
     archivedItem?: ArchivedItemSummary;
   } | null>(null);
+  useEscapeKey(inspectingItem !== null, () => setInspectingItem(null));
 
   // Restore feedback toast
   const [restoreFeedback, setRestoreFeedback] = useState<string | null>(null);
@@ -186,7 +188,26 @@ export const ArchiveHistoryView: React.FC = () => {
       journal: { ar: 'اليوميات', en: 'Journal', icon: 'book-open' },
       review: { ar: 'المراجعات', en: 'Reviews', icon: 'compass' }
     };
-    return arabic ? `${labels[domain]?.icon || '📌'} ${labels[domain]?.ar || domain}` : `${labels[domain]?.icon || '📌'} ${labels[domain]?.en || domain}`;
+    return arabic ? labels[domain]?.ar || domain : labels[domain]?.en || domain;
+  }
+
+  // Domain icon (a valid NuqtaIcon name), rendered next to the label.
+  function domainIcon(domain: UniversalHistoryDomain): IconName {
+    const icons: Record<UniversalHistoryDomain, IconName> = {
+      tasks: 'check-square',
+      habits: 'repeat',
+      quran: 'book-open',
+      reading: 'book',
+      workout: 'dumbbell',
+      drawing: 'brush',
+      goals: 'target',
+      focus: 'timer',
+      health: 'activity',
+      finance: 'wallet',
+      journal: 'notebook',
+      review: 'compass'
+    };
+    return icons[domain] || 'layers';
   }
 
   // Event Type labels helper
@@ -243,7 +264,7 @@ export const ArchiveHistoryView: React.FC = () => {
       {/* Toast Notification */}
       {restoreFeedback && (
         <div className="fixed bottom-6 start-6 z-50 p-4 rounded-xl bg-[var(--surface-active)] border border-accent text-[var(--text-primary)] shadow-2xl flex items-center gap-3 animate-fade-in">
-          <span className="text-xl">✨</span>
+          <NuqtaIcon name="sparkle" className="w-5 h-5 text-[var(--accent)]" />
           <span className="text-sm font-medium">{restoreFeedback}</span>
         </div>
       )}
@@ -327,7 +348,7 @@ export const ArchiveHistoryView: React.FC = () => {
                 : 'bg-[var(--surface-inset)] text-muted hover:text-[var(--text-primary)] border border-[var(--border-default)]'
             }`}
           >
-            <span>🗄️</span>
+            <NuqtaIcon name="archive" className="w-4 h-4" />
             <span>{isAr ? 'الأرشيف الموحد' : 'Universal Archive'}</span>
             <span className="ms-1 px-1.5 py-0.2 rounded-full text-xs font-mono bg-black/20 text-current">
               {allArchived.length}
@@ -342,7 +363,7 @@ export const ArchiveHistoryView: React.FC = () => {
                 : 'bg-[var(--surface-inset)] text-muted hover:text-[var(--text-primary)] border border-[var(--border-default)]'
             }`}
           >
-            <span>📜</span>
+            <NuqtaIcon name="history" className="w-4 h-4" />
             <span>{isAr ? 'سجل الزمن والمسيرة' : 'Life Timeline'}</span>
             <span className="ms-1 px-1.5 py-0.2 rounded-full text-xs font-mono bg-black/20 text-current">
               {allHistory.length}
@@ -357,7 +378,7 @@ export const ArchiveHistoryView: React.FC = () => {
                 : 'bg-[var(--surface-inset)] text-muted hover:text-[var(--text-primary)] border border-[var(--border-default)]'
             }`}
           >
-            <span>📊</span>
+            <NuqtaIcon name="chart" className="w-4 h-4" />
             <span>{isAr ? 'سجلات الاستوديوهات التراكمية' : 'Specialized Studio Logs'}</span>
           </button>
         </div>
@@ -372,7 +393,7 @@ export const ArchiveHistoryView: React.FC = () => {
               placeholder={isAr ? 'بحث في الذاكرة والأرشيف...' : 'Search memory & archive...'}
               className="input w-full text-xs ps-8"
             />
-            <span className="absolute start-2.5 top-2.5 text-xs text-muted pointer-events-none">🔍</span>
+            <NuqtaIcon name="search" className="w-3.5 h-3.5 absolute start-2.5 top-2.5 text-muted pointer-events-none" />
           </div>
 
           <input
@@ -385,10 +406,10 @@ export const ArchiveHistoryView: React.FC = () => {
           {dateQuery && (
             <button
               onClick={() => setDateQuery('')}
-              className="px-2 py-1 text-xs text-muted hover:text-[var(--text-primary)]"
+              className="px-2 py-1 text-muted hover:text-[var(--text-primary)]"
               title={isAr ? 'إلغاء تصفية التاريخ' : 'Clear date'}
             >
-              ✕
+              <NuqtaIcon name="close" className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -410,7 +431,14 @@ export const ArchiveHistoryView: React.FC = () => {
                     : 'text-muted hover:text-[var(--text-primary)] bg-[var(--surface-inset)] border border-transparent'
                 }`}
               >
-                {dom === 'all' ? (isAr ? 'الكل' : 'All') : getDomainLabel(dom, isAr)}
+                <span className="inline-flex items-center gap-1.5">
+                  {dom === 'all' ? (
+                    <NuqtaIcon name="layers" className="w-3.5 h-3.5" />
+                  ) : (
+                    <NuqtaIcon name={domainIcon(dom)} className="w-3.5 h-3.5" />
+                  )}
+                  {dom === 'all' ? (isAr ? 'الكل' : 'All') : getDomainLabel(dom, isAr)}
+                </span>
               </button>
             )
           )}
@@ -460,7 +488,7 @@ export const ArchiveHistoryView: React.FC = () => {
 
           {filteredArchived.length === 0 ? (
             <div className="empty-state py-16">
-              <div className="empty-icon">🗄️</div>
+              <div className="empty-icon"><NuqtaIcon name="archive" className="w-7 h-7" /></div>
               <strong>{isAr ? 'لا توجد عناصر مؤرشفة مطابقة' : 'No archived items found'}</strong>
               <p>
                 {isAr
@@ -479,6 +507,7 @@ export const ArchiveHistoryView: React.FC = () => {
                     {/* Card Header */}
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[var(--surface-chip)] border border-[var(--border-default)] text-accent font-semibold flex items-center gap-1.5">
+                        <NuqtaIcon name={domainIcon(item.domain)} className="w-3.5 h-3.5" />
                         <span>{getDomainLabel(item.domain, isAr)}</span>
                       </span>
 
@@ -503,7 +532,7 @@ export const ArchiveHistoryView: React.FC = () => {
                     {/* Linked Goal Badge */}
                     {item.linkedGoalTitle && (
                       <div className="text-[11px] px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--tone-success)] border border-[var(--tone-success-line)] w-fit flex items-center gap-1">
-                        <span>🎯</span>
+                        <NuqtaIcon name="target" className="w-3.5 h-3.5" />
                         <span className="truncate max-w-[200px]">{item.linkedGoalTitle}</span>
                       </div>
                     )}
@@ -530,7 +559,7 @@ export const ArchiveHistoryView: React.FC = () => {
                       className="btn primary text-xs py-1 px-3 flex items-center gap-1.5 shadow-sm"
                       title={isAr ? 'استعادة فورية إلى المكان الأصلي' : 'Restore back to original place'}
                     >
-                      <span>↩</span>
+                      <NuqtaIcon name="restore" className="w-3.5 h-3.5" />
                       <span>{isAr ? 'استعادة' : 'Restore'}</span>
                     </button>
                   </div>
@@ -554,7 +583,7 @@ export const ArchiveHistoryView: React.FC = () => {
 
           {groupedHistory.length === 0 ? (
             <div className="empty-state py-16">
-              <div className="empty-icon">📜</div>
+              <div className="empty-icon"><NuqtaIcon name="history" className="w-7 h-7" /></div>
               <strong>{isAr ? 'لا توجد أحداث مطابقة في السجل' : 'No history events found'}</strong>
               <p>
                 {isAr
@@ -588,7 +617,8 @@ export const ArchiveHistoryView: React.FC = () => {
                         <div className="space-y-1.5 flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {/* Domain Tag */}
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-default)] font-semibold">
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-default)] font-semibold inline-flex items-center gap-1">
+                              <NuqtaIcon name={domainIcon(item.domain)} className="w-3 h-3" />
                               {getDomainLabel(item.domain, isAr)}
                             </span>
 
@@ -626,7 +656,7 @@ export const ArchiveHistoryView: React.FC = () => {
 
                           {item.linkedGoalTitle && (
                             <span className="text-[10px] text-[var(--tone-success)] flex items-center gap-1 mt-0.5">
-                              <span>🎯</span>
+                              <NuqtaIcon name="target" className="w-3.5 h-3.5" />
                               <span className="truncate max-w-[140px]">{item.linkedGoalTitle}</span>
                             </span>
                           )}
@@ -655,7 +685,7 @@ export const ArchiveHistoryView: React.FC = () => {
             <div className="panel p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-default)] space-y-3">
               <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">📖</span>
+                  <NuqtaIcon name="book-open" className="w-5 h-5 text-[var(--tone-info)]" />
                   <h3 className="text-base font-bold text-[var(--text-primary)]">
                     {isAr ? 'سجل جلسات حفظ وتسميع القرآن' : 'Quran Memorization History'}
                   </h3>
@@ -664,7 +694,7 @@ export const ArchiveHistoryView: React.FC = () => {
                   onClick={() => setActiveNavTab('quran')}
                   className="text-xs text-accent hover:underline font-mono"
                 >
-                  {isAr ? 'فتح الاستوديو ↗' : 'Open Studio ↗'}
+                  {isAr ? 'فتح الاستوديو' : 'Open Studio'}
                 </button>
               </div>
 
@@ -705,7 +735,7 @@ export const ArchiveHistoryView: React.FC = () => {
             <div className="panel p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-default)] space-y-3">
               <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">📚</span>
+                  <NuqtaIcon name="book" className="w-5 h-5 text-[var(--tone-info)]" />
                   <h3 className="text-base font-bold text-[var(--text-primary)]">
                     {isAr ? 'سجل جلسات وخزانة القراءة' : 'Reading Sessions & Vault'}
                   </h3>
@@ -714,7 +744,7 @@ export const ArchiveHistoryView: React.FC = () => {
                   onClick={() => setActiveNavTab('reading')}
                   className="text-xs text-accent hover:underline font-mono"
                 >
-                  {isAr ? 'فتح الاستوديو ↗' : 'Open Studio ↗'}
+                  {isAr ? 'فتح الاستوديو' : 'Open Studio'}
                 </button>
               </div>
 
@@ -753,7 +783,7 @@ export const ArchiveHistoryView: React.FC = () => {
             <div className="panel p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-default)] space-y-3">
               <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">⚡</span>
+                  <NuqtaIcon name="dumbbell" className="w-5 h-5 text-[var(--tone-warning)]" />
                   <h3 className="text-base font-bold text-[var(--text-primary)]">
                     {isAr ? 'سجل حصص اللياقة البدنية' : 'Workout Sessions History'}
                   </h3>
@@ -762,7 +792,7 @@ export const ArchiveHistoryView: React.FC = () => {
                   onClick={() => setActiveNavTab('workout')}
                   className="text-xs text-accent hover:underline font-mono"
                 >
-                  {isAr ? 'فتح الاستوديو ↗' : 'Open Studio ↗'}
+                  {isAr ? 'فتح الاستوديو' : 'Open Studio'}
                 </button>
               </div>
 
@@ -801,7 +831,7 @@ export const ArchiveHistoryView: React.FC = () => {
             <div className="panel p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--border-default)] space-y-3">
               <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">🎨</span>
+                  <NuqtaIcon name="brush" className="w-5 h-5 text-[var(--tone-purple)]" />
                   <h3 className="text-base font-bold text-[var(--text-primary)]">
                     {isAr ? 'معرض الأعمال والمشاريع الفنية' : 'Art Studio Gallery & Pieces'}
                   </h3>
@@ -810,7 +840,7 @@ export const ArchiveHistoryView: React.FC = () => {
                   onClick={() => setActiveNavTab('drawing')}
                   className="text-xs text-accent hover:underline font-mono"
                 >
-                  {isAr ? 'فتح المرسم ↗' : 'Open Studio ↗'}
+                  {isAr ? 'فتح المرسم' : 'Open Studio'}
                 </button>
               </div>
 
@@ -854,6 +884,8 @@ export const ArchiveHistoryView: React.FC = () => {
       {inspectingItem && (
         <div className="modal-backdrop" onClick={() => setInspectingItem(null)}>
           <div
+            role="dialog"
+            aria-modal="true"
             className="modal-content max-w-xl p-6 bg-[var(--surface-deep)] border border-[var(--border-default)] rounded-2xl shadow-2xl space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
@@ -871,9 +903,10 @@ export const ArchiveHistoryView: React.FC = () => {
               </div>
               <button
                 onClick={() => setInspectingItem(null)}
-                className="text-muted hover:text-[var(--text-primary)] text-lg p-1"
+                className="text-muted hover:text-[var(--text-primary)] p-1"
+                aria-label={isAr ? 'إغلاق' : 'Close'}
               >
-                ✕
+                <NuqtaIcon name="close" className="w-4 h-4" />
               </button>
             </div>
 
@@ -924,7 +957,7 @@ export const ArchiveHistoryView: React.FC = () => {
             {(inspectingItem.historyItem?.linkedGoalTitle || inspectingItem.archivedItem?.linkedGoalTitle) && (
               <div className="p-3 rounded-xl bg-[var(--surface-deep)] border border-[var(--tone-success-line)] text-xs flex items-center justify-between">
                 <div className="flex items-center gap-2 text-[var(--tone-success)]">
-                  <span>🎯</span>
+                  <NuqtaIcon name="target" className="w-3.5 h-3.5" />
                   <span>
                     {isAr ? 'مرتبط بالهدف الاستراتيجي:' : 'Linked Goal:'}{' '}
                     <strong>{inspectingItem.historyItem?.linkedGoalTitle || inspectingItem.archivedItem?.linkedGoalTitle}</strong>
@@ -940,7 +973,7 @@ export const ArchiveHistoryView: React.FC = () => {
                   onClick={() => handleRestore(inspectingItem.archivedItem!)}
                   className="btn primary text-xs py-2 px-4 flex items-center gap-2"
                 >
-                  <span>↩</span>
+                  <NuqtaIcon name="restore" className="w-4 h-4" />
                   <span>{isAr ? 'استعادة العنصر إلى المجال النشط' : 'Restore Item to Active Domain'}</span>
                 </button>
               ) : (

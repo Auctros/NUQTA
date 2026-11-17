@@ -49,7 +49,7 @@ export const QuickCaptureBar: React.FC = () => {
           aria-label={isAr ? 'التقاط' : 'Capture'}
           className="send-capture"
         >
-          ↵
+          <NuqtaIcon name="arrow" className="w-4 h-4" />
         </button>
       </form>
 

@@ -5,6 +5,7 @@ import {
   MilestoneTimelineItem
 } from '../../lib/dashboardAnalytics';
 import { NuqtaIcon } from '../NuqtaIcon';
+import { pacingIconName } from '../../lib/goalProgressEngine';
 
 interface GoalsMilestonesSectionProps {
   items: GoalMilestoneOverview[];
@@ -112,7 +113,8 @@ export const GoalsMilestonesSection: React.FC<GoalsMilestonesSectionProps> = ({
                     <div className="flex items-center gap-2 text-[11px] font-mono">
                       <span className="uppercase text-[var(--text-tertiary)]">{goal.category}</span>
                       <span className="text-[var(--text-tertiary)]">·</span>
-                      <span className={pacingTone}>
+                      <span className={`${pacingTone} inline-flex items-center gap-1`}>
+                        <NuqtaIcon name={pacingIconName(summary.pacingStatus)} className="w-3 h-3" />
                         {isAr ? summary.pacingLabelAr : summary.pacingLabelEn}
                       </span>
                       {summary.daysRemaining !== null && (

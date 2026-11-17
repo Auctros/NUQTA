@@ -384,10 +384,10 @@ describe('dashboardAnalytics', () => {
     expect(todayPt.breakdownEn).toBe('Reading 28m · Workout 28m · Art 90m · Quran 45m');
   });
 
-  it('distinguishes completed, missed scheduled, rest, and missing days on the consistency heatmap using habit schedules', () => {
+  it('distinguishes completed, missed, rest, future, and missing days on the consistency heatmap', () => {
     const input = makeEmptyInput();
-    // 2026-11-13 is a Friday; 2026-11-02 is Monday (createdAt).
-    // Weekday habit is due Mon-Fri, NOT Sat (2026-11-07) / Sun (2026-11-08).
+    // NUQTA week runs Saturday..Thursday, with Friday as the weekly day off.
+    // 2026-11-02 is Monday (createdAt); 2026-11-06 is Friday (day off).
     input.habits = [
       {
         id: 'h-weekdays',
@@ -401,22 +401,23 @@ describe('dashboardAnalytics', () => {
         longestStreak: 1,
         freezesRemaining: 2,
         freezesUsedDates: [],
-        completedDates: ['2026-11-09', '2026-11-13'], // Mon & Fri completed; Tue-Thu missed
+        completedDates: ['2026-11-09', '2026-11-13'], // Mon & Fri completed
         createdAt: '2026-11-02T08:00:00.000Z'
       }
     ];
 
-    const sec = buildSecondaryAnalytics(input, '2026-11-13');
+    const sec = buildSecondaryAnalytics(input, '2026-11-14');
     expect(sec.hasScheduleOrHistory).toBe(true);
     const cellMap = new Map(sec.weeks.flat().map((c) => [c.dateKey, c]));
 
     expect(cellMap.get('2026-10-25')?.state).toBe('missing'); // before createdAt
-    expect(cellMap.get('2026-11-07')?.state).toBe('rest');    // Saturday (not due on weekdays schedule)
-    expect(cellMap.get('2026-11-08')?.state).toBe('rest');    // Sunday (not due on weekdays schedule)
+    expect(cellMap.get('2026-11-06')?.state).toBe('rest');    // Friday, the weekly day off
+    expect(cellMap.get('2026-11-07')?.state).toBe('missed');  // Saturday is a working day, uncompleted
+    expect(cellMap.get('2026-11-08')?.state).toBe('missed');  // Sunday is a working day, uncompleted
     expect(cellMap.get('2026-11-09')?.state).toBe('completed');
     expect(cellMap.get('2026-11-10')?.state).toBe('missed');  // Tuesday due & uncompleted
-    expect(cellMap.get('2026-11-13')?.state).toBe('completed');
-    expect(cellMap.get('2026-11-14')?.state).toBe('future');  // after todayKey
+    expect(cellMap.get('2026-11-13')?.state).toBe('completed'); // Friday, a bonus completion
+    expect(cellMap.get('2026-11-15')?.state).toBe('future');  // after todayKey
   });
 
   it('computes V2 rollingAvg, event annotations, activity allocation, scatter correlation, domain analytics, and milestone timeline', () => {

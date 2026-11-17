@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, Goal, Task } from '../types';
 import { localDateKey, localDayFrom, localTimeKey } from '../lib/dateKey';
+import { isTaskActive, isTaskDone, isTaskPending } from '../lib/taskStatus';
 import {
   buildActivityAllocation,
   buildConsistencyBreakdown,
@@ -29,6 +30,7 @@ import { SecondaryAnalyticsSection } from './dashboard/SecondaryAnalyticsSection
 import { LifeDomainsGrid } from './dashboard/LifeDomainsGrid';
 import { GoalsMilestonesSection } from './dashboard/GoalsMilestonesSection';
 import { LifeConnectionsSection } from './dashboard/LifeConnectionsSection';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const DashboardView: React.FC = () => {
   const {
@@ -62,6 +64,7 @@ export const DashboardView: React.FC = () => {
 
   // Daily Focus Selector Modal State
   const [isTaskPickerOpen, setIsTaskPickerOpen] = useState(false);
+  useEscapeKey(isTaskPickerOpen, () => setIsTaskPickerOpen(false));
 
   // Focus Launcher State
   const [focusingTask, setFocusingTask] = useState<Task | null>(null);
@@ -69,6 +72,7 @@ export const DashboardView: React.FC = () => {
   const [focusPreset, setFocusPreset] = useState<number>(25);
   const [focusRemaining, setFocusRemaining] = useState<number>(25 * 60);
   const [focusRunning, setFocusRunning] = useState<boolean>(false);
+  useEscapeKey(isFocusModalOpen, () => { if (!focusRunning) setIsFocusModalOpen(false); });
   const [focusDistractions, setFocusDistractions] = useState<number>(0);
 
   // Daily Command Center Agenda Filter
@@ -159,18 +163,18 @@ export const DashboardView: React.FC = () => {
   // =========================================================================
   // 2. Daily Command Center Data
   // =========================================================================
-  const activeTasks = tasks.filter((t) => !t.isArchived && t.status !== 'archived' && t.status !== 'cancelled');
+  const activeTasks = tasks.filter(isTaskActive);
   const topThree = activeTasks.filter((t) => t.isTopThree);
   const activeHabits = habits.filter((h) => !h.isArchived && h.status !== 'archived' && h.status !== 'paused');
 
   const todayTasks = activeTasks.filter(
     (t) => t.scheduledDate === todayStr || (t.completedAt && localDayFrom(t.completedAt) === todayStr)
   );
-  const pendingTodayTasks = todayTasks.filter((t) => t.status !== 'completed');
-  const doneTodayTasks = todayTasks.filter((t) => t.status === 'completed');
+  const pendingTodayTasks = todayTasks.filter(isTaskPending);
+  const doneTodayTasks = todayTasks.filter(isTaskDone);
 
   const overdueTasks = activeTasks.filter((t) => {
-    if (t.status === 'completed') return false;
+    if (isTaskDone(t)) return false;
     if (t.scheduledDate && t.scheduledDate < todayStr) return true;
     if (t.scheduledDate === todayStr && t.scheduledTime && t.scheduledTime < currentTimeHHMM) return true;
     return false;
@@ -178,7 +182,7 @@ export const DashboardView: React.FC = () => {
 
   const upcomingTasks = activeTasks
     .filter((t) => {
-      if (t.status === 'completed') return false;
+      if (isTaskDone(t)) return false;
       if (t.scheduledDate === todayStr) {
         if (!t.scheduledTime) return true;
         return t.scheduledTime >= currentTimeHHMM;
@@ -238,7 +242,7 @@ export const DashboardView: React.FC = () => {
       productivityScore: focusDistractions === 0 ? 5 : focusDistractions <= 2 ? 4 : 3
     });
 
-    if (markTaskDone && focusingTask && focusingTask.status !== 'completed') {
+    if (markTaskDone && focusingTask && isTaskPending(focusingTask)) {
       toggleTaskStatus(focusingTask.id);
     }
 
@@ -571,7 +575,7 @@ export const DashboardView: React.FC = () => {
               ) : (
                 <div className="divide-y divide-[var(--border-subtle)]">
                   {topThree.map((task) => {
-                    const isDone = task.status === 'completed';
+                    const isDone = isTaskDone(task);
                     return (
                       <div
                         key={task.id}
@@ -590,7 +594,7 @@ export const DashboardView: React.FC = () => {
                                 : 'border-[var(--border-strong)] bg-transparent text-transparent hover:border-[var(--brand-strong)]'
                             }`}
                           >
-                            ✓
+                            <NuqtaIcon name="check" className="w-3 h-3" />
                           </button>
                           <div className="min-w-0 flex-1">
                             <div
@@ -674,7 +678,7 @@ export const DashboardView: React.FC = () => {
                                 : 'border-[var(--border-strong)] bg-transparent text-transparent hover:border-[var(--brand-strong)]'
                             }`}
                           >
-                            ✓
+                            <NuqtaIcon name="check" className="w-3 h-3" />
                           </button>
                           <div className="min-w-0">
                             <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
@@ -840,7 +844,7 @@ export const DashboardView: React.FC = () => {
                       <div key={item.id} className="py-2 flex items-center justify-between gap-2 opacity-75">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-4 h-4 rounded bg-[var(--brand-soft)] text-[var(--brand-strong)] grid place-items-center text-[10px] font-bold shrink-0">
-                            ✓
+                            <NuqtaIcon name="check" className="w-3 h-3" />
                           </span>
                           <span className="text-xs text-[var(--text-primary)] truncate">{item.title}</span>
                         </div>
@@ -907,6 +911,8 @@ export const DashboardView: React.FC = () => {
           onClick={() => setIsTaskPickerOpen(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
             className="modal glass-surface w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
             onClick={(e) => e.stopPropagation()}
             dir={isAr ? 'rtl' : 'ltr'}
@@ -932,13 +938,13 @@ export const DashboardView: React.FC = () => {
             </div>
 
             <div className="max-h-[60vh] overflow-y-auto space-y-2 pe-1">
-              {activeTasks.filter((t) => t.status !== 'completed').length === 0 ? (
+              {activeTasks.filter(isTaskPending).length === 0 ? (
                 <div className="p-6 text-center text-xs text-[var(--text-secondary)]">
                   {isAr ? 'لا توجد مهام معلقة للاختيار.' : 'No pending tasks available.'}
                 </div>
               ) : (
                 activeTasks
-                  .filter((t) => t.status !== 'completed')
+                  .filter(isTaskPending)
                   .map((task) => {
                     const isPinned = task.isTopThree;
                     return (
@@ -959,7 +965,7 @@ export const DashboardView: React.FC = () => {
                                 : 'border-[var(--border-strong)] text-transparent'
                             }`}
                           >
-                            ✓
+                            <NuqtaIcon name="check" className="w-3 h-3" />
                           </span>
                           <div className="min-w-0">
                             <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
@@ -1006,6 +1012,8 @@ export const DashboardView: React.FC = () => {
           }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
             className="modal glass-surface w-full max-w-md rounded-2xl p-6 shadow-2xl text-center space-y-5"
             onClick={(e) => e.stopPropagation()}
             dir={isAr ? 'rtl' : 'ltr'}

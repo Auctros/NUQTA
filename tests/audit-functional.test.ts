@@ -15,6 +15,7 @@ import { generateUniversalHistory, getUniversalArchivedItems } from '../src/lib/
 import { computeLifeIntelligence } from '../src/lib/lifeIntelligenceEngine';
 import { parseNaturalLanguageTask } from '../src/lib/nlpParser';
 import { isHabitDueOn, computeCurrentStreak } from '../src/lib/habitSchedule';
+import { dayOfWeek } from '../src/lib/week';
 import type { Goal, Habit, Task } from '../src/types';
 
 const S = () => useNuqtaStore.getState();
@@ -142,21 +143,21 @@ describe('B. Habits', () => {
     expect(S().habits[0].currentStreak).toBe(3);
   });
 
-  it('F3 regression: non-due days (weekend) do not break a weekdays habit streak', () => {
-    // Mon 11-16 and Fri 11-13 are both due days; the intervening Sat/Sun are not
-    // due, so they are skipped without breaking the streak.
+  it('F3 regression: non-due days (Friday off) do not break a weekdays habit streak', () => {
+    // Thu 11-12 and Sat 11-14 are both due days (NUQTA week is Sat–Thu); Friday
+    // 11-13 in between is the weekly day off, so it is skipped without breaking.
     NuqtaStorageEngine.saveHabits([
-      mkHabit({ frequency: 'weekdays', completedDates: ['2026-11-13', '2026-11-16'] })
+      mkHabit({ frequency: 'weekdays', completedDates: ['2026-11-12', '2026-11-14'] })
     ]);
     S().initializeStore();
-    expect(computeCurrentStreak(S().habits[0], '2026-11-16')).toBe(2);
+    expect(computeCurrentStreak(S().habits[0], '2026-11-14')).toBe(2);
   });
 
-  it('habitCompliance only counts due days (weekdays habit, 5 due days/week)', () => {
+  it('habitCompliance only counts due days (weekdays habit, 6 due days/week)', () => {
     const h = mkHabit({ frequency: 'weekdays' });
-    const week = ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15'];
-    // Mon..Fri due, Sat/Sun not
-    expect(week.filter((d) => isHabitDueOn(h, d)).length).toBe(5);
+    // NUQTA week: Sat..Thu due, Friday off.
+    const week = ['2026-11-07', '2026-11-08', '2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13'];
+    expect(week.filter((d) => isHabitDueOn(h, d)).length).toBe(6);
   });
 
   it('a streak freeze suppresses a due day', () => {
@@ -760,3 +761,76 @@ describe('Cross-module integration journey', () => {
     expect(evaluateGoalProgress(S().goals[0], [], S().habits).linkedHabitsCount).toBe(0);
   });
 });
+
+// ------------------------------------------------ K. RECURRENCE SERIES
+
+describe('K. Task recurrence series', () => {
+  it('creating a recurring task materialises a bounded series with shared identity', () => {
+    S().createTask({ title: 'Weekly review', priority: 2, scheduledDate: today(), recurrence: { freq: 'weekly', days: [new Date().getDay()] } });
+    const series = S().tasks.filter((t) => t.title === 'Weekly review');
+    expect(series.length).toBeGreaterThan(1);
+    const ids = new Set(series.map((t) => t.seriesId));
+    expect(ids.size).toBe(1);
+    expect(series.every((t) => t.recurrence?.freq === 'weekly')).toBe(true);
+    // Every occurrence is a distinct record on its own day.
+    expect(new Set(series.map((t) => t.scheduledDate)).size).toBe(series.length);
+  });
+
+  it('topping up is idempotent: no duplicate days are created', () => {
+    S().createTask({ title: 'Daily standup', priority: 3, scheduledDate: today(), recurrence: { freq: 'daily' } });
+    const before = S().tasks.length;
+    S().topUpRecurringTasks();
+    S().topUpRecurringTasks();
+    expect(S().tasks.length).toBe(before);
+  });
+
+  it('skipping one occurrence only affects that occurrence and is not a completion', () => {
+    S().createTask({ title: 'Gym', priority: 2, scheduledDate: today(), recurrence: { freq: 'daily' } });
+    const series = S().tasks.filter((t) => t.title === 'Gym');
+    const target = series[0];
+    S().skipTaskOccurrence(target.id);
+    const updated = S().tasks.find((t) => t.id === target.id)!;
+    expect(updated.status).toBe('skipped');
+    // Siblings are untouched.
+    expect(S().tasks.filter((t) => t.title === 'Gym' && t.status === 'todo').length).toBe(series.length - 1);
+  });
+
+  it('editing the series updates open occurrences but not completed ones', () => {
+    S().createTask({ title: 'Read', priority: 2, scheduledDate: today(), recurrence: { freq: 'daily' } });
+    const series = S().tasks.filter((t) => t.title === 'Read');
+    const seriesId = series[0].seriesId!;
+    const anchorId = series[1].id; // the occurrence the user edited
+    S().toggleTaskStatus(series[0].id); // complete the first occurrence
+    S().updateTaskSeries(seriesId, anchorId, { title: 'Read deeply' });
+    const after = S().tasks.filter((t) => t.seriesId === seriesId);
+    expect(after.find((t) => t.id === series[0].id)!.title).toBe('Read'); // completed untouched
+    expect(after.filter((t) => t.status === 'todo').every((t) => t.title === 'Read deeply')).toBe(true);
+  });
+
+  it('changing the cadence of a series re-materialises future days from the anchor', () => {
+    S().createTask({ title: 'Weekly review', priority: 2, scheduledDate: today(), recurrence: { freq: 'daily' } });
+    const series = S().tasks.filter((t) => t.title === 'Weekly review');
+    const seriesId = series[0].seriesId!;
+    // Edit the first open occurrence to a weekly rule.
+    S().updateTaskSeries(seriesId, series[0].id, { recurrence: { freq: 'weekly', days: [dayOfWeek(today())] } });
+    const after = S().tasks.filter((t) => t.seriesId === seriesId);
+    expect(after.every((t) => t.recurrence?.freq === 'weekly')).toBe(true);
+    // A weekly series has far fewer open days than the daily one had.
+    expect(after.filter((t) => t.status === 'todo').length).toBeLessThan(series.length);
+  });
+
+  it('deleting a series removes every occurrence', () => {
+    S().createTask({ title: 'Meditate', priority: 2, scheduledDate: today(), recurrence: { freq: 'daily' } });
+    const seriesId = S().tasks.find((t) => t.title === 'Meditate')!.seriesId!;
+    S().deleteTaskSeries(seriesId);
+    expect(S().tasks.some((t) => t.seriesId === seriesId)).toBe(false);
+  });
+
+  it('a one-off task carries no series identity', () => {
+    S().createTask({ title: 'One-off', priority: 3, scheduledDate: today() });
+    const t = S().tasks.find((x) => x.title === 'One-off')!;
+    expect(t.seriesId).toBeUndefined();
+    expect(t.recurrence).toBeUndefined();
+  });
+});
+

@@ -4,6 +4,7 @@ import { useNuqtaStore } from '../store/nuqtaStore';
 import { QURAN_SURAHS, TOTAL_QURAN_AYAHS, TOTAL_QURAN_SURAHS, getSurahMeta } from '../lib/quranData';
 import { QuranSessionType, QuranRecitationQuality, QuranSurahStatus, SurahMemorizationState } from '../types';
 import { Button, NuqtaSelect } from './ui';
+import { NuqtaIcon, IconName } from './NuqtaIcon';
 import {
   StudioFrame,
   StudioSection,
@@ -333,7 +334,7 @@ export const QuranView: React.FC = () => {
           <StudioSection
             title={
               <>
-                <span aria-hidden="true">{sessionType === 'new_memorization' ? '✎' : '⟳'}</span>
+                <NuqtaIcon name={sessionType === 'new_memorization' ? 'edit' : 'repeat'} className="w-4 h-4 inline-block" />
                 {sessionType === 'new_memorization'
                   ? isAr
                     ? 'جلسة حفظ جديد'
@@ -1074,7 +1075,7 @@ export const QuranView: React.FC = () => {
           <StudioSection>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-[180px] flex-1 max-w-sm">
-                <span aria-hidden="true">🔍</span>
+                <NuqtaIcon name="search" className="w-4 h-4" />
                 <input
                   type="search"
                   value={mapSearch}
@@ -1128,10 +1129,10 @@ export const QuranView: React.FC = () => {
             <div className="mt-3 pt-3 border-t border-[var(--studio-line)]">
               <StudioLegend
                 entries={[
-                  { label: isAr ? 'محفوظة' : 'Memorized', swatch: 'var(--state-success)', glyph: '✓' },
-                  { label: isAr ? 'قيد الحفظ' : 'In progress', swatch: 'var(--state-info)', glyph: '◐' },
+                  { label: isAr ? 'محفوظة' : 'Memorized', swatch: 'var(--state-success)', icon: 'check' },
+                  { label: isAr ? 'قيد الحفظ' : 'In progress', swatch: 'var(--state-info)', icon: 'hourglass' },
                   { label: isAr ? 'تحتاج مراجعة' : 'Needs revision', swatch: 'var(--state-warning)', glyph: '!' },
-                  { label: isAr ? 'متأخرة' : 'Overdue', swatch: 'var(--state-danger)', glyph: '⏱' },
+                  { label: isAr ? 'متأخرة' : 'Overdue', swatch: 'var(--state-danger)', icon: 'clock' },
                   { label: isAr ? 'لم تبدأ' : 'Not started', swatch: 'var(--surface-track)', glyph: '·' }
                 ]}
               />
@@ -1152,16 +1153,16 @@ export const QuranView: React.FC = () => {
                 const status = derivedStatus(st);
                 const count = st?.memorizedAyahsCount || 0;
                 const pct = Math.min(100, Math.round((count / meta.totalAyahs) * 100));
-                const glyph =
+                const flagIcon: IconName | null =
                   status === 'completed'
-                    ? '✓'
+                    ? 'check'
                     : status === 'needs_revision'
-                    ? '!'
+                    ? 'alert'
                     : status === 'overdue'
-                    ? '⏱'
+                    ? 'clock'
                     : status === 'in_progress'
-                    ? '◐'
-                    : '';
+                    ? 'hourglass'
+                    : null;
                 return (
                   <button
                     key={meta.number}
@@ -1180,9 +1181,9 @@ export const QuranView: React.FC = () => {
                     )}`}
                   >
                     {pct > 0 && <span className="quran-cell-fill" style={{ height: `${pct}%` }} />}
-                    {glyph && (
+                    {flagIcon && (
                       <span className="quran-cell-flag" aria-hidden="true">
-                        {glyph}
+                        <NuqtaIcon name={flagIcon} className="w-3 h-3" />
                       </span>
                     )}
                     <span className="quran-cell-num relative">{meta.number}</span>
@@ -1301,12 +1302,12 @@ const StatusBadge: React.FC<{ status: DerivedStatus; isAr: boolean }> = ({ statu
     overdue: 'var(--state-danger)',
     not_started: 'var(--text-tertiary)'
   };
-  const glyph: Record<DerivedStatus, string> = {
-    completed: '✓',
-    in_progress: '◐',
-    needs_revision: '!',
-    overdue: '⏱',
-    not_started: '·'
+  const statusIcon: Record<DerivedStatus, IconName | null> = {
+    completed: 'check',
+    in_progress: 'hourglass',
+    needs_revision: 'alert',
+    overdue: 'clock',
+    not_started: null
   };
   return (
     <span
@@ -1317,7 +1318,7 @@ const StatusBadge: React.FC<{ status: DerivedStatus; isAr: boolean }> = ({ statu
         background: 'color-mix(in srgb, ' + tone[status] + ' 12%, transparent)'
       }}
     >
-      <span aria-hidden="true">{glyph[status]}</span>
+      {statusIcon[status] && <NuqtaIcon name={statusIcon[status]!} className="w-3.5 h-3.5" />}
       {statusLabel(status, isAr)}
     </span>
   );

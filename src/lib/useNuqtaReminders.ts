@@ -1,5 +1,7 @@
 import { localDateKey } from './dateKey';
 import { isReminderDue } from './reminderTiming';
+import { isHabitDueOn } from './habitSchedule';
+import { isTaskPending } from './taskStatus';
 import { useEffect, useRef } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaNotificationEngine } from './notifications';
@@ -7,6 +9,10 @@ import { NuqtaNotificationEngine } from './notifications';
 /**
  * Hook to monitor tasks and habit schedule intervals,
  * emitting ambient notifications and synth audio chimes when due.
+ *
+ * Only items that are actually *due today* fire: a pending task scheduled for today,
+ * a habit whose schedule says it is due today, or a recurring task whose occurrence
+ * lands on today. Off-schedule days never nudge.
  */
 export function useNuqtaReminders() {
   const { tasks, habits, profile } = useNuqtaStore();
@@ -20,10 +26,10 @@ export function useNuqtaReminders() {
       const todayStr = localDateKey(now);
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-      // 1. Task Reminders
+      // 1. Task Reminders — pending tasks scheduled for today at their due time.
       tasks.forEach((task) => {
         if (
-          task.status !== 'completed' &&
+          isTaskPending(task) &&
           task.scheduledDate === todayStr &&
           isReminderDue(task.scheduledTime, nowMinutes)
         ) {
@@ -36,19 +42,26 @@ export function useNuqtaReminders() {
                 ? `الأولوية ${task.priority} · الوقت المتوقع: ${task.estimatedMinutes || 25} دقيقة`
                 : `Priority ${task.priority} · Estimated: ${task.estimatedMinutes || 25}m`,
               tag: `task-${task.id}`,
-              chime: 'task-reminder'
+              chime: 'task-reminder',
+              route: { nav: 'tasks', entityId: task.id }
             });
           }
         }
       });
 
-      // 2. Morning Habit Cue (default 08:00 AM)
+      // 2. Morning Habit Cue (default 08:00 AM) — only habits actually due today.
       if (isReminderDue('08:00', nowMinutes)) {
         const key = `habit-morning-${todayStr}`;
         if (!firedRemindersRef.current.has(key)) {
           firedRemindersRef.current.add(key);
           const morningHabits = habits.filter(
-            (h) => h.timeOfDay === 'morning' && !h.completedDates.includes(todayStr)
+            (h) =>
+              h.timeOfDay === 'morning' &&
+              !h.isArchived &&
+              h.status !== 'archived' &&
+              h.status !== 'paused' &&
+              isHabitDueOn(h, todayStr) &&
+              !h.completedDates.includes(todayStr)
           );
           if (morningHabits.length > 0) {
             NuqtaNotificationEngine.notify({
@@ -57,7 +70,8 @@ export function useNuqtaReminders() {
                 ? `لديك ${morningHabits.length} عادات صباحية جاهزة للانطلاق: ${morningHabits[0].name}`
                 : `You have ${morningHabits.length} morning habits ready: ${morningHabits[0].name}`,
               tag: 'morning-habits',
-              chime: 'habit-cue'
+              chime: 'habit-cue',
+              route: { nav: 'habits' }
             });
           }
         }
@@ -74,7 +88,8 @@ export function useNuqtaReminders() {
               ? 'سجّل ما سار على ما يرام اليوم، وامنح عقلك صفاءً قبل النوم.'
               : 'Review what went well today and clear your mind before sleep.',
             tag: 'evening-ritual',
-            chime: 'gentle-bell'
+            chime: 'gentle-bell',
+            route: { nav: 'journal' }
           });
         }
       }

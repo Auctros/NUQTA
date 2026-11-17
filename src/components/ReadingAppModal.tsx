@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Habit, BookItem, BookCategory } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaSelect } from './ui';
+import { NuqtaIcon } from './NuqtaIcon';
 
 interface ReadingAppModalProps {
   habit: Habit;
@@ -246,8 +247,8 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
         {/* ================= HEADER BAR ================= */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--d-reading-border)] bg-[var(--d-reading-raised)]">
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-[var(--tone-warning-wash)] border border-[var(--tone-warning-line)] flex items-center justify-center text-[var(--d-reading-accent)] font-bold text-xl shadow-inner">
-              📖
+            <span className="w-10 h-10 rounded-xl bg-[var(--tone-warning-wash)] border border-[var(--tone-warning-line)] flex items-center justify-center text-[var(--d-reading-accent)] shadow-inner">
+              <NuqtaIcon name="book-open" className="w-5 h-5" />
             </span>
             <div>
               <div className="flex items-center gap-2">
@@ -302,9 +303,9 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-muted hover:text-[var(--text-primary)] hover:bg-[var(--surface-faint)] transition-colors"
-              aria-label="Close"
+              aria-label={isAr ? 'إغلاق' : 'Close'}
             >
-              <span className="text-lg font-bold px-2">✕</span>
+              <NuqtaIcon name="close" className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -370,7 +371,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                         className="btn primary small bg-[var(--tone-warning)] hover:bg-[var(--tone-warning)] text-[var(--accent-ink)] font-bold"
                       >
                         <span>{isAr ? 'تسجيل جلسة قراءة الآن' : 'Start Reading Session'}</span>
-                        <span>⚡</span>
+                        <NuqtaIcon name="play" className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -385,7 +386,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                 </div>
               ) : (
                 <div className="p-8 text-center panel border border-[var(--d-reading-border-accent)] bg-[var(--d-reading-raised)] rounded-2xl">
-                  <span className="text-3xl block mb-2">📚</span>
+                  <span className="block mb-2 text-[var(--d-reading-accent)]"><NuqtaIcon name="book" className="w-7 h-7" /></span>
                   <strong className="text-[var(--text-primary)] text-base block">{isAr ? 'لا يوجد كتاب نشط قيد القراءة حالياً' : 'No active book selected'}</strong>
                   <p className="text-xs text-muted mt-1">{isAr ? 'اختر كتاباً من مكتبتك أو أضف كتاباً جديداً لتبدأ متابعة القراءة.' : 'Select a book from your library to begin tracking daily pages.'}</p>
                   <button onClick={() => setActiveTab('library')} className="btn primary small mt-3">
@@ -475,7 +476,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       </div>
                       <span className="text-[10px] text-muted block">
                         {pagesReadToday >= (readingData.dailyTargetPages || 20)
-                          ? (isAr ? '✓ تم إنجاز هدف اليوم!' : 'Daily goal achieved!')
+                          ? (isAr ? 'تم إنجاز هدف اليوم!' : 'Daily goal achieved!')
                           : (isAr ? `متبقي ${(readingData.dailyTargetPages || 20) - pagesReadToday} صفحة` : `${(readingData.dailyTargetPages || 20) - pagesReadToday} pages left today`)}
                       </span>
                     </div>
@@ -550,7 +551,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                 <div className="panel p-4 border border-[var(--d-reading-border)] bg-[var(--d-reading-raised)]">
                   <span className="text-muted text-xs block">{isAr ? 'سلسلة الاستمرار' : 'Streak'}</span>
                   <strong className="text-2xl font-mono text-[var(--state-success)] font-bold mt-1 block">
-                    {habit.currentStreak || 0} {isAr ? 'يوم' : 'd'} ♨
+                    {habit.currentStreak || 0} {isAr ? 'يوم' : 'd'}
                   </strong>
                   <span className="text-[11px] text-muted">{isAr ? 'أطول سلسلة:' : 'best:'} {habit.longestStreak || 0} {isAr ? 'يوم' : 'd'}</span>
                 </div>
@@ -567,7 +568,8 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       onClick={() => setActiveTab('quotes')}
                       className="text-xs text-accent hover:underline"
                     >
-                      {isAr ? 'عرض الكل' : 'View all'} →
+                      {isAr ? 'عرض الكل' : 'View all'}
+                      <NuqtaIcon name="arrow" className="w-3 h-3 inline-block" />
                     </button>
                   </div>
                   <blockquote className="text-sm font-medium text-[var(--text-primary)]/95 italic border-s-2 border-[var(--tone-warning-line)] ps-3 py-1">
@@ -687,7 +689,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                   {/* Direct Quote Capture in Session */}
                   <div className="p-3 rounded-xl border border-[var(--d-reading-border-accent)] bg-[var(--d-reading-surface)] space-y-2">
                     <span className="text-[11px] font-bold text-[var(--d-reading-accent-strong)] block">
-                      {isAr ? '✦ اقتباس أعجبك لتخليده في السجل (اختياري):' : '✦ Capture Quote from this Session:'}
+                      <NuqtaIcon name="quote" className="w-3.5 h-3.5 inline-block" /> {isAr ? 'اقتباس أعجبك لتخليده في السجل (اختياري):' : 'Capture Quote from this Session:'}
                     </span>
                     <textarea
                       value={capturedQuote}
@@ -711,7 +713,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                   <div className="flex items-center justify-between pt-2">
                     {showLogSuccess ? (
                       <span className="text-xs text-accent font-semibold flex items-center gap-1.5 animate-pulse">
-                        ✓ {isAr ? 'تم تسجيل الجلسة وتحديث مؤشرات القراءة وسلسلة العادة!' : 'Session logged & streak updated!'}
+                        <NuqtaIcon name="check" className="w-3.5 h-3.5" /> {isAr ? 'تم تسجيل الجلسة وتحديث مؤشرات القراءة وسلسلة العادة!' : 'Session logged & streak updated!'}
                       </span>
                     ) : (
                       <span className="text-xs text-muted">
@@ -721,7 +723,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
 
                     <button type="submit" className="btn primary bg-[var(--tone-warning)] hover:bg-[var(--tone-warning)] text-[var(--accent-ink)] font-bold">
                       <span>{isAr ? 'تأكيد وحفظ الجلسة' : 'Save Session'}</span>
-                      <span>✓</span>
+                      <NuqtaIcon name="check" className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </form>
@@ -813,7 +815,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                     libraryFilter === 'reading' ? 'bg-[var(--d-reading-chip)] text-[var(--d-reading-accent-strong)] font-bold' : 'text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  📖 {isAr ? `أقرأ حالياً (${readingBooks.length})` : `Reading (${readingBooks.length})`}
+                  <NuqtaIcon name="book-open" className="w-3.5 h-3.5 inline-block" /> {isAr ? `أقرأ حالياً (${readingBooks.length})` : `Reading (${readingBooks.length})`}
                 </button>
                 <button
                   onClick={() => setLibraryFilter('completed')}
@@ -821,7 +823,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                     libraryFilter === 'completed' ? 'bg-[var(--d-reading-chip)] text-[var(--state-success)] font-bold' : 'text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  ✓ {isAr ? `مكتمل (${completedBooks.length})` : `Completed (${completedBooks.length})`}
+                  <NuqtaIcon name="check" className="w-3.5 h-3.5 inline-block" /> {isAr ? `مكتمل (${completedBooks.length})` : `Completed (${completedBooks.length})`}
                 </button>
                 <button
                   onClick={() => setLibraryFilter('want_to_read')}
@@ -829,7 +831,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                     libraryFilter === 'want_to_read' ? 'bg-[var(--d-reading-chip)] text-[var(--tone-info)] font-bold' : 'text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  📌 {isAr ? `في الانتظار (${wishlistBooks.length})` : `Wishlist (${wishlistBooks.length})`}
+                  <NuqtaIcon name="clock" className="w-3.5 h-3.5 inline-block" /> {isAr ? `في الانتظار (${wishlistBooks.length})` : `Wishlist (${wishlistBooks.length})`}
                 </button>
                 <button
                   onClick={() => setLibraryFilter('archived')}
@@ -837,14 +839,14 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                     libraryFilter === 'archived' ? 'bg-[var(--d-reading-chip)] text-[var(--text-primary)] font-bold' : 'text-muted hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  📁 {isAr ? `الأرشيف (${archivedBooks.length})` : `Archived (${archivedBooks.length})`}
+                  <NuqtaIcon name="archive" className="w-3.5 h-3.5 inline-block" /> {isAr ? `الأرشيف (${archivedBooks.length})` : `Archived (${archivedBooks.length})`}
                 </button>
               </div>
 
               {/* Books Grid */}
               {filteredBooks.length === 0 ? (
                 <div className="p-12 text-center panel border border-[var(--d-reading-border)] bg-[var(--d-reading-raised)] rounded-2xl">
-                  <span className="text-3xl block mb-2">📚</span>
+                  <span className="block mb-2 text-[var(--d-reading-accent)]"><NuqtaIcon name="book" className="w-7 h-7" /></span>
                   <strong className="text-[var(--text-primary)] block">{isAr ? 'لا توجد كتب مطابقة لهذا التصنيف' : 'No books in this category'}</strong>
                   <button onClick={() => handleOpenBookModal()} className="btn primary small mt-3">
                     + {isAr ? 'إضافة أول كتاب' : 'Add Book'}
@@ -901,15 +903,17 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                                     onClick={() => handleOpenBookModal(b)}
                                     className="text-muted hover:text-[var(--text-primary)] text-xs px-1"
                                     title={isAr ? 'تعديل الكتاب' : 'Edit book'}
+                                    aria-label={isAr ? 'تعديل الكتاب' : 'Edit book'}
                                   >
-                                    ✎
+                                    <NuqtaIcon name="edit" className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => deleteBook(habit.id, b.id)}
                                     className="text-muted hover:text-[var(--tone-danger)] text-xs px-1"
                                     title={isAr ? 'حذف الكتاب' : 'Delete'}
+                                    aria-label={isAr ? 'حذف الكتاب' : 'Delete book'}
                                   >
-                                    ✕
+                                    <NuqtaIcon name="trash" className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
                               </div>
@@ -978,7 +982,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                               className="btn subtle small text-[var(--state-success)] text-[10px] px-2 py-1"
                               title={isAr ? 'ختم الكتاب' : 'Mark completed'}
                             >
-                              ✓ {isAr ? 'ختم' : 'Done'}
+                              <NuqtaIcon name="check" className="w-3 h-3" /> {isAr ? 'ختم' : 'Done'}
                             </button>
                           )}
                         </div>
@@ -999,7 +1003,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                       <h4 className="font-bold text-sm text-[var(--text-primary)]">
                         {editingBookId ? (isAr ? 'تعديل بيانات الكتاب' : 'Edit Book') : (isAr ? 'إضافة كتاب جديد للمكتبة' : 'Add New Book')}
                       </h4>
-                      <button type="button" onClick={() => setIsEditingBook(false)} className="text-muted text-sm">✕</button>
+                      <button type="button" onClick={() => setIsEditingBook(false)} aria-label={isAr ? 'إغلاق' : 'Cancel'} className="text-muted"><NuqtaIcon name="close" className="w-4 h-4" /></button>
                     </div>
 
                     <div className="space-y-3">
@@ -1184,7 +1188,7 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
               {/* Quotes Grid */}
               {(readingData.quotes || []).length === 0 ? (
                 <div className="p-12 text-center panel border border-[var(--d-reading-border)] bg-[var(--d-reading-raised)] rounded-2xl">
-                  <span className="text-3xl block mb-2">📜</span>
+                  <span className="block mb-2 text-[var(--d-reading-accent)]"><NuqtaIcon name="quote" className="w-7 h-7" /></span>
                   <strong className="text-[var(--text-primary)] block">{isAr ? 'لم تسجل أي اقتباسات بعد' : 'No quotes saved yet'}</strong>
                   <p className="text-xs text-muted mt-1">
                     {isAr ? 'سجّل الاقتباسات مباشرة أثناء جلسة القراءة أو أضف اقتباساً يدوياً.' : 'Capture insights while reading sessions or add manually.'}
@@ -1204,8 +1208,9 @@ export const ReadingAppModal: React.FC<ReadingAppModalProps> = ({ habit, onClose
                             onClick={() => deleteBookQuote(habit.id, q.id)}
                             className="text-muted hover:text-[var(--tone-danger)] text-xs px-1"
                             title={isAr ? 'حذف الاقتباس' : 'Delete'}
+                            aria-label={isAr ? 'حذف الاقتباس' : 'Delete quote'}
                           >
-                            ✕
+                            <NuqtaIcon name="trash" className="w-3.5 h-3.5" />
                           </button>
                         </div>
                         <p className="text-xs text-[var(--text-primary)]/95 leading-relaxed font-medium">

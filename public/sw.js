@@ -21,7 +21,7 @@
  */
 
 const CACHE_PREFIX = 'nuqta-shell-';
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 5;
 const CACHE = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 const SCOPE = self.registration.scope;
 const INDEX_URL = new URL(SCOPE).toString();
@@ -162,5 +162,52 @@ self.addEventListener('fetch', (event) => {
       .open(CACHE)
       .then((cache) => cache.match(req, { ignoreVary: true }))
       .then((hit) => hit || fetch(req))
+  );
+});
+
+/*
+ * System notifications.
+ *
+ * Reminders are computed in the page (see `useNuqtaReminders`); the page asks the
+ * service worker to display them so they use the OS notification channel and can be
+ * shown while the tab is in the background. This is still NOT a background push: with
+ * no server there is no way to wake the app when it is fully closed, so the page must
+ * be open for a reminder to fire. The service worker only renders and routes clicks.
+ */
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || data.type !== 'nuqta-notify') return;
+  const { title, body, tag, url, route } = data;
+  if (!title) return;
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: body || '',
+      tag: tag || 'nuqta-general',
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
+      data: { url: url || INDEX_URL, route }
+    })
+  );
+});
+
+// Focus an existing client (or open one) and tell the page which entity to open, so a
+// reminder click lands on the exact task or habit it is about.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const target = data.url || INDEX_URL;
+  const route = data.route;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          if (route && 'postMessage' in client) {
+            client.postMessage({ type: 'nuqta-notification-click', route });
+          }
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    })
   );
 });

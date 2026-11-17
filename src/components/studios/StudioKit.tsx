@@ -185,6 +185,7 @@ export interface LegendEntry {
   label: string;
   swatch: string;
   glyph?: string;
+  icon?: IconName;
 }
 
 export const StudioLegend: React.FC<{ entries: LegendEntry[] }> = ({ entries }) => (
@@ -192,8 +193,8 @@ export const StudioLegend: React.FC<{ entries: LegendEntry[] }> = ({ entries }) 
     {entries.map((e) => (
       <li key={e.label} className="studio-legend-item">
         <span className="studio-swatch" style={{ background: e.swatch }} aria-hidden="true" />
-        <span>
-          {e.glyph ? `${e.glyph} ` : ''}
+        <span className="inline-flex items-center gap-1">
+          {e.icon ? <NuqtaIcon name={e.icon} className="w-3.5 h-3.5" /> : e.glyph ? `${e.glyph} ` : ''}
           {e.label}
         </span>
       </li>
