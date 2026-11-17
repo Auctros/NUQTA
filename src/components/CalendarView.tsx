@@ -299,14 +299,14 @@ export const CalendarView: React.FC = () => {
                     <strong>{t.title}</strong>
                     <small>
                       {t.estimatedMinutes ? `${t.estimatedMinutes} ${isAr ? 'دقيقة' : 'mins'}` : (isAr ? 'بدون تقدير وقت' : 'untimed')}
-                      {t.isTopThree ? ` · ★ ${isAr ? 'أهم 3' : 'Top 3'}` : ''}
+                      {t.isTopThree ? <span className="inline-flex items-center gap-1"> · <NuqtaIcon name="star" className="w-3 h-3" /> {isAr ? 'أهم 3' : 'Top 3'}</span> : ''}
                     </small>
                     <div style={{ marginTop: '7px', display: 'flex', gap: '6px' }}>
                       <button
                         className="btn small subtle"
                         onClick={() => toggleTaskStatus(t.id)}
                       >
-                        ✓ {isAr ? 'تم' : 'Done'}
+                        <NuqtaIcon name="check" className="w-3.5 h-3.5" /> {isAr ? 'تم' : 'Done'}
                       </button>
                     </div>
                   </div>

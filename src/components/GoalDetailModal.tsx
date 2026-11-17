@@ -4,6 +4,7 @@ import { Goal, KeyResult, KeyResultDataSource, GoalMilestone, SpecializedHabitTy
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { evaluateGoalProgress } from '../lib/goalProgressEngine';
 import { NuqtaSelect } from './ui';
+import { NuqtaIcon, IconName } from './NuqtaIcon';
 
 interface GoalDetailModalProps {
   goal: Goal;
@@ -215,31 +216,31 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
     low: { ar: 'أولوية عادية', en: 'Low', badge: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30' }
   };
 
-  const categoryLabels: Record<string, { ar: string; en: string; icon: string }> = {
-    career: { ar: 'مهني وعمل', en: 'Career', icon: '💼' },
-    health: { ar: 'صحة وجسد', en: 'Health', icon: '⚡' },
-    finance: { ar: 'مالي واستثمار', en: 'Finance', icon: '🪙' },
-    personal: { ar: 'شخصي وعائلة', en: 'Personal', icon: '🌱' },
-    intellect: { ar: 'فكري وثقافي', en: 'Intellect', icon: '🧠' }
+  const categoryLabels: Record<string, { ar: string; en: string; icon: IconName }> = {
+    career: { ar: 'مهني وعمل', en: 'Career', icon: 'briefcase' },
+    health: { ar: 'صحة وجسد', en: 'Health', icon: 'activity' },
+    finance: { ar: 'مالي واستثمار', en: 'Finance', icon: 'coin' },
+    personal: { ar: 'شخصي وعائلة', en: 'Personal', icon: 'leaf' },
+    intellect: { ar: 'فكري وثقافي', en: 'Intellect', icon: 'brain' }
   };
 
-  const dataSourceLabels: Record<KeyResultDataSource, { ar: string; en: string; icon: string }> = {
-    manual: { ar: 'تحديث يدوي', en: 'Manual Entry', icon: '✏️' },
-    tasks_completed: { ar: 'مهام مكتملة', en: 'Completed Tasks', icon: '✓' },
-    habit_consistency: { ar: 'التزام العادات', en: 'Habit Cadence', icon: '↻' },
-    reading_books_completed: { ar: 'كتب منجزة', en: 'Finished Books', icon: '📚' },
-    reading_pages_read: { ar: 'صفحات مقروءة', en: 'Pages Read', icon: '📖' },
-    reading_hours: { ar: 'ساعات القراءة', en: 'Reading Hours', icon: '⌛' },
-    workout_sessions_count: { ar: 'حصص التمارين', en: 'Workout Sessions', icon: '⚡' },
-    workout_total_reps: { ar: 'تكرارات التمارين', en: 'Total Reps', icon: '💪' },
-    workout_total_minutes: { ar: 'دقائق التدريب', en: 'Workout Minutes', icon: '⏱️' },
-    drawing_projects_completed: { ar: 'مشاريع فنية مكتملة', en: 'Art Projects Completed', icon: '🏆' },
-    drawing_flow_hours: { ar: 'ساعات التدفق الفني', en: 'Flow Hours', icon: '🎨' },
-    drawing_artworks_count: { ar: 'أعمال وسكتشات المعرض', en: 'Artworks Count', icon: '🖼️' },
-    quran_ayahs_memorized: { ar: 'آيات قرآنية مثبتة', en: 'Distinct Ayahs Memorized', icon: '📜' },
-    quran_surahs_completed: { ar: 'سور قرآنية مكتملة', en: 'Surahs Completed', icon: '📖' },
-    quran_revision_sessions: { ar: 'جلسات المراجعة والتسميع', en: 'Revision Sessions', icon: '🔁' },
-    quran_total_minutes: { ar: 'دقائق الحفظ والمراجعة', en: 'Quran Minutes', icon: '⏱️' }
+  const dataSourceLabels: Record<KeyResultDataSource, { ar: string; en: string; icon: IconName }> = {
+    manual: { ar: 'تحديث يدوي', en: 'Manual Entry', icon: 'edit' },
+    tasks_completed: { ar: 'مهام مكتملة', en: 'Completed Tasks', icon: 'check' },
+    habit_consistency: { ar: 'التزام العادات', en: 'Habit Cadence', icon: 'repeat' },
+    reading_books_completed: { ar: 'كتب منجزة', en: 'Finished Books', icon: 'book' },
+    reading_pages_read: { ar: 'صفحات مقروءة', en: 'Pages Read', icon: 'book-open' },
+    reading_hours: { ar: 'ساعات القراءة', en: 'Reading Hours', icon: 'hourglass' },
+    workout_sessions_count: { ar: 'حصص التمارين', en: 'Workout Sessions', icon: 'dumbbell' },
+    workout_total_reps: { ar: 'تكرارات التمارين', en: 'Total Reps', icon: 'flame' },
+    workout_total_minutes: { ar: 'دقائق التدريب', en: 'Workout Minutes', icon: 'timer' },
+    drawing_projects_completed: { ar: 'مشاريع فنية مكتملة', en: 'Art Projects Completed', icon: 'trophy' },
+    drawing_flow_hours: { ar: 'ساعات التدفق الفني', en: 'Flow Hours', icon: 'palette' },
+    drawing_artworks_count: { ar: 'أعمال وسكتشات المعرض', en: 'Artworks Count', icon: 'image' },
+    quran_ayahs_memorized: { ar: 'آيات قرآنية مثبتة', en: 'Distinct Ayahs Memorized', icon: 'quote' },
+    quran_surahs_completed: { ar: 'سور قرآنية مكتملة', en: 'Surahs Completed', icon: 'book-open' },
+    quran_revision_sessions: { ar: 'جلسات المراجعة والتسميع', en: 'Revision Sessions', icon: 'infinity' },
+    quran_total_minutes: { ar: 'دقائق الحفظ والمراجعة', en: 'Quran Minutes', icon: 'timer' }
   };
 
   return (
@@ -253,7 +254,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
           <div className="space-y-1.5 flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--surface-chip)] text-accent border border-[var(--border-default)] font-semibold flex items-center gap-1">
-                <span>{categoryLabels[goal.category]?.icon || '🎯'}</span>
+                <NuqtaIcon name={categoryLabels[goal.category]?.icon ?? 'target'} className="w-3.5 h-3.5" />
                 <span>{isAr ? categoryLabels[goal.category]?.ar : categoryLabels[goal.category]?.en}</span>
               </span>
 
@@ -299,7 +300,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
               onClick={() => onEditGoal(goal)}
               className="btn subtle small text-xs border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--surface-faint)]"
             >
-              <span>✏️</span>
+              <NuqtaIcon name="edit" className="w-3.5 h-3.5" />
               <span>{isAr ? 'تعديل الهدف' : 'Edit Goal'}</span>
             </button>
 
@@ -312,7 +313,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                 className="btn subtle small text-xs border-[var(--tone-info-line)] text-[var(--tone-info)] hover:bg-[var(--tone-info-wash)]"
                 title={isAr ? 'استعادة الهدف إلى الأهداف النشطة' : 'Restore Goal'}
               >
-                <span>↩</span>
+                <NuqtaIcon name="restore" className="w-3.5 h-3.5" />
                 <span>{isAr ? 'استعادة' : 'Restore'}</span>
               </button>
             ) : (
@@ -324,17 +325,17 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                 className="btn subtle small text-xs border-zinc-600 text-zinc-300 hover:bg-zinc-800"
                 title={isAr ? 'أرشفة الهدف (مع حفظ كامل نتائجه ومساهماته التاريخية)' : 'Archive Goal'}
               >
-                <span>🗄️</span>
+                <NuqtaIcon name="archive" className="w-3.5 h-3.5" />
                 <span>{isAr ? 'أرشفة' : 'Archive'}</span>
               </button>
             )}
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-muted hover:text-[var(--text-primary)] hover:bg-[var(--surface-faint)] text-lg font-bold"
-              aria-label="Close"
+              className="p-1.5 rounded-lg text-muted hover:text-[var(--text-primary)] hover:bg-[var(--surface-faint)]"
+              aria-label={isAr ? 'إغلاق' : 'Close'}
             >
-              ✕
+              <NuqtaIcon name="close" className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -480,22 +481,22 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     <div className="field">
                       <label className="text-xs text-muted mb-1 block">{isAr ? 'مصدر البيانات وطريقة الاحتساب' : 'Data Source Engine'}</label>
                       <NuqtaSelect value={krSource} onChange={(e) => handleSourceChange(e.target.value as KeyResultDataSource)} className="text-xs">
-                        <option value="tasks_completed">{isAr ? '✓ عدد المهام المكتملة المرتبطة' : 'Tasks: Completed Count'}</option>
-                        <option value="habit_consistency">{isAr ? '↻ معدل التزام العادات المرتبطة (%)' : 'Habits: Cadence Rate (%)'}</option>
-                        <option value="reading_books_completed">{isAr ? '📚 عدد الكتب المكتملة (مكتبة القراءة)' : 'Reading: Finished Books'}</option>
-                        <option value="reading_pages_read">{isAr ? '📖 مجموع الصفحات المقروءة' : 'Reading: Pages Read'}</option>
-                        <option value="reading_hours">{isAr ? '⌛ ساعات جلسات القراءة' : 'Reading: Hours Logged'}</option>
-                        <option value="workout_sessions_count">{isAr ? '⚡ عدد حصص التمارين المنزلية' : 'Workout: Sessions Count'}</option>
-                        <option value="workout_total_reps">{isAr ? '💪 مجموع تكرارات التمارين' : 'Workout: Total Reps'}</option>
-                        <option value="workout_total_minutes">{isAr ? '⏱️ مدة التمارين الرياضية (دقائق)' : 'Workout: Total Minutes'}</option>
-                        <option value="drawing_projects_completed">{isAr ? '🏆 مشاريع الرسم المكتملة' : 'Drawing: Finished Projects'}</option>
-                        <option value="drawing_flow_hours">{isAr ? '🎨 ساعات التدفق في المرسم' : 'Drawing: Flow Hours'}</option>
-                        <option value="drawing_artworks_count">{isAr ? '🖼️ عدد الأعمال والسكتشات' : 'Drawing: Artworks Count'}</option>
-                        <option value="quran_ayahs_memorized">{isAr ? '📜 مجموع الآيات المحفوظة فعلياً' : 'Quran: Ayahs Memorized'}</option>
-                        <option value="quran_surahs_completed">{isAr ? '🕌 عدد السور المحفوظة بالكامل' : 'Quran: Surahs Completed'}</option>
-                        <option value="quran_revision_sessions">{isAr ? '🔁 عدد جلسات المراجعة والتسميع' : 'Quran: Revision Sessions'}</option>
-                        <option value="quran_total_minutes">{isAr ? '⏱️ إجمالي دقائق الحفظ والمراجعة' : 'Quran: Total Minutes'}</option>
-                        <option value="manual">{isAr ? '✏️ نتيجة يدوية (تحديث مباشر)' : 'Manual Entry'}</option>
+                        <option value="tasks_completed">{isAr ? 'عدد المهام المكتملة المرتبطة' : 'Tasks: Completed Count'}</option>
+                        <option value="habit_consistency">{isAr ? 'معدل التزام العادات المرتبطة (%)' : 'Habits: Cadence Rate (%)'}</option>
+                        <option value="reading_books_completed">{isAr ? 'عدد الكتب المكتملة (مكتبة القراءة)' : 'Reading: Finished Books'}</option>
+                        <option value="reading_pages_read">{isAr ? 'مجموع الصفحات المقروءة' : 'Reading: Pages Read'}</option>
+                        <option value="reading_hours">{isAr ? 'ساعات جلسات القراءة' : 'Reading: Hours Logged'}</option>
+                        <option value="workout_sessions_count">{isAr ? 'عدد حصص التمارين المنزلية' : 'Workout: Sessions Count'}</option>
+                        <option value="workout_total_reps">{isAr ? 'مجموع تكرارات التمارين' : 'Workout: Total Reps'}</option>
+                        <option value="workout_total_minutes">{isAr ? 'مدة التمارين الرياضية (دقائق)' : 'Workout: Total Minutes'}</option>
+                        <option value="drawing_projects_completed">{isAr ? 'مشاريع الرسم المكتملة' : 'Drawing: Finished Projects'}</option>
+                        <option value="drawing_flow_hours">{isAr ? 'ساعات التدفق في المرسم' : 'Drawing: Flow Hours'}</option>
+                        <option value="drawing_artworks_count">{isAr ? 'عدد الأعمال والسكتشات' : 'Drawing: Artworks Count'}</option>
+                        <option value="quran_ayahs_memorized">{isAr ? 'مجموع الآيات المحفوظة فعلياً' : 'Quran: Ayahs Memorized'}</option>
+                        <option value="quran_surahs_completed">{isAr ? 'عدد السور المحفوظة بالكامل' : 'Quran: Surahs Completed'}</option>
+                        <option value="quran_revision_sessions">{isAr ? 'عدد جلسات المراجعة والتسميع' : 'Quran: Revision Sessions'}</option>
+                        <option value="quran_total_minutes">{isAr ? 'إجمالي دقائق الحفظ والمراجعة' : 'Quran: Total Minutes'}</option>
+                        <option value="manual">{isAr ? 'نتيجة يدوية (تحديث مباشر)' : 'Manual Entry'}</option>
                       </NuqtaSelect>
                     </div>
 
@@ -545,7 +546,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
               {/* KR List */}
               {intel.evaluatedKrs.length === 0 ? (
                 <div className="p-8 text-center panel border border-[var(--border-subtle)] bg-[var(--surface-deep)] rounded-xl space-y-2">
-                  <span className="text-2xl">🎯</span>
+                  <NuqtaIcon name="target" className="w-6 h-6" />
                   <p className="text-[var(--text-primary)] font-semibold">{isAr ? 'لم يتم تعريف نتائج رئيسية بعد' : 'No Key Results defined'}</p>
                   <p className="text-xs text-muted">{isAr ? 'أضف مؤشرات واضحة مستمدة من المهام أو القراءة أو التمارين لقياس تقدمك.' : 'Add measurable metrics to anchor execution.'}</p>
                   <button onClick={() => setIsAddingKr(true)} className="btn primary small mt-2">
@@ -567,7 +568,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                           <div className="space-y-1 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-default)] flex items-center gap-1 font-semibold">
-                                <span>{sourceInfo.icon}</span>
+                                <NuqtaIcon name={sourceInfo.icon} className="w-3 h-3" />
                                 <span>{isAr ? sourceInfo.ar : sourceInfo.en}</span>
                               </span>
                               <h4 className="font-bold text-[var(--text-primary)] text-sm">{kr.title}</h4>
@@ -591,8 +592,9 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                               onClick={() => deleteKeyResult(goal.id, kr.id)}
                               className="text-muted hover:text-[var(--tone-danger)] text-xs p-1"
                               title={isAr ? 'حذف النتيجة' : 'Delete'}
+                              aria-label={isAr ? 'حذف النتيجة' : 'Delete key result'}
                             >
-                              ✕
+                              <NuqtaIcon name="trash" className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -626,7 +628,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                               }}
                               className="btn subtle small text-xs py-1 text-accent border-accent/40"
                             >
-                              {isAr ? 'حفظ ✓' : 'Update ✓'}
+                              {isAr ? 'حفظ' : 'Update'}
                             </button>
                           </div>
                         )}
@@ -697,7 +699,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
               {intel.milestonesTotal === 0 ? (
                 <div className="p-8 text-center panel border border-[var(--border-subtle)] bg-[var(--surface-deep)] rounded-xl space-y-2">
-                  <span className="text-2xl">🚩</span>
+                  <NuqtaIcon name="flag" className="w-6 h-6" />
                   <p className="text-[var(--text-primary)] font-semibold">{isAr ? 'لا توجد مراحل محددة بعد' : 'No milestones defined'}</p>
                   <p className="text-xs text-muted">{isAr ? 'قسّم هدفك إلى 3-5 مراحل رئيسية لضمان الاستمرارية.' : 'Break down your goal into actionable checkpoints.'}</p>
                   <button onClick={() => setIsAddingMs(true)} className="btn primary small mt-2">
@@ -725,7 +727,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                               : 'border-[var(--border-strong)] hover:border-[var(--tone-success-line)] bg-transparent'
                           }`}
                         >
-                          {ms.isCompleted && '✓'}
+                          {ms.isCompleted && <NuqtaIcon name="check" className="w-3 h-3" />}
                         </button>
                         <div>
                           <span
@@ -748,8 +750,9 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         onClick={() => deleteGoalMilestone(goal.id, ms.id)}
                         className="text-muted hover:text-[var(--tone-danger)] text-xs px-2"
                         title={isAr ? 'حذف' : 'Delete'}
+                        aria-label={isAr ? 'حذف المرحلة' : 'Delete milestone'}
                       >
-                        ✕
+                        <NuqtaIcon name="trash" className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
@@ -772,7 +775,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-2">
-                      <span>✓</span>
+                      <NuqtaIcon name="check" className="w-3.5 h-3.5" />
                       <span>{isAr ? 'المهام التنفيذية المرتبطة' : 'Linked Tasks'}</span>
                       <span className="text-xs text-muted font-mono">({intel.linkedTasksCount})</span>
                     </h4>
@@ -822,7 +825,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                       <span className="text-xs font-bold text-[var(--text-primary)]">
                         {isAr ? 'إنشاء مهمة جديدة مرتبطة بالهدف تلقائياً' : 'Create New Task Linked to Goal'}
                       </span>
-                      <button type="button" onClick={() => setIsCreatingTask(false)} className="text-muted hover:text-[var(--text-primary)] text-xs">✕</button>
+                      <button type="button" onClick={() => setIsCreatingTask(false)} aria-label={isAr ? 'إغلاق' : 'Cancel'} className="text-muted hover:text-[var(--text-primary)]"><NuqtaIcon name="close" className="w-3.5 h-3.5" /></button>
                     </div>
                     <input
                       className="input text-xs"
@@ -852,7 +855,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                           {isAr ? 'إلغاء' : 'Cancel'}
                         </button>
                         <button type="submit" className="btn primary small text-xs">
-                          {isAr ? 'إضافة وربط بالهدف ✓' : 'Add & Link ✓'}
+                          {isAr ? 'إضافة وربط بالهدف' : 'Add & Link'}
                         </button>
                       </div>
                     </div>
@@ -893,7 +896,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-2">
-                      <span>↻</span>
+                      <NuqtaIcon name="repeat" className="w-3.5 h-3.5" />
                       <span>{isAr ? 'العادات الروتينية المرتبطة' : 'Linked Habits'}</span>
                       <span className="text-xs text-muted font-mono">({intel.linkedHabitsCount})</span>
                     </h4>
@@ -943,7 +946,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                       <span className="text-xs font-bold text-[var(--text-primary)]">
                         {isAr ? 'إنشاء عادة جديدة مرتبطة بالهدف تلقائياً' : 'Create New Habit Linked to Goal'}
                       </span>
-                      <button type="button" onClick={() => setIsCreatingHabit(false)} className="text-muted hover:text-[var(--text-primary)] text-xs">✕</button>
+                      <button type="button" onClick={() => setIsCreatingHabit(false)} aria-label={isAr ? 'إغلاق' : 'Cancel'} className="text-muted hover:text-[var(--text-primary)]"><NuqtaIcon name="close" className="w-3.5 h-3.5" /></button>
                     </div>
                     <input
                       className="input text-xs"
@@ -967,7 +970,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                             : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
-                        <span className="block text-sm">📜</span>
+                        <span className="block text-[var(--tone-success)]"><NuqtaIcon name="mosque" className="w-4 h-4" /></span>
                         <span className="text-[10px] font-bold block">{isAr ? 'حفظ القرآن' : 'Quran Studio'}</span>
                       </button>
                       <button
@@ -983,7 +986,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                             : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
-                        <span className="block text-sm">📖</span>
+                        <span className="block text-[var(--tone-warning)]"><NuqtaIcon name="book-open" className="w-4 h-4" /></span>
                         <span className="text-[10px] font-bold block">{isAr ? 'القراءة' : 'Reading Studio'}</span>
                       </button>
                       <button
@@ -999,7 +1002,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                             : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
-                        <span className="block text-sm">⚡</span>
+                        <span className="block text-[var(--tone-info)]"><NuqtaIcon name="dumbbell" className="w-4 h-4" /></span>
                         <span className="text-[10px] font-bold block">{isAr ? 'التمارين' : 'Workout Studio'}</span>
                       </button>
                       <button
@@ -1015,7 +1018,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                             : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
-                        <span className="block text-sm">🎨</span>
+                        <span className="block text-[var(--tone-purple)]"><NuqtaIcon name="palette" className="w-4 h-4" /></span>
                         <span className="text-[10px] font-bold block">{isAr ? 'المرسم' : 'Drawing Studio'}</span>
                       </button>
                       <button
@@ -1027,7 +1030,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                             : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted'
                         }`}
                       >
-                        <span className="block text-sm">✓</span>
+                        <span className="block text-accent"><NuqtaIcon name="check" className="w-4 h-4" /></span>
                         <span className="text-[10px] font-bold block">{isAr ? 'عادة عامة' : 'Standard Habit'}</span>
                       </button>
                     </div>
@@ -1042,7 +1045,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         {isAr ? 'إلغاء' : 'Cancel'}
                       </button>
                       <button type="submit" className="btn primary small text-xs">
-                        {isAr ? 'إنشاء وربط بالهدف ✓' : 'Create & Link ✓'}
+                        {isAr ? 'إنشاء وربط بالهدف' : 'Create & Link'}
                       </button>
                     </div>
                   </form>
@@ -1057,7 +1060,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         className="flex items-center justify-between p-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)] text-xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-accent">↻</span>
+                          <NuqtaIcon name="repeat" className="w-3.5 h-3.5 text-accent" />
                           <span className="text-[var(--text-primary)] font-medium truncate">{h.name}</span>
                           <span className="text-[11px] text-muted font-mono">({h.currentStreak} {isAr ? 'يوم' : 'd'})</span>
                         </div>
@@ -1081,7 +1084,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-2">
-                      <span>📖</span>
+                      <NuqtaIcon name="book-open" className="w-3.5 h-3.5" />
                       <span>{isAr ? 'الكتب المرتبطة (نظام القراءة)' : 'Linked Books (Reading Studio)'}</span>
                       <span className="text-xs text-muted font-mono">({intel.linkedBooksCount})</span>
                     </h4>
@@ -1123,7 +1126,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         className="flex items-center justify-between p-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)] text-xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-[var(--tone-warning)]">📖</span>
+                          <NuqtaIcon name="book-open" className="w-3.5 h-3.5 text-[var(--tone-warning)]" />
                           <span className="text-[var(--text-primary)] font-medium truncate">{b.title}</span>
                           <span className="text-[11px] text-muted font-mono">({b.currentPage}/{b.totalPages} ص · {b.status})</span>
                         </div>
@@ -1147,7 +1150,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-2">
-                      <span>🎨</span>
+                      <NuqtaIcon name="palette" className="w-3.5 h-3.5" />
                       <span>{isAr ? 'المشاريع الفنية المرتبطة (مرسم الفن)' : 'Linked Art Projects (Creative Studio)'}</span>
                       <span className="text-xs text-muted font-mono">({intel.linkedArtProjectsCount})</span>
                     </h4>
@@ -1189,7 +1192,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                         className="flex items-center justify-between p-2 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-default)] text-xs"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-[var(--tone-purple)]">🎨</span>
+                          <NuqtaIcon name="palette" className="w-3.5 h-3.5 text-[var(--tone-purple)]" />
                           <span className="text-[var(--text-primary)] font-medium truncate">{p.title}</span>
                           <span className="text-[11px] text-muted font-mono">({p.stage} · {p.sessionsCount} sessions)</span>
                         </div>
@@ -1257,7 +1260,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
 
                 {intel.contributions.length === 0 ? (
                   <div className="p-8 text-center panel border border-[var(--border-subtle)] bg-[var(--surface-deep)] rounded-xl space-y-2">
-                    <span className="text-2xl">⏳</span>
+                    <NuqtaIcon name="hourglass" className="w-6 h-6" />
                     <p className="text-[var(--text-primary)] font-semibold">{isAr ? 'لا توجد مساهمات مسجلة بعد' : 'No contribution records yet'}</p>
                     <p className="text-xs text-muted">
                       {isAr

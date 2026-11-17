@@ -2,7 +2,7 @@ import { localDateKey, localDayFrom } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Goal, GoalPriority, KeyResult, KeyResultDataSource } from '../types';
-import { NuqtaIcon } from './NuqtaIcon';
+import { NuqtaIcon, IconName } from './NuqtaIcon';
 import { EmptyState, NuqtaSelect, PageHeader } from './ui';
 import { GoalDetailModal } from './GoalDetailModal';
 import { evaluateGoalProgress } from '../lib/goalProgressEngine';
@@ -157,12 +157,12 @@ export const GoalsView: React.FC = () => {
     0
   );
 
-  const categoryLabels: Record<string, { ar: string; en: string; icon: string }> = {
-    career: { ar: 'مهني وعمل', en: 'Career', icon: '💼' },
-    health: { ar: 'صحة وجسد', en: 'Health', icon: '⚡' },
-    finance: { ar: 'مالي واستثمار', en: 'Finance', icon: '🪙' },
-    personal: { ar: 'شخصي وعائلة', en: 'Personal', icon: '🌱' },
-    intellect: { ar: 'فكري وثقافي', en: 'Intellect', icon: '🧠' }
+  const categoryLabels: Record<string, { ar: string; en: string; icon: IconName }> = {
+    career: { ar: 'مهني وعمل', en: 'Career', icon: 'briefcase' },
+    health: { ar: 'صحة وجسد', en: 'Health', icon: 'activity' },
+    finance: { ar: 'مالي واستثمار', en: 'Finance', icon: 'coin' },
+    personal: { ar: 'شخصي وعائلة', en: 'Personal', icon: 'leaf' },
+    intellect: { ar: 'فكري وثقافي', en: 'Intellect', icon: 'brain' }
   };
 
   const priorityLabels: Record<string, { ar: string; en: string; badge: string }> = {
@@ -290,11 +290,11 @@ export const GoalsView: React.FC = () => {
           {/* Category Dropdown */}
           <NuqtaSelect value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="text-xs">
             <option value="all">{isAr ? 'كل التصنيفات' : 'All Categories'}</option>
-            <option value="career">{isAr ? '💼 مهني وعمل' : 'Career'}</option>
-            <option value="health">{isAr ? '⚡ صحة وجسد' : 'Health'}</option>
-            <option value="finance">{isAr ? '🪙 مالي واستثمار' : 'Finance'}</option>
-            <option value="personal">{isAr ? '🌱 شخصي وعائلة' : 'Personal'}</option>
-            <option value="intellect">{isAr ? '🧠 فكري وثقافي' : 'Intellect'}</option>
+            <option value="career">{isAr ? 'مهني وعمل' : 'Career'}</option>
+            <option value="health">{isAr ? 'صحة وجسد' : 'Health'}</option>
+            <option value="finance">{isAr ? 'مالي واستثمار' : 'Finance'}</option>
+            <option value="personal">{isAr ? 'شخصي وعائلة' : 'Personal'}</option>
+            <option value="intellect">{isAr ? 'فكري وثقافي' : 'Intellect'}</option>
           </NuqtaSelect>
         </div>
 
@@ -347,7 +347,7 @@ export const GoalsView: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-strong)] font-semibold flex items-center gap-1">
-                        <span>{cat.icon}</span>
+                        <NuqtaIcon name={cat.icon} className="w-3.5 h-3.5" />
                         <span>{isAr ? cat.ar : cat.en}</span>
                       </span>
 
@@ -453,22 +453,22 @@ export const GoalsView: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] text-muted">
                     {intel.linkedTasksCount > 0 && (
                       <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-[var(--text-primary)] border border-[var(--border-strong)]">
-                        ✓ {intel.linkedTasksCount} {isAr ? 'مهام' : 'tasks'}
+                        {intel.linkedTasksCount} {isAr ? 'مهام' : 'tasks'}
                       </span>
                     )}
                     {intel.linkedHabitsCount > 0 && (
                       <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-[var(--text-primary)] border border-[var(--border-strong)]">
-                        ↻ {intel.linkedHabitsCount} {isAr ? 'عادات' : 'habits'}
+                        {intel.linkedHabitsCount} {isAr ? 'عادات' : 'habits'}
                       </span>
                     )}
                     {intel.linkedBooksCount > 0 && (
                       <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-[var(--tone-warning)] border border-[var(--border-strong)]">
-                        📖 {intel.linkedBooksCount} {isAr ? 'كتب' : 'books'}
+                        {intel.linkedBooksCount} {isAr ? 'كتب' : 'books'}
                       </span>
                     )}
                     {intel.linkedArtProjectsCount > 0 && (
                       <span className="px-2 py-0.5 rounded bg-[var(--surface-inset)] text-[var(--tone-purple)] border border-[var(--border-strong)]">
-                        🎨 {intel.linkedArtProjectsCount} {isAr ? 'مشاريع فنية' : 'art projects'}
+                        {intel.linkedArtProjectsCount} {isAr ? 'مشاريع فنية' : 'art projects'}
                       </span>
                     )}
                   </div>
@@ -490,14 +490,15 @@ export const GoalsView: React.FC = () => {
                       className="btn subtle small text-xs py-1 text-accent border-accent/30 hover:bg-accent/15"
                       onClick={() => setInspectingGoal(goal)}
                     >
-                      <span>{isAr ? 'تفاصيل المؤشرات ↗' : 'Inspect Intel ↗'}</span>
+                      <span>{isAr ? 'تفاصيل المؤشرات' : 'Inspect Intel'}</span>
                     </button>
                     <button
                       className="mini-icon text-muted hover:text-[var(--text-primary)]"
                       onClick={() => openEditGoalModal(goal)}
                       title={isAr ? 'تعديل' : 'Edit'}
+                      aria-label={isAr ? 'تعديل الهدف' : 'Edit goal'}
                     >
-                      ✏️
+                      <NuqtaIcon name="edit" className="w-4 h-4" />
                     </button>
                     <button
                       className="mini-icon text-muted hover:text-[var(--tone-danger)]"
@@ -566,21 +567,21 @@ export const GoalsView: React.FC = () => {
                 <div className="field">
                   <label className="text-xs text-muted mb-1 block">{isAr ? 'التصنيف' : 'Category'}</label>
                   <NuqtaSelect value={formCategory} onChange={(e) => setFormCategory(e.target.value as any)} className="text-xs">
-                    <option value="career">{isAr ? '💼 مهني وعمل' : 'Career'}</option>
-                    <option value="health">{isAr ? '⚡ صحة وجسد' : 'Health'}</option>
-                    <option value="finance">{isAr ? '🪙 مالي واستثمار' : 'Finance'}</option>
-                    <option value="personal">{isAr ? '🌱 شخصي وعائلة' : 'Personal'}</option>
-                    <option value="intellect">{isAr ? '🧠 فكري وثقافي' : 'Intellect'}</option>
+                    <option value="career">{isAr ? 'مهني وعمل' : 'Career'}</option>
+                    <option value="health">{isAr ? 'صحة وجسد' : 'Health'}</option>
+                    <option value="finance">{isAr ? 'مالي واستثمار' : 'Finance'}</option>
+                    <option value="personal">{isAr ? 'شخصي وعائلة' : 'Personal'}</option>
+                    <option value="intellect">{isAr ? 'فكري وثقافي' : 'Intellect'}</option>
                   </NuqtaSelect>
                 </div>
 
                 <div className="field">
                   <label className="text-xs text-muted mb-1 block">{isAr ? 'الأولوية' : 'Priority'}</label>
                   <NuqtaSelect value={formPriority} onChange={(e) => setFormPriority(e.target.value as GoalPriority)} className="text-xs">
-                    <option value="urgent">{isAr ? '🔴 عاجل جداً' : 'Urgent'}</option>
-                    <option value="high">{isAr ? '🟡 أولوية كبرى' : 'High'}</option>
-                    <option value="medium">{isAr ? '🔵 متوسط الأهمية' : 'Medium'}</option>
-                    <option value="low">{isAr ? '⚪ أولوية عادية' : 'Low'}</option>
+                    <option value="urgent">{isAr ? 'عاجل جداً' : 'Urgent'}</option>
+                    <option value="high">{isAr ? 'أولوية كبرى' : 'High'}</option>
+                    <option value="medium">{isAr ? 'متوسط الأهمية' : 'Medium'}</option>
+                    <option value="low">{isAr ? 'أولوية عادية' : 'Low'}</option>
                   </NuqtaSelect>
                 </div>
 
@@ -655,14 +656,14 @@ export const GoalsView: React.FC = () => {
                           }
                         }} className="text-xs">
 
-                        <option value="tasks_completed">{isAr ? '✓ عدد المهام المنجزة' : 'Tasks: Completed Count'}</option>
-                        <option value="habit_consistency">{isAr ? '↻ نسبة التزام العادات (%)' : 'Habits: Cadence (%)'}</option>
-                        <option value="reading_books_completed">{isAr ? '📚 عدد الكتب المكتملة' : 'Reading: Books Finished'}</option>
-                        <option value="reading_pages_read">{isAr ? '📖 صفحات القراءة' : 'Reading: Pages Read'}</option>
-                        <option value="workout_sessions_count">{isAr ? '⚡ حصص التمارين المنزلية' : 'Workout: Sessions'}</option>
-                        <option value="workout_total_reps">{isAr ? '💪 تكرارات التمارين' : 'Workout: Total Reps'}</option>
-                        <option value="drawing_projects_completed">{isAr ? '🏆 مشاريع الرسم المكتملة' : 'Drawing: Finished Projects'}</option>
-                        <option value="manual">{isAr ? '✏️ نتيجة يدوية' : 'Manual Entry'}</option>
+                        <option value="tasks_completed">{isAr ? 'عدد المهام المنجزة' : 'Tasks: Completed Count'}</option>
+                        <option value="habit_consistency">{isAr ? 'نسبة التزام العادات (%)' : 'Habits: Cadence (%)'}</option>
+                        <option value="reading_books_completed">{isAr ? 'عدد الكتب المكتملة' : 'Reading: Books Finished'}</option>
+                        <option value="reading_pages_read">{isAr ? 'صفحات القراءة' : 'Reading: Pages Read'}</option>
+                        <option value="workout_sessions_count">{isAr ? 'حصص التمارين المنزلية' : 'Workout: Sessions'}</option>
+                        <option value="workout_total_reps">{isAr ? 'تكرارات التمارين' : 'Workout: Total Reps'}</option>
+                        <option value="drawing_projects_completed">{isAr ? 'مشاريع الرسم المكتملة' : 'Drawing: Finished Projects'}</option>
+                        <option value="manual">{isAr ? 'نتيجة يدوية' : 'Manual Entry'}</option>
                       </NuqtaSelect>
                     </div>
                   </div>

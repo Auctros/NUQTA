@@ -594,7 +594,7 @@ export const DashboardView: React.FC = () => {
                                 : 'border-[var(--border-strong)] bg-transparent text-transparent hover:border-[var(--brand-strong)]'
                             }`}
                           >
-                            ✓
+                            <NuqtaIcon name="check" className="w-3 h-3" />
                           </button>
                           <div className="min-w-0 flex-1">
                             <div
@@ -678,7 +678,7 @@ export const DashboardView: React.FC = () => {
                                 : 'border-[var(--border-strong)] bg-transparent text-transparent hover:border-[var(--brand-strong)]'
                             }`}
                           >
-                            ✓
+                            <NuqtaIcon name="check" className="w-3 h-3" />
                           </button>
                           <div className="min-w-0">
                             <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
@@ -844,7 +844,7 @@ export const DashboardView: React.FC = () => {
                       <div key={item.id} className="py-2 flex items-center justify-between gap-2 opacity-75">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-4 h-4 rounded bg-[var(--brand-soft)] text-[var(--brand-strong)] grid place-items-center text-[10px] font-bold shrink-0">
-                            ✓
+                            <NuqtaIcon name="check" className="w-3 h-3" />
                           </span>
                           <span className="text-xs text-[var(--text-primary)] truncate">{item.title}</span>
                         </div>
@@ -965,7 +965,7 @@ export const DashboardView: React.FC = () => {
                                 : 'border-[var(--border-strong)] text-transparent'
                             }`}
                           >
-                            ✓
+                            <NuqtaIcon name="check" className="w-3 h-3" />
                           </span>
                           <div className="min-w-0">
                             <div className="text-xs font-semibold text-[var(--text-primary)] truncate">

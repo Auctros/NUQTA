@@ -156,7 +156,7 @@ export const HealthView: React.FC = () => {
             <span className="small-muted">{isAr ? 'اليوم' : 'Today'}</span>
           </div>
           <strong>
-            {today.workoutMinutes ?? (today.workoutLogged ? '✓' : '0')}
+            {today.workoutMinutes ?? (today.workoutLogged ? <NuqtaIcon name="check" className="w-4 h-4" /> : '0')}
             <small style={{ display: 'inline', marginInlineStart: '5px' }}>{isAr ? 'د' : 'min'}</small>
           </strong>
           <small>{isAr ? 'الحركة والتمرين' : 'Movement'}</small>

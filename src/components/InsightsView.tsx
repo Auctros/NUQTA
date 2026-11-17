@@ -9,7 +9,7 @@ import {
   MovementDistributionBar
 } from './charts/LifeIntelligenceCharts';
 import { WhatIfSimulator } from './WhatIfSimulator';
-import { NuqtaIcon } from './NuqtaIcon';
+import { NuqtaIcon, IconName } from './NuqtaIcon';
 
 export const InsightsView: React.FC = () => {
   const {
@@ -53,58 +53,58 @@ export const InsightsView: React.FC = () => {
             : 'bg-[var(--tone-danger-wash)] text-[var(--tone-danger)] border-[var(--tone-danger-line)]'
         }`}
       >
-        <span>{isUp ? '↗ +' : '↘ '}</span>
+        <NuqtaIcon name={isUp ? 'trending-up' : 'trending-down'} className="w-3 h-3" />
         <span>{Math.abs(deltaPercent)}%</span>
       </span>
     );
   };
 
   // Meaningful non-infantilizing milestones
-  const achievements = [
+  const achievements: { icon: IconName; title: string; sub: string; unlocked: boolean }[] = [
     {
-      icon: '✳',
+      icon: 'sparkle',
       title: isAr ? 'أول نقطة' : 'First Point',
       sub: isAr ? 'إنجاز أول مهمة بحضور كامل' : 'Complete first anchor task',
       unlocked: tasks.filter((t) => t.status === 'completed').length >= 1
     },
     {
-      icon: '♨',
+      icon: 'flame',
       title: isAr ? 'سلسلة ٧ أيام' : 'Seven-Day Chain',
       sub: isAr ? 'المحافظة على عادة لأسبوع كامل' : 'Keep a habit unbroken for a week',
       unlocked: habits.some((h) => h.longestStreak >= 7 || h.currentStreak >= 7)
     },
     {
-      icon: '📖',
+      icon: 'book-open',
       title: isAr ? 'قارئ منهجي' : 'Systematic Reader',
       sub: isAr ? 'قراءة أكثر من 100 صفحة موثقة' : 'Log 100+ verified pages read',
       unlocked: report.reading.pagesRead.currentValue >= 100
     },
     {
-      icon: '⚡',
+      icon: 'dumbbell',
       title: isAr ? 'عزيمة كاليستنكس' : 'Calisthenics Discipline',
       sub: isAr ? 'إنجاز أكثر من 100 تكرار بوزن الجسم' : 'Complete 100+ bodyweight reps',
       unlocked: report.fitness.workoutReps.currentValue >= 100
     },
     {
-      icon: '🎨',
+      icon: 'palette',
       title: isAr ? 'حالة تدفق إبداعي' : 'Creative Flow Master',
       sub: isAr ? 'تسجيل 3 ساعات تدفق في المرسم' : '3+ hours of studio flow',
       unlocked: report.drawing.flowHours.currentValue >= 3
     },
     {
-      icon: '◷',
+      icon: 'timer',
       title: isAr ? 'انتباه غير منقطع' : 'Deep Attention',
       sub: isAr ? 'تسجيل 5 جلسات تركيز عميقة' : '5+ deep work focus sprints',
       unlocked: focusSessions.length >= 5
     },
     {
-      icon: '🎯',
+      icon: 'target',
       title: isAr ? 'محقق الأهداف' : 'Milestone Crusher',
       sub: isAr ? 'إنجاز أول مرحلة زمنية استراتيجية' : 'Hit first strategic milestone',
       unlocked: report.goals.milestonesAchieved >= 1
     },
     {
-      icon: '✦',
+      icon: 'check',
       title: isAr ? 'أسبوع متوازن' : 'Steady Week',
       sub: isAr ? 'انتظام العادات بنسبة تتجاوز 70%' : '70%+ habit consistency',
       unlocked: report.habits.consistencyRate.currentValue >= 70
@@ -169,9 +169,10 @@ export const InsightsView: React.FC = () => {
           <button
             onClick={() => setSundayRitualOpen(true)}
             className="btn primary"
+            title={isAr ? 'مراجعة الأسبوع المنصرم يوم الجمعة' : 'Close out the week on Friday'}
           >
             <NuqtaIcon name="sparkle" className="w-4 h-4" />
-            <span>{isAr ? 'طقس الأحد' : 'Sunday Ritual'}</span>
+            <span>{isAr ? 'طقس الجمعة الأسبوعي' : 'Friday Weekly Review'}</span>
           </button>
         </div>
       </div>
@@ -217,7 +218,8 @@ export const InsightsView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 text-xs font-mono text-muted">
-          <span>📅 {report.dateRangeLabel}</span>
+          <NuqtaIcon name="calendar" className="w-3.5 h-3.5" />
+          <span>{report.dateRangeLabel}</span>
           {horizon !== 'all' && (
             <span className="text-[11px] text-accent font-medium">
               ({isAr ? 'مقارن بالفترة السابقة المماثلة' : 'vs prior period'})
@@ -237,7 +239,7 @@ export const InsightsView: React.FC = () => {
             <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted flex items-center gap-1.5">
-                  <span>✓</span>
+                  <NuqtaIcon name="check" className="w-3.5 h-3.5" />
                   <span>{isAr ? 'إنجاز المهام' : 'Tasks Completed'}</span>
                 </span>
                 {renderDelta(report.productivity.tasksCompleted.deltaPercent)}
@@ -259,7 +261,7 @@ export const InsightsView: React.FC = () => {
             <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted flex items-center gap-1.5">
-                  <span>↻</span>
+                  <NuqtaIcon name="repeat" className="w-3.5 h-3.5" />
                   <span>{isAr ? 'انتظام العادات' : 'Habit Cadence'}</span>
                 </span>
                 {renderDelta(report.habits.consistencyRate.deltaPercent)}
@@ -284,7 +286,7 @@ export const InsightsView: React.FC = () => {
             <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted flex items-center gap-1.5">
-                  <span>📖</span>
+                  <NuqtaIcon name="book-open" className="w-3.5 h-3.5" />
                   <span>{isAr ? 'صفحات القراءة' : 'Pages Read'}</span>
                 </span>
                 {renderDelta(report.reading.pagesRead.deltaPercent)}
@@ -308,7 +310,7 @@ export const InsightsView: React.FC = () => {
             <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl flex flex-col justify-between space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted flex items-center gap-1.5">
-                  <span>⚡</span>
+                  <NuqtaIcon name="dumbbell" className="w-3.5 h-3.5" />
                   <span>{isAr ? 'تكرارات اللياقة' : 'Calisthenics Reps'}</span>
                 </span>
                 {renderDelta(report.fitness.workoutReps.deltaPercent)}
@@ -332,7 +334,7 @@ export const InsightsView: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <span>⚖️</span>
+                  <NuqtaIcon name="scale" className="w-4 h-4" />
                   <span>{isAr ? 'توزيع الوقت والمجهود بين مجالات الحياة' : 'Life Spheres Time & Effort Allocation'}</span>
                 </h3>
                 <p className="text-xs text-muted">
@@ -358,7 +360,7 @@ export const InsightsView: React.FC = () => {
             {/* Highest Momentum vs Area Needing Attention Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
               <div className="p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] flex items-start gap-3">
-                <span className="text-xl">🚀</span>
+                <NuqtaIcon name="rocket" className="w-5 h-5" />
                 <div className="space-y-1 min-w-0">
                   <span className="text-[10px] uppercase font-mono tracking-wider text-accent font-semibold block">
                     {isAr ? 'المجال الأكثر نشاطاً وزخماً' : 'HIGHEST MOMENTUM SPHERE'}
@@ -374,7 +376,7 @@ export const InsightsView: React.FC = () => {
 
               {report.areaNeedingAttention ? (
                 <div className="p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] flex items-start gap-3">
-                  <span className="text-xl">⚠️</span>
+                  <NuqtaIcon name="alert" className="w-5 h-5" />
                   <div className="space-y-1 min-w-0">
                     <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--tone-warning)] font-semibold block">
                       {isAr ? 'مجال يحتاج انتباهاً وتنشيطاً' : 'SPHERE NEEDING MOMENTUM'}
@@ -389,7 +391,7 @@ export const InsightsView: React.FC = () => {
                 </div>
               ) : (
                 <div className="p-3.5 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-strong)] flex items-start gap-3">
-                  <span className="text-xl">🌱</span>
+                  <NuqtaIcon name="leaf" className="w-5 h-5" />
                   <div className="space-y-1 min-w-0">
                     <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--tone-success)] font-semibold block">
                       {isAr ? 'توازن مستقر بين المجالات' : 'BALANCED SPHERE DISTRIBUTION'}
@@ -411,7 +413,7 @@ export const InsightsView: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <span>📈</span>
+                  <NuqtaIcon name="trending-up" className="w-4 h-4" />
                   <span>{isAr ? 'منحنى الاتجاه والوتيرة اليومية (Daily Momentum Curve)' : 'Daily Momentum Trend Line'}</span>
                 </h3>
                 <p className="text-xs text-muted">
@@ -487,7 +489,7 @@ export const InsightsView: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <span>🧱</span>
+                  <NuqtaIcon name="blocks" className="w-4 h-4" />
                   <span>{isAr ? 'مصفوفة النشاط التراكمي (8 أسابيع / 56 يوماً)' : 'Continuous Momentum Matrix (8 Weeks)'}</span>
                 </h3>
                 <p className="text-xs text-muted">
@@ -506,7 +508,7 @@ export const InsightsView: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <span>🎯</span>
+                  <NuqtaIcon name="target" className="w-4 h-4" />
                   <span>{isAr ? 'مساهمة الأنشطة في الأهداف الاستراتيجية' : 'Activity Contribution to Strategic Goals'}</span>
                 </h3>
                 <p className="text-xs text-muted">
@@ -519,7 +521,8 @@ export const InsightsView: React.FC = () => {
                 onClick={() => setActiveNavTab('goals')}
                 className="text-xs text-accent hover:underline"
               >
-                {isAr ? 'خارطة الأهداف الكاملة ↗' : 'Goals Roadmap ↗'}
+                {isAr ? 'خارطة الأهداف الكاملة' : 'Goals Roadmap'}
+                <NuqtaIcon name="arrow" className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -587,7 +590,7 @@ export const InsightsView: React.FC = () => {
                 domainDetailTab === 'productivity' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
-              <span>✓</span>
+              <NuqtaIcon name="check" className="w-3.5 h-3.5" />
               <span>{isAr ? 'الإنتاجية والمهام' : 'Tasks'}</span>
             </button>
             <button
@@ -596,7 +599,7 @@ export const InsightsView: React.FC = () => {
                 domainDetailTab === 'habits' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
-              <span>↻</span>
+              <NuqtaIcon name="repeat" className="w-3.5 h-3.5" />
               <span>{isAr ? 'العادات اليومية' : 'Habits'}</span>
             </button>
             <button
@@ -605,7 +608,7 @@ export const InsightsView: React.FC = () => {
                 domainDetailTab === 'reading' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
-              <span>📖</span>
+              <NuqtaIcon name="book-open" className="w-3.5 h-3.5" />
               <span>{isAr ? 'مكتبة القراءة' : 'Reading'}</span>
             </button>
             <button
@@ -614,7 +617,7 @@ export const InsightsView: React.FC = () => {
                 domainDetailTab === 'fitness' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
-              <span>⚡</span>
+              <NuqtaIcon name="dumbbell" className="w-3.5 h-3.5" />
               <span>{isAr ? 'اللياقة المنزلية' : 'Fitness'}</span>
             </button>
             <button
@@ -623,7 +626,7 @@ export const InsightsView: React.FC = () => {
                 domainDetailTab === 'drawing' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
-              <span>🎨</span>
+              <NuqtaIcon name="palette" className="w-3.5 h-3.5" />
               <span>{isAr ? 'مرسم الإبداع' : 'Drawing'}</span>
             </button>
             <button
@@ -632,7 +635,7 @@ export const InsightsView: React.FC = () => {
                 domainDetailTab === 'focus' ? 'bg-[var(--surface-track)] text-accent font-bold shadow' : 'text-muted hover:text-[var(--text-primary)]'
               }`}
             >
-              <span>◷</span>
+              <NuqtaIcon name="timer" className="w-3.5 h-3.5" />
               <span>{isAr ? 'التركيز العميق' : 'Focus'}</span>
             </button>
           </div>
@@ -880,7 +883,7 @@ export const InsightsView: React.FC = () => {
                   <strong className="text-2xl font-mono text-accent font-bold mt-1 block">
                     {report.drawing.projectsCompleted}
                   </strong>
-                  <span className="text-[11px] text-muted">{isAr ? 'مشروع مكتمل 🏆' : 'completed projects'}</span>
+                  <span className="text-[11px] text-muted">{isAr ? 'مشروع مكتمل' : 'completed projects'}</span>
                 </div>
 
                 <div className="panel p-4 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-xl">
@@ -958,7 +961,7 @@ export const InsightsView: React.FC = () => {
                 key={i}
                 className={`achievement ${a.unlocked ? 'unlocked' : ''}`}
               >
-                <span className="achievement-icon">{a.icon}</span>
+                <span className="achievement-icon"><NuqtaIcon name={a.icon} className="w-4 h-4" /></span>
                 <strong>{a.title}</strong>
                 <small>{a.sub}</small>
               </div>

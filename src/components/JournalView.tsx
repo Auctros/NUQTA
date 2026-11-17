@@ -17,13 +17,23 @@ export const JournalView: React.FC = () => {
   const [tomorrow, setTomorrow] = useState(existingToday?.planForTomorrow || '');
   const [gratitude, setGratitude] = useState((existingToday?.gratitudeList || [])[0] || '');
 
-  const moods = [
-    { emoji: '😞', labelAr: 'مستنزف جداً', labelEn: 'Drained', val: 1 },
-    { emoji: '😕', labelAr: 'طاقة منخفضة', labelEn: 'Low Energy', val: 2 },
-    { emoji: '😐', labelAr: 'محايد ومستقر', labelEn: 'Neutral', val: 3 },
-    { emoji: '🙂', labelAr: 'جيد وإيجابي', labelEn: 'Good', val: 4 },
-    { emoji: '😊', labelAr: 'طاقة عالية ومزدهر', labelEn: 'Great', val: 5 }
+  const moods: { bars: number; labelAr: string; labelEn: string; val: number }[] = [
+    { bars: 1, labelAr: 'مستنزف جداً', labelEn: 'Drained', val: 1 },
+    { bars: 2, labelAr: 'طاقة منخفضة', labelEn: 'Low Energy', val: 2 },
+    { bars: 3, labelAr: 'محايد ومستقر', labelEn: 'Neutral', val: 3 },
+    { bars: 4, labelAr: 'جيد وإيجابي', labelEn: 'Good', val: 4 },
+    { bars: 5, labelAr: 'طاقة عالية ومزدهر', labelEn: 'Great', val: 5 }
   ];
+
+  // Five ascending bars; mood n lights up n bars. Textual label carries the
+  // meaning for screen readers, so no emoji glyph is needed.
+  const moodBars = (level: number) => (
+    <span className="mood-bars" aria-hidden="true">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <span key={i} className={`mood-bar ${i <= level ? 'on' : ''}`} />
+      ))}
+    </span>
+  );
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +110,7 @@ export const JournalView: React.FC = () => {
                     className={`mood-button ${mood === m.val ? 'active' : ''}`}
                     onClick={() => setMood(m.val)}
                   >
-                    <span>{m.emoji}</span>
+                    {moodBars(m.bars)}
                     <small>{isAr ? m.labelAr : m.labelEn}</small>
                   </button>
                 ))}
@@ -152,7 +162,7 @@ export const JournalView: React.FC = () => {
             {/* Gratitude Prompt */}
             <div className="prompt-block">
               <label className="field-label" htmlFor="journal-gratitude">
-                ✳ — {isAr ? 'شيء تشعر بالامتنان والتقدير لوجوده اليوم' : 'One thing you are genuinely grateful for'}
+                <NuqtaIcon name="sparkle" className="w-3.5 h-3.5 inline-block" /> — {isAr ? 'شيء تشعر بالامتنان والتقدير لوجوده اليوم' : 'One thing you are genuinely grateful for'}
               </label>
               <input
                 id="journal-gratitude"
@@ -168,7 +178,7 @@ export const JournalView: React.FC = () => {
                 {isAr ? '٣ دقائق مساءً تفرغ الذاكرة المؤقتة لمخك' : '3 minutes of evening reflection frees working memory'}
               </span>
               <button className="btn primary" type="submit">
-                {isAr ? 'حفظ التأمل ✓' : 'Save Entry ✓'}
+                {isAr ? 'حفظ التأمل' : 'Save Entry'}
               </button>
             </div>
           </form>
@@ -189,13 +199,13 @@ export const JournalView: React.FC = () => {
           ) : (
             <div>
               {journalEntries.slice(0, 6).map((entry) => {
-                const moodEmoji = ['😞', '😕', '😐', '🙂', '😊'][Number(entry.mood) - 1] || '🙂';
+                const moodLevel = Math.min(5, Math.max(1, Number(entry.mood) || 3));
                 const snippet = entry.whatWentWell || entry.planForTomorrow || (entry.gratitudeList || [])[0] || '—';
                 return (
                   <div key={entry.id} className="journal-history-item">
                     <div className="journal-history-date">
                       <strong>{entry.date}</strong>
-                      <small>{moodEmoji}</small>
+                      <small>{moodBars(moodLevel)}</small>
                     </div>
                     <p>{snippet.slice(0, 140)}</p>
                   </div>

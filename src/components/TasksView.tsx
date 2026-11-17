@@ -298,7 +298,7 @@ export const TasksView: React.FC = () => {
           <option value="all">{isAr ? 'الكل (غير المؤرشفة)' : 'All Active'}</option>
           <option value="active">{isAr ? 'النشطة' : 'Active'}</option>
           <option value="completed">{isAr ? 'المكتملة' : 'Completed'}</option>
-          <option value="archived">{isAr ? 'المؤرشفة 🗄️' : 'Archived 🗄️'}</option>
+          <option value="archived">{isAr ? 'المؤرشفة' : 'Archived'}</option>
         </NuqtaSelect>
 
         <button
@@ -306,7 +306,7 @@ export const TasksView: React.FC = () => {
           className="btn subtle text-xs py-1.5 px-3 flex items-center gap-1.5"
           title={isAr ? 'فتح الأرشيف والسجل الشامل' : 'Open Universal Archive & History'}
         >
-          <span>🗄️</span>
+          <NuqtaIcon name="archive" className="w-4 h-4" />
           <span>{isAr ? 'الذاكرة والأرشيف' : 'Archive'}</span>
         </button>
 
@@ -392,12 +392,12 @@ export const TasksView: React.FC = () => {
                           <span className="task-title">{task.title}</span>
                           {task.isTopThree && (
                             <span className="tag green text-[9px] py-0 px-1.5" title={isAr ? 'ضمن أهم 3 اليوم' : 'Daily Top 3'}>
-                              ★ {isAr ? 'أهم 3' : 'Top 3'}
+                              <NuqtaIcon name="star" className="w-3 h-3 inline-block" /> {isAr ? 'أهم 3' : 'Top 3'}
                             </span>
                           )}
                           {task.recurrence && (
                             <span className="tag text-[9px] py-0 px-1.5 bg-accent/10 text-accent border border-accent/20" title={recurrenceLabel(task.recurrence, isAr)}>
-                              🔁 {recurrenceLabel(task.recurrence, isAr)}
+                              <NuqtaIcon name="repeat" className="w-3 h-3 inline-block" /> {recurrenceLabel(task.recurrence, isAr)}
                             </span>
                           )}
                         </div>
@@ -414,8 +414,8 @@ export const TasksView: React.FC = () => {
                         {task.linkedGoalId && (() => {
                           const linkedG = goals.find((g) => g.id === task.linkedGoalId);
                           return linkedG ? (
-                            <span className="tag text-[10px] bg-accent/10 text-accent border border-accent/20 truncate max-w-[140px]" title={linkedG.title}>
-                              🎯 {linkedG.title}
+                            <span className="tag text-[10px] bg-accent/10 text-accent border border-accent/20 truncate max-w-[140px] inline-flex items-center gap-1" title={linkedG.title}>
+                              <NuqtaIcon name="target" className="w-3 h-3" /> {linkedG.title}
                             </span>
                           ) : null;
                         })()}
@@ -450,8 +450,9 @@ export const TasksView: React.FC = () => {
                             className="mini-icon hover:text-[var(--tone-warning)]"
                             onClick={() => skipTaskOccurrence(task.id)}
                             title={isAr ? 'تخطّي هذا التكرار فقط' : 'Skip this occurrence'}
+                            aria-label={isAr ? 'تخطّي هذا التكرار' : 'Skip this occurrence'}
                           >
-                            ⏭
+                            <NuqtaIcon name="chevronRight" className="w-4 h-4" />
                           </button>
                         )}
                         {task.isArchived || task.status === 'archived' ? (
@@ -459,16 +460,18 @@ export const TasksView: React.FC = () => {
                             className="mini-icon text-[var(--tone-info)] hover:text-[var(--text-primary)]"
                             onClick={() => restoreTask(task.id)}
                             title={isAr ? 'استعادة من الأرشيف' : 'Restore from archive'}
+                            aria-label={isAr ? 'استعادة من الأرشيف' : 'Restore from archive'}
                           >
-                            ↩
+                            <NuqtaIcon name="restore" className="w-4 h-4" />
                           </button>
                         ) : (
                           <button
                             className="mini-icon hover:text-[var(--tone-warning)]"
                             onClick={() => archiveTask(task.id)}
                             title={isAr ? 'أرشفة المهمة' : 'Archive task'}
+                            aria-label={isAr ? 'أرشفة المهمة' : 'Archive task'}
                           >
-                            🗄️
+                            <NuqtaIcon name="archive" className="w-4 h-4" />
                           </button>
                         )}
 
@@ -561,7 +564,7 @@ export const TasksView: React.FC = () => {
                         <div key={t.id} className="kanban-card">
                           <div className="flex justify-between items-start gap-2">
                             <span className="task-title font-medium">{t.title}</span>
-                            {t.isTopThree && <span className="text-[10px] text-accent">★</span>}
+                            {t.isTopThree && <NuqtaIcon name="star" className="w-3 h-3 text-accent" />}
                           </div>
                           <div className="flex justify-between items-center text-[10px] text-muted mt-2">
                             <span>{t.scheduledDate || (isAr ? 'بلا موعد' : 'No date')}</span>
@@ -796,7 +799,7 @@ export const TasksView: React.FC = () => {
                   <option value="">{isAr ? 'بدون هدف استراتيجي (مهمة عامة)' : 'No linked goal (general task)'}</option>
                   {goals.map((g) => (
                     <option key={g.id} value={g.id}>
-                      🎯 {g.title} ({g.timeframe})
+                      {g.title} ({g.timeframe})
                     </option>
                   ))}
                 </NuqtaSelect>

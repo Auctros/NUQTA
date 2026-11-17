@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { BookItem, BookCategory } from '../types';
 import { Button, Field, Input, Modal, NuqtaSelect, Textarea, Toast } from './ui';
+import { NuqtaIcon } from './NuqtaIcon';
 import {
   StudioFrame,
   StudioSection,
@@ -394,11 +395,14 @@ export const ReadingView: React.FC = () => {
                       <span>
                         <span className="book-spine-author block">{b.author}</span>
                         <span className="text-[var(--fs-micro)] opacity-90 font-mono">
-                          {b.status === 'completed'
-                            ? isAr
-                              ? '✓ مكتمل'
-                              : '✓ Completed'
-                            : `${b.currentPage}/${b.totalPages}`}
+                          {b.status === 'completed' ? (
+                            <span className="inline-flex items-center gap-1">
+                              <NuqtaIcon name="check" className="w-3 h-3" />
+                              {isAr ? 'مكتمل' : 'Completed'}
+                            </span>
+                          ) : (
+                            `${b.currentPage}/${b.totalPages}`
+                          )}
                         </span>
                       </span>
                     </span>
@@ -641,7 +645,7 @@ export const ReadingView: React.FC = () => {
                           {s.date} · {s.pagesRead} {isAr ? 'ص' : 'p'} · {s.durationMinutes}m · {s.speedPagesPerHour} {isAr ? 'ص/س' : 'p/h'}
                         </p>
                       </div>
-                      {s.quoteSnippet && <span className="text-[var(--fs-micro)] text-[var(--studio-accent)]">💬</span>}
+                      {s.quoteSnippet && <span className="text-[var(--studio-accent)]"><NuqtaIcon name="quote" className="w-3.5 h-3.5" /></span>}
                     </div>
                     {s.notes && <p className="text-[var(--fs-xs)] text-[var(--text-tertiary)] italic mt-1">“{s.notes}”</p>}
                   </li>

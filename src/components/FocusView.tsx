@@ -59,7 +59,7 @@ export const FocusView: React.FC = () => {
       });
 
       NuqtaNotificationEngine.notify({
-        title: isAr ? '🎉 اكتملت جلسة التركيز!' : '🎉 Focus Session Completed!',
+        title: isAr ? 'اكتملت جلسة التركيز!' : 'Focus Session Completed!',
         body: isAr
           ? `أنجزت ${preset} دقيقة من العمل العميق بامتياز. خذ استراحة مستحقة.`
           : `You completed ${preset} minutes of deep work. Time for a well-deserved recovery.`,
@@ -128,7 +128,7 @@ export const FocusView: React.FC = () => {
         {/* Left Timer Panel */}
         <section className="panel timer-panel">
           <span className="tag green">
-            ✳ {mode === 'focus' ? (isAr ? 'جلسة تركيز' : 'Focus Session') : (isAr ? 'استراحة' : 'Break')}
+            <NuqtaIcon name="sparkle" className="w-3.5 h-3.5" /> {mode === 'focus' ? (isAr ? 'جلسة تركيز' : 'Focus Session') : (isAr ? 'استراحة' : 'Break')}
           </span>
 
           <div className="timer-mode-label">
@@ -287,10 +287,10 @@ export const FocusView: React.FC = () => {
               <div className="space-y-1">
                 {focusSessions.slice(0, 5).map((s) => (
                   <div key={s.id} className="session-log-row">
-                    <span className="session-log-icon">◷</span>
+                    <span className="session-log-icon"><NuqtaIcon name="timer" className="w-3.5 h-3.5" /></span>
                     <div className="session-log-copy">
                       <strong>{s.taskTitle || (isAr ? 'جلسة تركيز عامة' : 'General Focus Session')}</strong>
-                      <small>{s.completedAt?.slice(0, 10)} · ★ {s.productivityScore}/5</small>
+                      <small className="inline-flex items-center gap-1">{s.completedAt?.slice(0, 10)} · <NuqtaIcon name="star" className="w-3 h-3" /> {s.productivityScore}/5</small>
                     </div>
                     <span className="session-log-min">{s.durationMinutes}m</span>
                   </div>

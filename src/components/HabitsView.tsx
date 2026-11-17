@@ -312,7 +312,7 @@ export const HabitsView: React.FC = () => {
           },
           {
             id: 'archived',
-            label: `${isAr ? 'المؤرشفة 🗄️' : 'Archived 🗄️'} (${habits.filter((h) => h.isArchived || h.status === 'archived').length})`
+            label: `${isAr ? 'المؤرشفة' : 'Archived'} (${habits.filter((h) => h.isArchived || h.status === 'archived').length})`
           }
         ]}
         value={showArchived ? 'archived' : 'active'}
@@ -383,16 +383,18 @@ export const HabitsView: React.FC = () => {
                           className="mini-icon text-[var(--tone-info)] hover:text-[var(--text-primary)]"
                           onClick={() => restoreHabit(habit.id)}
                           title={isAr ? 'استعادة العادة' : 'Restore habit'}
+                          aria-label={isAr ? 'استعادة العادة' : 'Restore habit'}
                         >
-                          ↩
+                          <NuqtaIcon name="restore" className="w-4 h-4" />
                         </button>
                       ) : (
                         <button
                           className="mini-icon hover:text-[var(--tone-warning)]"
                           onClick={() => archiveHabit(habit.id)}
                           title={isAr ? 'أرشفة العادة مع الاحتفاظ بسجلها' : 'Archive habit (keeps history intact)'}
+                          aria-label={isAr ? 'أرشفة العادة' : 'Archive habit'}
                         >
-                          🗄️
+                          <NuqtaIcon name="archive" className="w-4 h-4" />
                         </button>
                       )}
 
@@ -410,22 +412,22 @@ export const HabitsView: React.FC = () => {
                   <h3>{habit.name}</h3>
                   {habit.specializedType === 'quran' && (
                     <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--tone-success)] border border-[var(--tone-success-line)]">
-                      📜 {isAr ? 'استوديو حفظ القرآن' : 'Quran Studio'}
+                      <NuqtaIcon name="mosque" className="w-3 h-3 inline-block" /> {isAr ? 'استوديو حفظ القرآن' : 'Quran Studio'}
                     </span>
                   )}
                   {habit.specializedType === 'reading' && (
                     <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-warning-wash)] text-[var(--tone-warning)] border border-[var(--tone-warning-line)]">
-                      📖 {isAr ? 'استوديو القراءة' : 'Reading Studio'}
+                      <NuqtaIcon name="book-open" className="w-3 h-3 inline-block" /> {isAr ? 'استوديو القراءة' : 'Reading Studio'}
                     </span>
                   )}
                   {habit.specializedType === 'workout' && (
                     <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-info-wash)] text-[var(--tone-info)] border border-[var(--tone-info-line)]">
-                      ⚡ {isAr ? 'استوديو التدريب' : 'Workout Studio'}
+                      <NuqtaIcon name="dumbbell" className="w-3 h-3 inline-block" /> {isAr ? 'استوديو التدريب' : 'Workout Studio'}
                     </span>
                   )}
                   {habit.specializedType === 'drawing' && (
                     <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[var(--tone-purple-wash)] text-[var(--tone-purple)] border border-[var(--tone-purple-line)]">
-                      🎨 {isAr ? 'مرسم الفن' : 'Drawing Studio'}
+                      <NuqtaIcon name="palette" className="w-3 h-3 inline-block" /> {isAr ? 'مرسم الفن' : 'Drawing Studio'}
                     </span>
                   )}
                 </div>
@@ -435,7 +437,7 @@ export const HabitsView: React.FC = () => {
                   return g ? (
                     <div className="mt-1">
                       <span className="tag text-[10px] bg-accent/10 text-accent border border-accent/25 truncate max-w-full inline-flex items-center gap-1" title={g.title}>
-                        <span>🎯</span>
+                        <NuqtaIcon name="target" className="w-3 h-3" />
                         <span className="truncate">{g.title}</span>
                       </span>
                     </div>
@@ -461,7 +463,7 @@ export const HabitsView: React.FC = () => {
                       onClick={() => useNuqtaStore.getState().setActiveNavTab('quran')}
                       className="btn subtle small text-[var(--tone-success)] border-[var(--tone-success-line)] hover:bg-[var(--tone-success-wash)] text-[11px] py-1 px-2.5 flex-shrink-0"
                     >
-                      <span>{isAr ? 'فتح استوديو القرآن ↗' : 'Open Quran Studio ↗'}</span>
+                      <span>{isAr ? 'فتح استوديو القرآن' : 'Open Quran Studio'}</span>
                     </button>
                   </div>
                 )}
@@ -480,7 +482,7 @@ export const HabitsView: React.FC = () => {
                       onClick={() => useNuqtaStore.getState().setActiveNavTab('reading')}
                       className="btn subtle small text-[var(--tone-warning)] border-[var(--tone-warning-line)] hover:bg-[var(--tone-warning-wash)] text-[11px] py-1 px-2.5 flex-shrink-0"
                     >
-                      <span>{isAr ? 'فتح استوديو القراءة ↗' : 'Open Reading Studio ↗'}</span>
+                      <span>{isAr ? 'فتح استوديو القراءة' : 'Open Reading Studio'}</span>
                     </button>
                   </div>
                 )}
@@ -499,7 +501,7 @@ export const HabitsView: React.FC = () => {
                       onClick={() => useNuqtaStore.getState().setActiveNavTab('workout')}
                       className="btn subtle small text-[var(--tone-info)] border-[var(--tone-info-line)] hover:bg-[var(--tone-info-wash)] text-[11px] py-1 px-2.5 flex-shrink-0"
                     >
-                      <span>{isAr ? 'فتح استوديو التدريب ↗' : 'Open Workout Studio ↗'}</span>
+                      <span>{isAr ? 'فتح استوديو التدريب' : 'Open Workout Studio'}</span>
                     </button>
                   </div>
                 )}
@@ -518,7 +520,7 @@ export const HabitsView: React.FC = () => {
                       onClick={() => useNuqtaStore.getState().setActiveNavTab('drawing')}
                       className="btn subtle small text-[var(--tone-purple)] border-[var(--tone-purple-line)] hover:bg-[var(--tone-purple-wash)] text-[11px] py-1 px-2.5 flex-shrink-0"
                     >
-                      <span>{isAr ? 'فتح المرسم ↗' : 'Open Art Studio ↗'}</span>
+                      <span>{isAr ? 'فتح المرسم' : 'Open Art Studio'}</span>
                     </button>
                   </div>
                 )}
@@ -536,7 +538,13 @@ export const HabitsView: React.FC = () => {
                         className={`${state} ${d.isToday ? 'today' : ''}`}
                         title={d.key}
                       >
-                        {isDone ? '✓' : isFrozen ? '❄' : d.label}
+                        {isDone ? (
+                          <NuqtaIcon name="check" className="w-3 h-3" />
+                        ) : isFrozen ? (
+                          <NuqtaIcon name="snowflake" className="w-3 h-3" />
+                        ) : (
+                          d.label
+                        )}
                       </span>
                     );
                   })}
@@ -558,7 +566,7 @@ export const HabitsView: React.FC = () => {
                 {/* Foot: Streak + Toggle */}
                 <div className="habit-card-foot">
                   <span className="streak">
-                    <em>♨</em> {habit.currentStreak || 0} {isAr ? 'يوم متواصل' : 'streak'}
+                    <NuqtaIcon name="flame" className="w-3.5 h-3.5 inline-block" /> {habit.currentStreak || 0} {isAr ? 'يوم متواصل' : 'streak'}
                   </span>
                   <button
                     className={`btn small ${isDoneToday ? 'subtle' : 'primary'}`}
@@ -579,14 +587,14 @@ export const HabitsView: React.FC = () => {
                     {isDoneToday
                       ? (isAr ? 'إلغاء الإنجاز' : 'Undo')
                       : habit.specializedType === 'quran'
-                      ? (isAr ? 'جلسة حفظ/مراجعة 📜' : 'Log Quran 📜')
+                      ? (isAr ? 'جلسة حفظ/مراجعة' : 'Log Quran')
                       : habit.specializedType === 'reading'
-                      ? (isAr ? 'تسجيل قراءة 📖' : 'Log Reading 📖')
+                      ? (isAr ? 'تسجيل قراءة' : 'Log Reading')
                       : habit.specializedType === 'workout'
-                      ? (isAr ? 'تسجيل تمرين ⚡' : 'Log Workout ⚡')
+                      ? (isAr ? 'تسجيل تمرين' : 'Log Workout')
                       : habit.specializedType === 'drawing'
-                      ? (isAr ? 'تسجيل رسم 🎨' : 'Log Art 🎨')
-                      : (isAr ? 'تم الإنجاز ✓' : 'Mark Done')}
+                      ? (isAr ? 'تسجيل رسم' : 'Log Art')
+                      : (isAr ? 'تم الإنجاز' : 'Mark Done')}
                   </button>
                 </div>
 
@@ -598,7 +606,7 @@ export const HabitsView: React.FC = () => {
                   onClick={() => useStreakFreeze(habit.id)}
                   title={isAr ? 'تجميد السلسلة في الحالات الطارئة دون فقدان تقدمك' : 'Emergency freeze without breaking streak'}
                 >
-                  <span>❄ {isAr ? 'تجميد السلسلة' : 'Streak Freeze'}</span>
+                  <span className="inline-flex items-center gap-1.5"><NuqtaIcon name="snowflake" className="w-3.5 h-3.5" /> {isAr ? 'تجميد السلسلة' : 'Streak Freeze'}</span>
                   <span className="tag text-[9px]">
                     {habit.freezesRemaining ?? 2} {isAr ? 'متبقي هذا الشهر' : 'left'}
                   </span>
@@ -739,7 +747,7 @@ export const HabitsView: React.FC = () => {
                   <option value="">{isAr ? 'بدون هدف استراتيجي (عادة عامة)' : 'No linked goal (general habit)'}</option>
                   {goals.map((g) => (
                     <option key={g.id} value={g.id}>
-                      🎯 {g.title} ({g.timeframe})
+                      {g.title} ({g.timeframe})
                     </option>
                   ))}
                 </NuqtaSelect>
@@ -766,7 +774,7 @@ export const HabitsView: React.FC = () => {
                         : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-[var(--tone-success-line)]'
                     }`}
                   >
-                    <span className="text-lg block mb-1">📜</span>
+                    <span className="block mb-1 text-[var(--tone-success)]"><NuqtaIcon name="mosque" className="w-5 h-5" /></span>
                     <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'حفظ القرآن' : 'Quran Studio'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'تثبيت الآيات والمراجعة' : 'Ayahs & revision'}</small>
                   </button>
@@ -786,7 +794,7 @@ export const HabitsView: React.FC = () => {
                         : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-[var(--tone-warning-line)]'
                     }`}
                   >
-                    <span className="text-lg block mb-1">📖</span>
+                    <span className="block mb-1 text-[var(--tone-warning)]"><NuqtaIcon name="book-open" className="w-5 h-5" /></span>
                     <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'عادة القراءة' : 'Reading Habit'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'نظام الكتب والصفحات' : 'Book tracker & speed'}</small>
                   </button>
@@ -806,7 +814,7 @@ export const HabitsView: React.FC = () => {
                         : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-[var(--tone-info-line)]'
                     }`}
                   >
-                    <span className="text-lg block mb-1">⚡</span>
+                    <span className="block mb-1 text-[var(--tone-info)]"><NuqtaIcon name="dumbbell" className="w-5 h-5" /></span>
                     <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'عادة التمرين' : 'Workout Habit'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'تمارين منزلية وحصص' : 'Home workout sets'}</small>
                   </button>
@@ -826,7 +834,7 @@ export const HabitsView: React.FC = () => {
                         : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-[var(--tone-purple-line)]'
                     }`}
                   >
-                    <span className="text-lg block mb-1">🎨</span>
+                    <span className="block mb-1 text-[var(--tone-purple)]"><NuqtaIcon name="palette" className="w-5 h-5" /></span>
                     <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'عادة الرسم' : 'Drawing Habit'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'استوديو الإبداع' : 'Sketch & art studio'}</small>
                   </button>
@@ -842,7 +850,7 @@ export const HabitsView: React.FC = () => {
                         : 'border-[var(--border-default)] bg-[var(--surface-raised)] text-muted hover:border-accent/50'
                     }`}
                   >
-                    <span className="text-lg block mb-1">✓</span>
+                    <span className="block mb-1 text-accent"><NuqtaIcon name="check" className="w-5 h-5" /></span>
                     <strong className="text-xs block text-[var(--text-primary)]">{isAr ? 'عادة يومية مخصصة' : 'Custom Habit'}</strong>
                     <small className="text-[10px] text-muted block mt-0.5">{isAr ? 'تتبع يومي وسلاسل' : 'Standard daily streak'}</small>
                   </button>

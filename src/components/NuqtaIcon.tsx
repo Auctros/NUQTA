@@ -54,7 +54,22 @@ export type IconName =
   | 'notebook'
   | 'user'
   | 'restore'
-  | 'undo';
+  | 'undo'
+  | 'briefcase'
+  | 'coin'
+  | 'brain'
+  | 'rocket'
+  | 'alert'
+  | 'scale'
+  | 'trending-up'
+  | 'trending-down'
+  | 'blocks'
+  | 'hourglass'
+  | 'infinity'
+  | 'palette'
+  | 'sunrise'
+  | 'minus'
+  | 'snowflake';
 
 const iconPaths: Record<IconName, React.ReactNode> = {
   grid: (
@@ -304,6 +319,98 @@ const iconPaths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M9 14 4 9l5-5" />
       <path d="M4 9h10a6 6 0 0 1 6 6v1a6 6 0 0 1-6 6h-2" />
+    </>
+  ),
+  briefcase: (
+    <>
+      <rect x="3" y="7.5" width="18" height="12" rx="2.2" />
+      <path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5" />
+      <path d="M3 12.5h18" />
+    </>
+  ),
+  coin: (
+    <>
+      <ellipse cx="12" cy="7" rx="7" ry="3" />
+      <path d="M5 7v10c0 1.7 3.1 3 7 3s7-1.3 7-3V7" />
+      <path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3" />
+    </>
+  ),
+  brain: (
+    <>
+      <path d="M12 5.5a3 3 0 0 0-5.7 1.3A3 3 0 0 0 4.4 12a3 3 0 0 0 1.9 4.7A3 3 0 0 0 12 18.5Z" />
+      <path d="M12 5.5a3 3 0 0 1 5.7 1.3A3 3 0 0 1 19.6 12a3 3 0 0 1-1.9 4.7A3 3 0 0 1 12 18.5Z" />
+      <path d="M12 5.5v13" />
+    </>
+  ),
+  rocket: (
+    <>
+      <path d="M12 3c3 1.6 5 4.6 5 8.2V15l-2.4 1.6h-5.2L7 15v-3.8C7 7.6 9 4.6 12 3Z" />
+      <circle cx="12" cy="10" r="1.7" />
+      <path d="M9.4 16.6 8 21l3-1.4M14.6 16.6 16 21l-3-1.4" />
+    </>
+  ),
+  alert: (
+    <>
+      <path d="M12 4.5 21 20H3Z" />
+      <path d="M12 10v4.2" />
+      <circle cx="12" cy="17.2" r="0.6" />
+    </>
+  ),
+  scale: (
+    <>
+      <path d="M12 4v16M7 20h10" />
+      <path d="M6 6h12" />
+      <path d="M6 6 3 12h6ZM18 6l-3 6h6Z" />
+    </>
+  ),
+  'trending-up': (
+    <>
+      <path d="M3 17 9.5 10.5l3.5 3.5L21 6" />
+      <path d="M15.5 6H21v5.5" />
+    </>
+  ),
+  'trending-down': (
+    <>
+      <path d="M3 7 9.5 13.5l3.5-3.5L21 18" />
+      <path d="M15.5 18H21v-5.5" />
+    </>
+  ),
+  blocks: (
+    <>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.4" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.4" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.4" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.4" />
+    </>
+  ),
+  hourglass: (
+    <>
+      <path d="M7 3h10M7 21h10" />
+      <path d="M8 3v3.5L12 11l4-4.5V3M8 21v-3.5L12 13l4 4.5V21" />
+    </>
+  ),
+  infinity: (
+    <path d="M8.4 9.2a3.1 3.1 0 1 0 0 5.6c1.6-1.1 2.4-2.1 3.6-2.8 1.2.7 2 1.7 3.6 2.8a3.1 3.1 0 1 0 0-5.6c-1.6 1.1-2.4 2.1-3.6 2.8-1.2-.7-2-1.7-3.6-2.8Z" />
+  ),
+  palette: (
+    <>
+      <path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.4 0 2-.9 2-1.8 0-.6-.3-1-.6-1.4-.3-.4-.6-.8-.6-1.4 0-.9.7-1.6 1.6-1.6h1.1a4 4 0 0 0 4-4c0-3.8-3.4-6.8-7.5-6.8Z" />
+      <circle cx="8" cy="10" r="1" />
+      <circle cx="12" cy="8" r="1" />
+      <circle cx="15.8" cy="10.4" r="1" />
+    </>
+  ),
+  sunrise: (
+    <>
+      <path d="M12 3.5v4M5.6 9.6 4 8M18.4 9.6 20 8M3 15h3M18 15h3M8 15a4 4 0 0 1 8 0" />
+      <path d="M3 19h18" />
+    </>
+  ),
+  minus: <path d="M5 12h14" />,
+  snowflake: (
+    <>
+      <path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5 4.2 16.5" />
+      <path d="M12 6.4 9.8 4.6M12 6.4l2.2-1.8M12 17.6l-2.2 1.8M12 17.6l2.2 1.8" />
     </>
   )
 };

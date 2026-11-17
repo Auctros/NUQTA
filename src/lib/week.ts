@@ -61,6 +61,18 @@ export function isWeekOff(value: Date | string): boolean {
   return dayOfWeek(value) === WEEK_OFF_DOW;
 }
 
+/**
+ * Is the weekly review due on this day?
+ *
+ * NUQTA's week ends on Friday, so the review closes the week on the weekly day
+ * off. (The feature predates the Sat-first week and was named "Sunday Ritual";
+ * the storage keys and the `SundayRitualReview` type keep that legacy name for
+ * backward compatibility, but the day it fires on is Friday.)
+ */
+export function isWeeklyReviewDay(value: Date | string): boolean {
+  return isWeekOff(value);
+}
+
 /** Is this a working day? Every day except Friday. */
 export function isWorkingDay(value: Date | string): boolean {
   return dayOfWeek(value) !== WEEK_OFF_DOW;

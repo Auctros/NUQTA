@@ -90,7 +90,12 @@ export const ProfileView: React.FC = () => {
               </div>
               <div className="form-actions">
                 <button type="submit" className="btn primary" disabled={!nameInput.trim()}>
-                  {saved ? (isAr ? 'تم الحفظ ✓' : 'Saved ✓') : isAr ? 'حفظ الاسم' : 'Save Name'}
+                  {saved ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <NuqtaIcon name="check" className="w-4 h-4" />
+                      {isAr ? 'تم الحفظ' : 'Saved'}
+                    </span>
+                  ) : isAr ? 'حفظ الاسم' : 'Save Name'}
                 </button>
               </div>
             </form>

@@ -24,7 +24,7 @@ import { parseNaturalLanguageTask } from '../lib/nlpParser';
 import { computeDailyEnergyScore } from '../lib/energyAlgorithm';
 import { computeCurrentStreak } from '../lib/habitSchedule';
 import { isTaskPending } from '../lib/taskStatus';
-import { dayOfWeek } from '../lib/week';
+import { isWeeklyReviewDay } from '../lib/week';
 import {
   draftFromTask,
   materializeSeries,
@@ -358,10 +358,9 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
     const energy = computeDailyEnergyScore(todayHealth, tasks);
 
-    // Check if Sunday review is due (if Sunday and not done today)
-    const isSunday = dayOfWeek(todayStr) === 0;
+    // The weekly review closes the week on the weekly day off (Friday).
     const reviewedToday = sundayReviews.some((r) => r.date === todayStr);
-    const weeklySundayReviewDue = isSunday && !reviewedToday;
+    const weeklySundayReviewDue = isWeeklyReviewDay(todayStr) && !reviewedToday;
 
     set({
       tasks,

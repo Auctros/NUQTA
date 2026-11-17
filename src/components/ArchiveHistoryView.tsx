@@ -694,7 +694,7 @@ export const ArchiveHistoryView: React.FC = () => {
                   onClick={() => setActiveNavTab('quran')}
                   className="text-xs text-accent hover:underline font-mono"
                 >
-                  {isAr ? 'فتح الاستوديو ↗' : 'Open Studio ↗'}
+                  {isAr ? 'فتح الاستوديو' : 'Open Studio'}
                 </button>
               </div>
 
@@ -744,7 +744,7 @@ export const ArchiveHistoryView: React.FC = () => {
                   onClick={() => setActiveNavTab('reading')}
                   className="text-xs text-accent hover:underline font-mono"
                 >
-                  {isAr ? 'فتح الاستوديو ↗' : 'Open Studio ↗'}
+                  {isAr ? 'فتح الاستوديو' : 'Open Studio'}
                 </button>
               </div>
 
@@ -792,7 +792,7 @@ export const ArchiveHistoryView: React.FC = () => {
                   onClick={() => setActiveNavTab('workout')}
                   className="text-xs text-accent hover:underline font-mono"
                 >
-                  {isAr ? 'فتح الاستوديو ↗' : 'Open Studio ↗'}
+                  {isAr ? 'فتح الاستوديو' : 'Open Studio'}
                 </button>
               </div>
 
@@ -840,7 +840,7 @@ export const ArchiveHistoryView: React.FC = () => {
                   onClick={() => setActiveNavTab('drawing')}
                   className="text-xs text-accent hover:underline font-mono"
                 >
-                  {isAr ? 'فتح المرسم ↗' : 'Open Studio ↗'}
+                  {isAr ? 'فتح المرسم' : 'Open Studio'}
                 </button>
               </div>
 

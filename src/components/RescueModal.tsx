@@ -59,7 +59,7 @@ export const RescueModal: React.FC = () => {
 
             <div className="space-y-2 text-xs text-muted">
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-4 h-4 text-accent" />
                 <span>
                   {isAr
                     ? 'ترحيل المهام المتبقية لصباح الغد تلقائياً دون أي شعور بالذنب.'
@@ -67,7 +67,7 @@ export const RescueModal: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-accent font-bold">✓</span>
+                <NuqtaIcon name="check" className="w-4 h-4 text-accent" />
                 <span>
                   {isAr
                     ? 'اختيار مهمة محورية واحدة فقط، إذا أنجزتها يعتبر اليوم كافياً وناجحاً.'
@@ -137,7 +137,7 @@ export const RescueModal: React.FC = () => {
                 {isAr ? 'رجوع' : 'Back'}
               </button>
               <button className="btn primary" onClick={handleExecute}>
-                {isAr ? 'تنفيذ خطة الإنقاذ ✓' : 'Execute Rescue Plan'}
+                {isAr ? 'تنفيذ خطة الإنقاذ' : 'Execute Rescue Plan'}
               </button>
             </div>
           </div>

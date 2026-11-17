@@ -498,7 +498,7 @@ export const FinanceView: React.FC = () => {
                   {isAr ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button type="submit" className="btn primary">
-                  {isAr ? 'حفظ المعاملة ✓' : 'Save'}
+                  {isAr ? 'حفظ المعاملة' : 'Save'}
                 </button>
               </div>
             </form>
