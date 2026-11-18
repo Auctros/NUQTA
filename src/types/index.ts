@@ -1,3 +1,7 @@
+import type { PrebuiltExercise } from '../lib/exerciseTypes';
+
+export type { PrebuiltExercise } from '../lib/exerciseTypes';
+
 export type PriorityLevel = 1 | 2 | 3 | 4; // 1: Urgent & Important, 2: Important, 3: Urgent, 4: Neither (Eisenhower)
 
 export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'deferred' | 'archived' | 'cancelled' | 'skipped';
@@ -255,7 +259,35 @@ export interface ExerciseSet {
   reps: number;
   restSeconds?: number;
   completed: boolean;
+  /**
+   * Optional richer prescription. All fields are additive, so every set logged
+   * before this existed still validates and renders unchanged.
+   */
+  type?: WorkoutSetType;
+  /** Rep target when a range is prescribed (e.g. 8–12 → reps 8, repsMax 12). */
+  repsMax?: number;
+  /** Target effort in reserve (0–5). */
+  rir?: number;
+  /** Target rate of perceived exertion (1–10). */
+  rpe?: number;
+  /** Seconds held / performed for timed (isometric or cardio) work. */
+  durationSeconds?: number;
+  /** Superset / circuit grouping label; sets sharing a value are linked. */
+  supersetId?: string;
 }
+
+/** How a set is performed. `normal` is the default for legacy data. */
+export type WorkoutSetType =
+  | 'normal'
+  | 'warmup'
+  | 'working'
+  | 'dropset'
+  | 'failure'
+  | 'amrap'
+  | 'backoff';
+
+/** How an exercise is measured during a session. */
+export type ExerciseTrackingType = 'reps_weight' | 'reps' | 'time' | 'distance_time';
 
 export interface ExerciseEntry {
   id: string;
@@ -264,6 +296,20 @@ export interface ExerciseEntry {
   movement?: MuscleMovement;
   sets: ExerciseSet[];
   notes?: string;
+  /** Catalog id when this entry originated from the library (enables history). */
+  catalogId?: string;
+  /** Tracking model, defaults to `reps_weight`. */
+  tracking?: ExerciseTrackingType;
+  /** Target rest between sets, in seconds. */
+  restSeconds?: number;
+  /** Performed one side at a time. */
+  unilateral?: boolean;
+  /** Superset grouping at the exercise level. */
+  supersetId?: string;
+  /** Optional progression rule (free text or a compact descriptor). */
+  progression?: string;
+  /** Planned/technique cue shown during execution. */
+  cue?: string;
 }
 
 export interface WorkoutRoutine {
@@ -279,6 +325,77 @@ export interface WorkoutRoutine {
   isCustom?: boolean;
   isArchived?: boolean;
   archivedAt?: string;
+  /**
+   * Optional structured program built on top of the flat `exercises` list. A
+   * routine without it is still a valid "quick routine" — the legacy shape.
+   */
+  program?: WorkoutProgram;
+  /** Lifecycle status for the Programs workspace. Absent = legacy routine. */
+  status?: WorkoutProgramStatus;
+}
+
+/** Lifecycle of a program in the workspace. */
+export type WorkoutProgramStatus = 'draft' | 'active' | 'paused' | 'completed' | 'archived';
+
+/** The training split a program follows. `custom` means a hand-built week. */
+export type TrainingSplit =
+  | 'full_body'
+  | 'upper_lower'
+  | 'ppl'
+  | 'push_pull'
+  | 'bro_split'
+  | 'custom';
+
+export type ProgramGoal = 'strength' | 'hypertrophy' | 'endurance' | 'fat_loss' | 'general' | 'mobility';
+
+/** One training day (or rest day) inside a program week. */
+export interface ProgramDay {
+  id: string;
+  name: string;
+  nameAr?: string;
+  /** Rest days carry no exercises and render as recovery. */
+  isRest?: boolean;
+  /** Optional focus label, e.g. "Push" / "Upper A". */
+  focus?: string;
+  exercises: ExerciseEntry[];
+  notes?: string;
+}
+
+/** One week of the program. */
+export interface ProgramWeek {
+  id: string;
+  name?: string;
+  nameAr?: string;
+  days: ProgramDay[];
+}
+
+/** A phase/block groups weeks under one objective (e.g. "Hypertrophy block"). */
+export interface ProgramPhase {
+  id: string;
+  name: string;
+  nameAr?: string;
+  /** Weeks (by id) that belong to this phase. */
+  weekIds: string[];
+  notes?: string;
+}
+
+/**
+ * The structured program attached to a `WorkoutRoutine`. Kept optional so every
+ * routine saved before this existed remains valid and usable.
+ */
+export interface WorkoutProgram {
+  split: TrainingSplit;
+  goal?: ProgramGoal;
+  /** Number of training weeks (mirrors `weeks.length` when weeks are authored). */
+  durationWeeks?: number;
+  /** Sessions per week the program expects. */
+  frequencyPerWeek?: number;
+  weeks: ProgramWeek[];
+  phases?: ProgramPhase[];
+  /** When the program was started (YYYY-MM-DD); drives progress. */
+  startedAt?: string;
+  /** Completed program days, by day id, for progress tracking. */
+  completedDayIds?: string[];
 }
 
 export interface WorkoutSessionLog {
@@ -296,6 +413,12 @@ export interface WorkoutSessionLog {
   notes?: string;
   caloriesBurned?: number;
   linkedGoalId?: string;
+  /** Program this session was executed from, when started from a program day. */
+  programId?: string;
+  /** The program day that was executed. */
+  programDayId?: string;
+  /** Human label of the executed day (survives program edits). */
+  programDayName?: string;
 }
 
 export interface WorkoutHabitData {
@@ -308,6 +431,8 @@ export interface WorkoutHabitData {
   totalMinutes: number;
   totalWorkouts: number;
   favoriteRoutine: string;
+  /** User-authored exercises that can be used inside programs (custom library). */
+  customExercises?: PrebuiltExercise[];
 }
 
 export interface Habit {

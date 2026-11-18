@@ -1,5 +1,5 @@
 import React from 'react';
-import { PrebuiltExercise } from '../../lib/exerciseTypes';
+import { PrebuiltExercise, facingForExercise } from '../../lib/exerciseTypes';
 import {
   categoryLabel,
   difficultyLabel,
@@ -10,12 +10,13 @@ import {
 } from '../../lib/exerciseCatalog';
 import { Modal, Button } from '../ui';
 import { ExerciseIllustration } from './illustration/ExerciseIllustration';
+import { getIllustration } from './illustration/registry';
 import { MuscleMap } from './MuscleMap';
 
 /**
  * The full instructional page for one exercise.
  *
- * Layout: a hero that pairs the animated code-generated demonstration with the
+ * Layout: a hero that pairs the code-generated start/end demonstration with the
  * anatomical muscle map, then the structured coaching content (how to perform
  * it, breathing, form cues, mistakes, safety, and how to make it easier or
  * harder). Everything is bilingual and driven by the catalog entry.
@@ -50,6 +51,8 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
   const name = isAr ? exercise.nameAr : exercise.nameEn;
   const tips = isAr ? exercise.tipsAr : exercise.tipsEn;
   const c = exercise.coaching;
+  const facing = facingForExercise(exercise);
+  const phaseCount = getIllustration(exercise.illustrationKey)?.phases.length ?? 1;
 
   const pick = <T,>(ar: T, en: T): T => (isAr ? ar : en);
 
@@ -58,7 +61,47 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
       <div className="ex-detail">
         <div className="ex-detail-hero">
           <div className="ex-detail-stage">
-            <ExerciseIllustration illustrationKey={exercise.illustrationKey} isAr={isAr} name={name} mode="animated" />
+            {phaseCount > 1 ? (
+              <div className="ex-poses">
+                <figure className="ex-pose">
+                  <ExerciseIllustration
+                    illustrationKey={exercise.illustrationKey}
+                    isAr={isAr}
+                    name={name}
+                    mode="static"
+                    phaseIndex={0}
+                    primary={exercise.primary}
+                    secondary={exercise.secondary}
+                    facing={facing}
+                  />
+                  <figcaption className="ex-pose-caption">{isAr ? 'البداية' : 'Start'}</figcaption>
+                </figure>
+                <figure className="ex-pose">
+                  <ExerciseIllustration
+                    illustrationKey={exercise.illustrationKey}
+                    isAr={isAr}
+                    name={name}
+                    mode="static"
+                    phaseIndex={phaseCount - 1}
+                    primary={exercise.primary}
+                    secondary={exercise.secondary}
+                    facing={facing}
+                    decorative
+                  />
+                  <figcaption className="ex-pose-caption">{isAr ? 'النهاية' : 'End'}</figcaption>
+                </figure>
+              </div>
+            ) : (
+              <ExerciseIllustration
+                illustrationKey={exercise.illustrationKey}
+                isAr={isAr}
+                name={name}
+                mode="static"
+                primary={exercise.primary}
+                secondary={exercise.secondary}
+                facing={facing}
+              />
+            )}
           </div>
           <MuscleMap primary={exercise.primary} secondary={exercise.secondary} isAr={isAr} />
         </div>

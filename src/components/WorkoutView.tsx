@@ -14,6 +14,9 @@ import {
 } from './studios/StudioKit';
 import { PrebuiltExercise, exerciseEntryFromCatalog, movementLabel } from '../lib/exerciseCatalog';
 import { ExerciseCatalog } from './workout/ExerciseCatalog';
+import { ProgramBuilder } from './workout/ProgramBuilder';
+import { PROGRAM_TEMPLATES, ProgramTemplate } from '../lib/programTemplates';
+import { programFromTemplate, splitLabel, goalLabel, statusLabel, routineStatus, programProgress, flattenProgramExercises } from '../lib/program';
 
 type WTab = 'today' | 'programs' | 'exercises' | 'history' | 'progress';
 
@@ -57,6 +60,8 @@ export const WorkoutView: React.FC = () => {
     addOrUpdateWorkoutRoutine,
     deleteWorkoutRoutine,
     updateFitnessTargets,
+    setWorkoutRoutineStatus,
+    setProgramDayCompleted,
     setActiveNavTab
   } = useNuqtaStore();
 
@@ -117,6 +122,8 @@ export const WorkoutView: React.FC = () => {
   const [routineDesc, setRoutineDesc] = useState('');
   const [routineMinutes, setRoutineMinutes] = useState(25);
   const [routineSaved, setRoutineSaved] = useState(false);
+  const [programSaved, setProgramSaved] = useState<string | null>(null);
+  const [openProgramId, setOpenProgramId] = useState<string | null>(null);
 
 
   // ---------- Progress ----------
@@ -339,6 +346,39 @@ export const WorkoutView: React.FC = () => {
     setRoutineTitle('');
     setRoutineDesc('');
     window.setTimeout(() => setRoutineSaved(false), 2000);
+  };
+
+  const createProgramFromTemplate = (template: ProgramTemplate) => {
+    if (!workoutHabit) return;
+    const program = programFromTemplate(template);
+    const routine: WorkoutRoutine = {
+      id: 'rt-' + crypto.randomUUID().slice(0, 8),
+      name: template.name,
+      nameAr: template.nameAr,
+      description: template.description,
+      descriptionAr: template.descriptionAr,
+      targetLevel: 'intermediate',
+      estimatedMinutes: 30,
+      category: 'bodyweight',
+      isCustom: true,
+      status: 'draft',
+      exercises: [],
+      program
+    };
+    addOrUpdateWorkoutRoutine(workoutHabit.id, routine);
+    setProgramSaved(template.id);
+    window.setTimeout(() => setProgramSaved(null), 2200);
+  };
+
+  /** Persist a day's exercise list, keeping the flat list in sync for legacy views. */
+  const updateProgramDay = (routine: WorkoutRoutine, dayId: string, exercises: ExerciseEntry[]) => {
+    if (!workoutHabit || !routine.program) return;
+    const weeks = routine.program.weeks.map((w) => ({
+      ...w,
+      days: w.days.map((d) => (d.id === dayId ? { ...d, exercises } : d))
+    }));
+    const program = { ...routine.program, weeks };
+    addOrUpdateWorkoutRoutine(workoutHabit.id, { ...routine, program, exercises: flattenProgramExercises(program) });
   };
 
   const saveTargets = (e: React.FormEvent) => {
@@ -850,48 +890,127 @@ export const WorkoutView: React.FC = () => {
               <StudioEmpty
                 icon="list"
                 title={isAr ? 'لا توجد برامج بعد' : 'No programs yet'}
-                description={isAr ? 'أنشئ برنامجاً من مكتبة التمارين أو ابنِ حصة أثناء التدريب.' : 'Create a program from the exercise library, or build one during a session.'}
+                description={isAr ? 'ابدأ من قالب جاهز بالأسفل، أو ابنِ حصة أثناء التدريب.' : 'Start from a template below, or build one during a session.'}
               />
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {routines.map((r) => (
-                  <div key={r.id} className="studio-tile flex flex-col gap-2">
+                {routines.map((r) => {
+                  const status = routineStatus(r);
+                  const progress = r.program ? programProgress(r.program) : null;
+                  const open = openProgramId === r.id;
+                  return (
+                  <div key={r.id} className={`studio-tile flex flex-col gap-2${r.program ? ' ex-program-card' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)] truncate">
-                          {r.name}
+                          {isAr ? r.nameAr || r.name : r.name}
                         </p>
                         <p className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono">
+                          {r.program ? `${splitLabel(r.program.split, isAr)} · ` : ''}
                           {r.estimatedMinutes}m · {r.exercises.length} {isAr ? 'تمارين' : 'exercises'}
                         </p>
                       </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className={`ex-status ex-status-${status}`}>{statusLabel(status, isAr)}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon="trash"
+                          aria-label={isAr ? 'حذف البرنامج' : 'Delete program'}
+                          onClick={() => {
+                            if (confirm(isAr ? 'حذف هذا البرنامج؟' : 'Delete this program?')) {
+                              deleteWorkoutRoutine(workoutHabit.id, r.id);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {progress && (
+                      <div className="flex items-center gap-2">
+                        <span className="ex-progress-track" aria-hidden="true">
+                          <span className="ex-progress-fill" style={{ width: `${Math.round(progress.ratio * 100)}%` }} />
+                        </span>
+                        <span className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono shrink-0">
+                          {progress.completedDays}/{progress.trainingDays}
+                        </span>
+                      </div>
+                    )}
+                    {r.description && <p className="text-[var(--fs-xs)] text-[var(--text-secondary)]">{isAr ? r.descriptionAr || r.description : r.description}</p>}
+                    {!r.program && (
+                      <ul className="text-[var(--fs-xs)] text-[var(--text-secondary)] space-y-0.5">
+                        {r.exercises.slice(0, 4).map((e) => (
+                          <li key={e.id} className="truncate">
+                            • {e.name} — {e.sets.length}×{e.sets[0]?.reps ?? 0}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {r.program ? (
                       <Button
-                        variant="ghost"
+                        variant="secondary"
                         size="sm"
-                        icon="trash"
-                        aria-label={isAr ? 'حذف البرنامج' : 'Delete program'}
-                        onClick={() => {
+                        icon={open ? 'chevronDown' : 'chevronRight'}
+                        className="mt-auto"
+                        aria-expanded={open}
+                        onClick={() => setOpenProgramId(open ? null : r.id)}
+                      >
+                        {open ? (isAr ? 'إخفاء الأيام' : 'Hide days') : isAr ? 'إدارة الأيام' : 'Manage days'}
+                      </Button>
+                    ) : (
+                      <Button variant="secondary" size="sm" icon="play" className="mt-auto" onClick={() => startWorkout(r.name, r.exercises)}>
+                        {isAr ? 'ابدأ البرنامج' : 'Start program'}
+                      </Button>
+                    )}
+                    {open && r.program && (
+                      <ProgramBuilder
+                        routine={r}
+                        isAr={isAr}
+                        onUpdateDay={(dayId, exercises) => updateProgramDay(r, dayId, exercises)}
+                        onToggleDayComplete={(dayId, completed) => setProgramDayCompleted(workoutHabit.id, r.id, dayId, completed)}
+                        onSetStatus={(s) => setWorkoutRoutineStatus(workoutHabit.id, r.id, s)}
+                        onStartDay={(day) => startWorkout(isAr ? day.nameAr || day.name : day.name, day.exercises)}
+                        onDelete={() => {
                           if (confirm(isAr ? 'حذف هذا البرنامج؟' : 'Delete this program?')) {
                             deleteWorkoutRoutine(workoutHabit.id, r.id);
                           }
                         }}
                       />
-                    </div>
-                    {r.description && <p className="text-[var(--fs-xs)] text-[var(--text-secondary)]">{r.description}</p>}
-                    <ul className="text-[var(--fs-xs)] text-[var(--text-secondary)] space-y-0.5">
-                      {r.exercises.slice(0, 4).map((e) => (
-                        <li key={e.id} className="truncate">
-                          • {e.name} — {e.sets.length}×{e.sets[0]?.reps ?? 0}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button variant="secondary" size="sm" icon="play" className="mt-auto" onClick={() => startWorkout(r.name, r.exercises)}>
-                      {isAr ? 'ابدأ البرنامج' : 'Start program'}
-                    </Button>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
+          </StudioSection>
+
+          <StudioSection title={isAr ? 'قوالب جاهزة' : 'Start from a template'}>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {PROGRAM_TEMPLATES.map((t) => {
+                const trainingDays = t.days.filter((d) => !d.isRest).length;
+                const saved = programSaved === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className="studio-tile ex-template text-start flex flex-col gap-2"
+                    onClick={() => createProgramFromTemplate(t)}
+                  >
+                    <span className="text-[var(--fs-sm)] font-[var(--fw-semibold)] text-[var(--text-primary)]">
+                      {isAr ? t.nameAr : t.name}
+                    </span>
+                    <span className="text-[var(--fs-micro)] text-[var(--text-secondary)] font-mono">
+                      {splitLabel(t.split, isAr)} · {goalLabel(t.goal, isAr)} · {trainingDays} {isAr ? 'أيام تدريب' : 'training days'}
+                    </span>
+                    <span className="text-[var(--fs-xs)] text-[var(--text-secondary)]">
+                      {isAr ? t.descriptionAr : t.description}
+                    </span>
+                    <span className={`text-[var(--fs-micro)] mt-auto ${saved ? 'text-[var(--state-success)]' : 'text-[var(--studio-accent,var(--brand))]'}`}>
+                      {saved ? (isAr ? '✓ تمت الإضافة' : '✓ Added') : isAr ? '+ إضافة البرنامج' : '+ Add program'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </StudioSection>
 
           <StudioSection title={isAr ? 'إنشاء برنامج جديد' : 'New program'}>

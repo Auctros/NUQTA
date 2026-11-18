@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Illustration, Motion, GroundSpec, Pt, lerpPose, subPt, mulPt, addPt, unitPt } from './geometry';
+import { Motion, GroundSpec, Pt, lerpPose, subPt, mulPt, addPt, unitPt } from './geometry';
 import { Figure } from './Figure';
+import { AnatomicalFigure } from './AnatomicalFigure';
 import { getIllustration } from './registry';
+import { MuscleId } from '../../../lib/exerciseTypes';
 
 /**
  * Renders one exercise illustration from the registry.
@@ -12,6 +14,11 @@ import { getIllustration } from './registry';
  *   prefers reduced motion.
  * - A missing registry entry renders a labelled placeholder, so a new catalog
  *   exercise never breaks the layout before its art is authored.
+ *
+ * When `primary` muscles are supplied the illustration renders the volumetric
+ * *anatomical* figure (grayscale body + highlighted trained muscles). Without
+ * them it falls back to the lighter schematic `Figure`, which keeps the
+ * component usable anywhere muscle data is not available.
  */
 
 export interface ExerciseIllustrationProps {
@@ -23,6 +30,20 @@ export interface ExerciseIllustrationProps {
   className?: string;
   /** Shows the movement arrow when the illustration defines one. */
   showMotion?: boolean;
+  /** Primary muscles to highlight (enables the anatomical rendering). */
+  primary?: MuscleId[];
+  /** Secondary muscles to highlight. */
+  secondary?: MuscleId[];
+  /** Which phase to freeze on in static mode; defaults to the start (0). */
+  phaseIndex?: number;
+  /** Which body side to present; overrides the registry default. */
+  facing?: 'front' | 'back';
+  /**
+   * Renders the SVG without an accessible role/title. Use when a visible
+   * caption already names the figure (e.g. the second of a start/end pair) so
+   * assistive tech is not given two identically-named images.
+   */
+  decorative?: boolean;
 }
 
 const prefersReducedMotion = (): boolean =>
@@ -100,7 +121,12 @@ export const ExerciseIllustration: React.FC<ExerciseIllustrationProps> = ({
   name,
   mode = 'static',
   className = '',
-  showMotion = true
+  showMotion = true,
+  primary,
+  secondary,
+  phaseIndex,
+  facing,
+  decorative
 }) => {
   const illo = getIllustration(illustrationKey);
   const [phaseT, setPhaseT] = useState(0);
@@ -108,6 +134,7 @@ export const ExerciseIllustration: React.FC<ExerciseIllustrationProps> = ({
   const reduced = prefersReducedMotion();
 
   const animated = mode === 'animated' && !!illo?.animated && (illo?.phases.length ?? 0) > 1 && !reduced;
+  const anatomical = !!(primary && primary.length);
 
   useEffect(() => {
     if (!animated) {
@@ -135,27 +162,40 @@ export const ExerciseIllustration: React.FC<ExerciseIllustrationProps> = ({
 
   const n = illo.phases.length;
   // position along the phase list (0..n-1), driven by phaseT for animated art
-  const pos = n === 1 ? 0 : phaseT * (n - 1);
+  const pos = n === 1 ? 0 : animated ? phaseT * (n - 1) : Math.min(n - 1, Math.max(0, phaseIndex ?? 0));
   const i0 = Math.min(n - 1, Math.floor(pos));
   const i1 = Math.min(n - 1, i0 + 1);
   const pose = lerpPose(illo.phases[i0], illo.phases[i1], pos - i0);
 
   const desc = isAr ? illo.altAr || name : illo.altEn || name;
+  const uid = `${illustrationKey || 'x'}-${i0}`;
   const titleId = `ex-illo-title-${illustrationKey || 'x'}`;
   const descId = `ex-illo-desc-${illustrationKey || 'x'}`;
 
   return (
     <svg
       viewBox="0 0 200 200"
-      className={`ex-illustration ${className}`}
-      role="img"
-      aria-labelledby={`${titleId} ${descId}`}
+      className={`ex-illustration${anatomical ? ' ex-illustration--anat' : ''} ${className}`}
+      role={decorative ? 'presentation' : 'img'}
+      aria-labelledby={decorative ? undefined : `${titleId} ${descId}`}
+      aria-hidden={decorative ? true : undefined}
       preserveAspectRatio="xMidYMid meet"
     >
-      <title id={titleId}>{name}</title>
-      <desc id={descId}>{desc}</desc>
+      {!decorative && <title id={titleId}>{name}</title>}
+      {!decorative && <desc id={descId}>{desc}</desc>}
       <Ground ground={illo.ground} />
-      <Figure pose={pose} joints={mode !== 'static'} />
+      {anatomical ? (
+        <AnatomicalFigure
+          pose={pose}
+          primary={primary!}
+          secondary={secondary ?? []}
+          facing={facing ?? illo.facing ?? 'front'}
+          uid={uid}
+          joints={mode !== 'static'}
+        />
+      ) : (
+        <Figure pose={pose} joints={mode !== 'static'} />
+      )}
       {showMotion && illo.motion && <MotionArrow motion={illo.motion} />}
     </svg>
   );

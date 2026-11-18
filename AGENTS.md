@@ -177,6 +177,17 @@ with an IndexedDB mirror for recovery.
   Add a key → it appears on the card and in the detail view. Entries marked `animated`
   must have phases that actually differ, and every pose must stay inside the 200×200
   viewBox — `tests/exerciseLibrary.test.tsx` enforces both.
+  - When `primary` muscles are supplied, `ExerciseIllustration` renders the *volumetric*
+    `AnatomicalFigure` (grayscale body volumes + highlighted trained muscles) instead of
+    the schematic `Figure`. `anatomy.ts` builds the body volumes and the limb-aware
+    muscle patches; `facing` (`front`/`back`, from `facingForExercise`) picks the muscle
+    set. Keep both renderers working — the schematic is the fallback when no muscle data
+    is available.
+  - The detail view shows a static start/end pose pair. The end pose passes
+    `decorative` so assistive tech is not given two identically-named images (the
+    captions name them). Movement *animation* is deliberately out of scope here
+    for now — the `ExerciseIllustration` `mode="animated"` path exists but is not
+    wired into the detail view.
 - **The exercise browser is one component: `ExerciseCatalog`**
   (`src/components/workout/ExerciseCatalog.tsx`). It owns the search box, the filter row,
   the result grid, the detail sheet, and the "recently performed" quick-pick; the Workout
@@ -191,6 +202,15 @@ with an IndexedDB mirror for recovery.
   variations. Both `WorkoutView` (Exercises tab) and `WorkoutAppModal` use the same card.
 - Goal linkage: sessions carry `linkedGoalId` and the store defaults it from the habit.
   Do not compute goal progress in a studio — `goalProgressEngine` owns that.
+- **Programs are a superset of routines, not a new entity.** `WorkoutRoutine.program`
+  (`WorkoutProgram` in `src/types/index.ts`) holds the structured weeks/days; a routine
+  without it is still a valid flat "quick routine". `src/lib/program.ts` owns the pure
+  helpers (lifecycle labels, `programProgress`, `estimateDayMinutes`, `programFromTemplate`,
+  `flattenProgramExercises`) and `programTemplates.ts` the starter splits. Lifecycle and
+  day completion go through the store (`setWorkoutRoutineStatus`, `setProgramDayCompleted`),
+  never local state. `ProgramBuilder` (`src/components/workout/ProgramBuilder.tsx`) is the
+  day-level workspace rendered inside a program card in the Workout Studio "Programs" tab;
+  filling a day keeps the flat `exercises` list in sync via `flattenProgramExercises`.
 - `WorkoutAppModal` / `ReadingAppModal` are the dashboard/habits entry points; keep them
   working.
 

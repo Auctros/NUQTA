@@ -134,3 +134,16 @@ export interface PrebuiltExercise {
   tipsEn: string;
   coaching: ExerciseCoaching;
 }
+
+/**
+ * Which side of the body an illustration should present. Posterior-chain moves
+ * (hinges, glutes, hamstrings, back) read best from behind; everything else
+ * defaults to the front view. Explicit per-illustration `facing` wins.
+ */
+export const facingForExercise = (e: Pick<PrebuiltExercise, 'category' | 'pattern' | 'primary'>): 'front' | 'back' => {
+  const backPatterns: MovementPattern[] = ['hinge', 'carry'];
+  if (backPatterns.includes(e.pattern)) return 'back';
+  const backPrimary: MuscleId[] = ['glutes', 'hamstrings', 'lats', 'upper_back', 'traps', 'lower_back', 'rear_delts'];
+  if (e.primary.some((m) => backPrimary.includes(m))) return 'back';
+  return 'front';
+};

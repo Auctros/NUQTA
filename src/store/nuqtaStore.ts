@@ -248,6 +248,13 @@ interface NuqtaStoreState {
   addOrUpdateWorkoutRoutine: (habitId: string, routine: import('../types').WorkoutRoutine) => void;
   deleteWorkoutRoutine: (habitId: string, routineId: string) => void;
   updateFitnessTargets: (habitId: string, targets: { weeklyTargetSessions?: number; monthlyTargetReps?: number }) => void;
+  /** Move a program through its lifecycle (draft → active → paused → completed → archived). */
+  setWorkoutRoutineStatus: (habitId: string, routineId: string, status: import('../types').WorkoutProgramStatus) => void;
+  /** Mark a program day complete (or not) — drives the workspace progress bar. */
+  setProgramDayCompleted: (habitId: string, routineId: string, dayId: string, completed: boolean) => void;
+  /** Add or update a user-authored exercise in the custom library. */
+  addOrUpdateCustomExercise: (habitId: string, exercise: import('../types').PrebuiltExercise) => void;
+  deleteCustomExercise: (habitId: string, exerciseId: string) => void;
 
   logDrawingSession: (habitId: string, piece: Omit<import('../types').ArtworkPiece, 'id' | 'completedDate'>) => void;
   deleteArtworkPiece: (habitId: string, pieceId: string) => void;
@@ -1282,6 +1289,73 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
         workoutData: {
           ...h.workoutData,
           ...targets
+        }
+      };
+    });
+    NuqtaStorageEngine.saveHabits(updated);
+    set({ habits: updated });
+  },
+
+  setWorkoutRoutineStatus: (habitId, routineId, status) => {
+    const updated = get().habits.map((h) => {
+      if (h.id !== habitId || !h.workoutData) return h;
+      const customRoutines = (h.workoutData.customRoutines || []).map((r) => {
+        if (r.id !== routineId) return r;
+        // Archive keeps the legacy flags in sync so the archive views agree.
+        const isArchived = status === 'archived';
+        return {
+          ...r,
+          status,
+          isArchived,
+          archivedAt: isArchived ? r.archivedAt || new Date().toISOString() : undefined,
+          program:
+            r.program && status === 'active' && !r.program.startedAt
+              ? { ...r.program, startedAt: localDateKey() }
+              : r.program
+        };
+      });
+      return { ...h, workoutData: { ...h.workoutData, customRoutines } };
+    });
+    NuqtaStorageEngine.saveHabits(updated);
+    set({ habits: updated });
+  },
+
+  setProgramDayCompleted: (habitId, routineId, dayId, completed) => {
+    const updated = get().habits.map((h) => {
+      if (h.id !== habitId || !h.workoutData) return h;
+      const customRoutines = (h.workoutData.customRoutines || []).map((r) => {
+        if (r.id !== routineId || !r.program) return r;
+        const done = new Set(r.program.completedDayIds ?? []);
+        if (completed) done.add(dayId);
+        else done.delete(dayId);
+        return { ...r, program: { ...r.program, completedDayIds: Array.from(done) } };
+      });
+      return { ...h, workoutData: { ...h.workoutData, customRoutines } };
+    });
+    NuqtaStorageEngine.saveHabits(updated);
+    set({ habits: updated });
+  },
+
+  addOrUpdateCustomExercise: (habitId, exercise) => {
+    const updated = get().habits.map((h) => {
+      if (h.id !== habitId || !h.workoutData) return h;
+      const existing = h.workoutData.customExercises || [];
+      const idx = existing.findIndex((e) => e.id === exercise.id);
+      const customExercises = idx >= 0 ? existing.map((e) => (e.id === exercise.id ? exercise : e)) : [...existing, exercise];
+      return { ...h, workoutData: { ...h.workoutData, customExercises } };
+    });
+    NuqtaStorageEngine.saveHabits(updated);
+    set({ habits: updated });
+  },
+
+  deleteCustomExercise: (habitId, exerciseId) => {
+    const updated = get().habits.map((h) => {
+      if (h.id !== habitId || !h.workoutData) return h;
+      return {
+        ...h,
+        workoutData: {
+          ...h.workoutData,
+          customExercises: (h.workoutData.customExercises || []).filter((e) => e.id !== exerciseId)
         }
       };
     });

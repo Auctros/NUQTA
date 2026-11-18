@@ -182,6 +182,19 @@ const WORKOUT_ROUTINE_CATEGORY = ['bodyweight', 'mobility', 'core', 'cardio'];
 const EXERCISE_CATEGORY = ['chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'cardio', 'mobility'];
 const MUSCLE_MOVEMENT = ['push', 'legs', 'core', 'back_pull', 'mobility', 'cardio'];
 const FITNESS_DIFFICULTY = ['beginner', 'intermediate', 'advanced'];
+const HOME_EQUIPMENT = [
+  'bodyweight_only',
+  'mat',
+  'pullup_bar',
+  'resistance_band',
+  'chair_elevated',
+  'light_dumbbells'
+];
+const WORKOUT_SET_TYPE = ['normal', 'warmup', 'working', 'dropset', 'failure', 'amrap', 'backoff'];
+const EXERCISE_TRACKING = ['reps_weight', 'reps', 'time', 'distance_time'];
+const WORKOUT_PROGRAM_STATUS = ['draft', 'active', 'paused', 'completed', 'archived'];
+const TRAINING_SPLIT = ['full_body', 'upper_lower', 'ppl', 'push_pull', 'bro_split', 'custom'];
+const PROGRAM_GOAL = ['strength', 'hypertrophy', 'endurance', 'fat_loss', 'general', 'mobility'];
 
 /**
  * Priority is stored as a number 1-4; the compact "P1".."P4" spelling is also
@@ -361,7 +374,13 @@ function isExerciseSet(v: unknown): boolean {
     isNumber(v.reps) &&
     isBoolean(v.completed) &&
     optional(isNumber)(v.weightKg) &&
-    optional(isNumber)(v.restSeconds)
+    optional(isNumber)(v.restSeconds) &&
+    optional(oneOf(WORKOUT_SET_TYPE))(v.type) &&
+    optional(isNumber)(v.repsMax) &&
+    optional(isNumber)(v.rir) &&
+    optional(isNumber)(v.rpe) &&
+    optional(isNumber)(v.durationSeconds) &&
+    optional(isString)(v.supersetId)
   );
 }
 
@@ -374,7 +393,89 @@ function isExerciseEntry(v: unknown): boolean {
     Array.isArray(v.sets) &&
     v.sets.every(isExerciseSet) &&
     optional(oneOf(MUSCLE_MOVEMENT))(v.movement) &&
+    optional(isString)(v.notes) &&
+    optional(isString)(v.catalogId) &&
+    optional(oneOf(EXERCISE_TRACKING))(v.tracking) &&
+    optional(isNumber)(v.restSeconds) &&
+    optional(isBoolean)(v.unilateral) &&
+    optional(isString)(v.supersetId) &&
+    optional(isString)(v.progression) &&
+    optional(isString)(v.cue)
+  );
+}
+
+/** One training day inside a program week. */
+function isProgramDay(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    isString(v.name) &&
+    Array.isArray(v.exercises) &&
+    v.exercises.every(isExerciseEntry) &&
+    optional(isString)(v.nameAr) &&
+    optional(isBoolean)(v.isRest) &&
+    optional(isString)(v.focus) &&
     optional(isString)(v.notes)
+  );
+}
+
+function isProgramWeek(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    Array.isArray(v.days) &&
+    v.days.every(isProgramDay) &&
+    optional(isString)(v.name) &&
+    optional(isString)(v.nameAr)
+  );
+}
+
+function isProgramPhase(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    isString(v.name) &&
+    isStringArray(v.weekIds) &&
+    optional(isString)(v.nameAr) &&
+    optional(isString)(v.notes)
+  );
+}
+
+function isWorkoutProgram(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    oneOf(TRAINING_SPLIT)(v.split) &&
+    Array.isArray(v.weeks) &&
+    v.weeks.every(isProgramWeek) &&
+    optional(oneOf(PROGRAM_GOAL))(v.goal) &&
+    optional(isNumber)(v.durationWeeks) &&
+    optional(isNumber)(v.frequencyPerWeek) &&
+    optional((x) => Array.isArray(x) && x.every(isProgramPhase))(v.phases) &&
+    optional(isString)(v.startedAt) &&
+    optional(isStringArray)(v.completedDayIds)
+  );
+}
+
+/** Custom (user-authored) exercise stored in the workout habit data. */
+function isCustomExercise(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    isString(v.nameAr) &&
+    isString(v.nameEn) &&
+    oneOf(MUSCLE_MOVEMENT)(v.movement) &&
+    oneOf(FITNESS_DIFFICULTY)(v.difficulty) &&
+    oneOf(HOME_EQUIPMENT)(v.equipment) &&
+    isNumber(v.defaultReps) &&
+    isString(v.tipsAr) &&
+    isString(v.category) &&
+    isStringArray(v.primary) &&
+    isStringArray(v.secondary) &&
+    isString(v.pattern) &&
+    isBoolean(v.unilateral) &&
+    isString(v.illustrationKey) &&
+    isString(v.tipsEn) &&
+    isPlainObject(v.coaching)
   );
 }
 
@@ -395,7 +496,10 @@ function isWorkoutSession(v: unknown): boolean {
     optional(oneOf(FITNESS_DIFFICULTY))(v.difficultyLevel) &&
     optional(isString)(v.notes) &&
     optional(isNumber)(v.caloriesBurned) &&
-    optional(isString)(v.linkedGoalId)
+    optional(isString)(v.linkedGoalId) &&
+    optional(isString)(v.programId) &&
+    optional(isString)(v.programDayId) &&
+    optional(isString)(v.programDayName)
   );
 }
 
@@ -414,7 +518,9 @@ function isWorkoutRoutine(v: unknown): boolean {
     optional(isString)(v.descriptionAr) &&
     optional(isBoolean)(v.isCustom) &&
     optional(isBoolean)(v.isArchived) &&
-    optional(isString)(v.archivedAt)
+    optional(isString)(v.archivedAt) &&
+    optional(isWorkoutProgram)(v.program) &&
+    optional(oneOf(WORKOUT_PROGRAM_STATUS))(v.status)
   );
 }
 
@@ -423,6 +529,7 @@ function isWorkoutData(v: unknown): boolean {
     isPlainObject(v) &&
     optional((x) => Array.isArray(x) && x.every(isWorkoutSession))(v.sessions) &&
     optional((x) => Array.isArray(x) && x.every(isWorkoutRoutine))(v.customRoutines) &&
+    optional((x) => Array.isArray(x) && x.every(isCustomExercise))(v.customExercises) &&
     optional(isNumber)(v.weeklyTargetSessions) &&
     optional(isNumber)(v.monthlyTargetReps) &&
     optional(isNumber)(v.totalReps) &&

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PrebuiltExercise } from '../../lib/exerciseTypes';
+import { PrebuiltExercise, facingForExercise } from '../../lib/exerciseTypes';
 import { categoryLabel, difficultyLabel, muscleLabel } from '../../lib/exerciseCatalog';
 import { ExerciseIllustration } from './illustration/ExerciseIllustration';
 
@@ -38,7 +38,16 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, isAr, onOp
         aria-label={name}
       >
         <span className="ex-card-media" aria-hidden="true">
-          <ExerciseIllustration illustrationKey={exercise.illustrationKey} isAr={isAr} name={name} mode="static" showMotion={false} />
+          <ExerciseIllustration
+            illustrationKey={exercise.illustrationKey}
+            isAr={isAr}
+            name={name}
+            mode="static"
+            showMotion={false}
+            primary={exercise.primary}
+            secondary={exercise.secondary}
+            facing={facingForExercise(exercise)}
+          />
         </span>
         <span className="block mt-2 ex-card-name">{name}</span>
       </button>

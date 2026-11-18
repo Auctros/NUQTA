@@ -42,6 +42,13 @@
   --surface-active: var(--panel-active);
   --surface-faint: var(--panel-faint);
 
+  /* --- exercise anatomy figure (grayscale body + definition lines) --- */
+  --ex-body-1: #d5dbd7;     /* body fill, lit side                */
+  --ex-body-2: #aeb8b2;     /* body fill, shadow side             */
+  --ex-body-3: #8f9a94;     /* neutral (untargeted) muscle tone   */
+  --ex-body-line: #6c7972;  /* outlines + muscle definition       */
+  --ex-body-shadow: #0a0f0c;/* drop-shadow colour                 */
+
   /* --- text (semantic) --- */
   --text-primary: var(--text);
   --text-secondary: var(--muted);
@@ -475,6 +482,13 @@ body.light-mode {
 
   --brand-soft: rgba(30, 99, 68, 0.1);
   --brand-soft-border: rgba(30, 99, 68, 0.26);
+
+  /* Exercise anatomy figure — light edition: pale body, dark definition. */
+  --ex-body-1: #e7ece9;
+  --ex-body-2: #c3cdc7;
+  --ex-body-3: #aab4ae;
+  --ex-body-line: #7f8c85;
+  --ex-body-shadow: #33443b;
 
   --state-success: #137a4d;
   --state-success-strong: #0f6b43;
@@ -2479,6 +2493,22 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .ex-fig-far { opacity: 0.34; }
 .ex-fig-far.ex-fig-limb { stroke-width: 7; }
 
+/* ---------- volumetric anatomical figure ----------
+   Grayscale body volumes with highlighted trained muscles. The body fills come
+   from --ex-body-* tokens so the same art works in every theme; primary and
+   secondary highlights reuse the studio accent so the figure belongs to NUQTA
+   rather than looking like a foreign medical clip-art. */
+.ex-anat { }
+.ex-anat-body { fill: var(--ex-fill, var(--surface-chip)); stroke: var(--ex-body-line); stroke-width: 1.1; stroke-linejoin: round; }
+.ex-anat-line { fill: none; stroke: var(--ex-body-line); stroke-width: 0.9; stroke-linecap: round; opacity: 0.75; }
+.ex-anat-far { opacity: 0.42; }
+.ex-anat-joint { fill: var(--ex-body-line); opacity: 0.55; }
+.ex-anat-muscle { stroke: var(--ex-body-1); stroke-width: 0.6; }
+.ex-anat-neutral { fill: var(--ex-body-3); opacity: 0.9; }
+.ex-anat-primary { fill: var(--studio-accent, var(--brand)); }
+.ex-anat-secondary { fill: color-mix(in srgb, var(--studio-accent, var(--brand)) 46%, var(--ex-body-2)); }
+.ex-illustration--anat .ex-anat-primary { filter: saturate(1.05); }
+
 /* props: floor, mat, wall, chair, bar — quiet, never competing with the body */
 .ex-ground { stroke: var(--border-strong); stroke-width: 2.4; stroke-linecap: round; }
 .ex-mat { fill: color-mix(in srgb, var(--studio-accent, var(--brand)) 22%, transparent); stroke: color-mix(in srgb, var(--studio-accent, var(--brand)) 40%, transparent); stroke-width: 1; }
@@ -2529,6 +2559,43 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 @media (max-width: 640px) { .ex-detail-hero { grid-template-columns: 1fr; } }
 .ex-detail-stage { display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: var(--r-md); background: var(--surface-inset); border: 1px solid var(--studio-line, var(--border-default)); overflow: hidden; }
 .ex-detail-stage .ex-illustration { width: 86%; max-height: 100%; }
+.ex-poses { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); width: 100%; align-items: center; }
+.ex-pose { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ex-pose .ex-illustration { width: 100%; }
+.ex-pose-caption { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-tertiary); }
+
+/* program status pill + day progress */
+.ex-status { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: var(--r-full, 999px); border: 1px solid var(--border-default); color: var(--text-tertiary); white-space: nowrap; }
+.ex-status-active { color: var(--studio-accent, var(--brand)); border-color: var(--studio-accent-line, var(--border-strong)); }
+.ex-status-completed { color: var(--state-success); border-color: color-mix(in srgb, var(--state-success) 40%, var(--border-default)); }
+.ex-status-paused, .ex-status-archived { opacity: 0.75; }
+.ex-progress-track { display: block; flex: 1; height: 6px; border-radius: var(--r-full, 999px); background: var(--surface-track); overflow: hidden; }
+.ex-progress-fill { display: block; height: 100%; border-radius: inherit; background: var(--studio-accent, var(--brand)); transition: width var(--dur-base) var(--ease-standard); }
+.ex-template { cursor: pointer; border-style: dashed; }
+.ex-template:hover { border-color: var(--studio-accent-line, var(--border-strong)); transform: translateY(-2px); }
+
+/* ---------- program builder (day-level workspace) ---------- */
+.ex-program-card { grid-column: 1 / -1; }
+.ex-program { display: flex; flex-direction: column; gap: var(--sp-3); border-top: 1px solid var(--studio-line, var(--border-default)); padding-top: var(--sp-3); margin-top: var(--sp-1); }
+.ex-chip { font-size: var(--fs-micro); padding: 3px 9px; border-radius: var(--r-full, 999px); border: 1px solid var(--border-default); background: transparent; color: var(--text-tertiary); cursor: pointer; transition: color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard); }
+.ex-chip:hover { color: var(--text-secondary); }
+.ex-chip-on { color: var(--studio-accent, var(--brand)); border-color: var(--studio-accent-line, var(--border-strong)); background: color-mix(in srgb, var(--studio-accent, var(--brand)) 10%, transparent); }
+.ex-days { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ex-day { border: 1px solid var(--studio-line, var(--border-default)); border-radius: var(--r-md); background: var(--surface-raised); }
+.ex-day-rest { opacity: 0.6; }
+.ex-day-done { border-color: color-mix(in srgb, var(--state-success) 40%, var(--border-default)); }
+.ex-day-head { display: flex; align-items: center; gap: var(--sp-2); padding: 8px 10px; }
+.ex-day-check { display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--r-sm); border: 1px solid var(--border-default); background: transparent; color: var(--text-tertiary); cursor: pointer; flex: none; }
+.ex-day-done .ex-day-check { color: var(--state-success); border-color: color-mix(in srgb, var(--state-success) 40%, var(--border-default)); }
+.ex-day-rest-icon { display: grid; place-items: center; width: 26px; height: 26px; color: var(--text-tertiary); flex: none; }
+.ex-day-title { display: flex; align-items: center; gap: var(--sp-2); flex: 1; min-width: 0; background: transparent; border: 0; cursor: pointer; text-align: start; color: var(--text-primary); font-size: var(--fs-sm); }
+.ex-day-caret { display: grid; place-items: center; background: transparent; border: 0; color: var(--text-tertiary); cursor: pointer; flex: none; }
+.ex-day-body { padding: 0 10px 10px; display: flex; flex-direction: column; gap: var(--sp-2); }
+.ex-day-exercises { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.ex-day-exercises li { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--text-secondary); }
+.ex-day-exercises li > span:first-child { flex: 1; min-width: 0; }
+.ex-day-remove { display: grid; place-items: center; background: transparent; border: 0; color: var(--text-tertiary); cursor: pointer; }
+.ex-day-remove:hover { color: var(--state-danger); }
 .ex-detail-blocks { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .ex-meta { display: flex; flex-direction: column; gap: 2px; }
 .ex-meta-label { font-size: var(--fs-micro); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; }

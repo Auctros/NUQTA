@@ -127,6 +127,8 @@ export interface Illustration {
   ground?: GroundSpec;
   /** True when the movement itself is the teaching point. */
   animated?: boolean;
+  /** Which side of the body the illustration presents. Defaults to `front`. */
+  facing?: 'front' | 'back';
   /** Per-illustration label override for screen readers. */
   altEn?: string;
   altAr?: string;
