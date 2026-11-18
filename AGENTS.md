@@ -20,7 +20,7 @@ with an IndexedDB mirror for recovery.
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(18 rules). Add a rule whenever a new safety property must never regress.
+(19 rules). Add a rule whenever a new safety property must never regress.
 
 ## Theming (light / dark)
 
@@ -113,6 +113,13 @@ with an IndexedDB mirror for recovery.
 - **Escape closes overlays.** Any overlay that renders its own backdrop (legacy `.modal`
   markup and the kit `Modal`/`Sheet`) closes on Escape via `useEscapeKey(open, onClose)`
   from `src/lib/useEscapeKey.ts`, and exposes `role="dialog"` + `aria-modal="true"`.
+- **A modal must never move the page.** Every backdrop is `position: fixed` inside
+  `.page-content`, so `.page-content` must not become a containing block: no `transform`,
+  `filter`, `perspective`, `contain` or `will-change` on it, and its entry animation
+  (`page-in`) must stay opacity-only. A lingering `transform` (e.g. from a keyframe's `to`
+  state kept by `animation-fill-mode: both`) makes the overlay size to the whole tall page
+  instead of the viewport, so the browser scrolls to the off-screen dialog. Invariant #19 and
+  the `modal_scroll` check in `views.py` guard this; keep the page animation opacity-only.
 - **Prefer inline panels over popups.** Reserve modals for genuinely modal tasks; savings
   and budget editing live in inline panels toggled with `aria-expanded`/`aria-controls`.
 - **Profile is the single home for identity and settings.** `ProfileView` owns identity, the

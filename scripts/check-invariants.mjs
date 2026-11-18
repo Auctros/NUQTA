@@ -230,8 +230,54 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 19. Modals must not be trapped by a transformed ancestor. `.page-content` wraps every
+//     view, and both the legacy `.modal-backdrop` and the kit `Modal`/`Sheet` are
+//     `position: fixed` inside it. A `transform` on `.page-content` — including one an
+//     entry animation leaves applied forever via fill-mode — makes it the containing block
+//     for those fixed overlays, so they size to the whole (tall) page instead of the
+//     viewport and the browser scrolls to the misplaced dialog. Keep the page-entry
+//     animation to opacity only.
+{
+  const css =
+    readFileSync(join(root, 'src/nuqta-theme.css'), 'utf8') + '\n' + readFileSync(join(root, 'src/index.css'), 'utf8');
+  const problems = [];
+  const rule = css.match(/\.page-content\s*\{([^}]*)\}/);
+  const body = rule ? rule[1] : '';
+  if (/(^|;)\s*transform\s*:/.test(body)) problems.push('.page-content sets `transform` directly');
+  const anim = body.match(/animation\s*:\s*([^;}]+)/);
+  if (anim) {
+    const name = anim[1].trim().split(/\s+/)[0];
+    const kfStart = css.indexOf('@keyframes ' + name);
+    if (kfStart !== -1) {
+      const open = css.indexOf('{', kfStart);
+      let depth = 0;
+      let end = -1;
+      for (let i = open; i < css.length; i++) {
+        if (css[i] === '{') depth++;
+        else if (css[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            end = i;
+            break;
+          }
+        }
+      }
+      const kfBody = css.slice(open + 1, end === -1 ? undefined : end);
+      if (/transform\s*:/.test(kfBody)) {
+        problems.push(`the page-entry animation "${name}" animates \`transform\``);
+      }
+    }
+  }
+  if (problems.length) {
+    fail(
+      'A transformed .page-content traps position:fixed modals inside the page (they open off-screen)',
+      problems.join('\n    ')
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (18 rules).');
+console.log('Invariant check passed (19 rules).');
