@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import App from '../src/App';
 import { useNuqtaStore } from '../src/store/nuqtaStore';
+import { NuqtaStorageEngine, defaultProfile } from '../src/lib/storage';
 
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 80)); });
 
@@ -49,5 +50,25 @@ describe('Profile is the single destination for identity and application setting
     await settle();
 
     expect(useNuqtaStore.getState().profile.name).toBe('Layla');
+  });
+
+  it('shows a symbolic placeholder name, never an invented persona, before a name is set', async () => {
+    NuqtaStorageEngine.saveProfile({ ...defaultProfile(), name: '', language: 'en' });
+    render(<App />);
+    await settle();
+
+    const dock = screen.getByRole('button', { name: /Local profile|الملف الشخصي/i });
+    expect(within(dock).getByText('Sir')).toBeTruthy();
+    expect(screen.queryByText(/^User$/)).toBeNull();
+    expect(screen.queryByText('Ali')).toBeNull();
+  });
+
+  it('uses the Arabic symbolic name when the language is Arabic', async () => {
+    NuqtaStorageEngine.saveProfile({ ...defaultProfile(), name: '', language: 'ar' });
+    render(<App />);
+    await settle();
+
+    const dock = screen.getByRole('button', { name: /Local profile|الملف الشخصي/i });
+    expect(within(dock).getByText('سيدي')).toBeTruthy();
   });
 });

@@ -31,11 +31,40 @@
         }
       })();
     </script>
+    <script>
+      // Apply the saved theme before first paint so the shell never flashes the
+      // wrong mode while React boots. Light is the first-run default.
+      (function() {
+        try {
+          var stored = localStorage.getItem('nuqta_profile_v1');
+          var theme = 'light';
+          if (stored) {
+            try {
+              var parsed = JSON.parse(stored);
+              if (parsed && typeof parsed.theme === 'string') theme = parsed.theme;
+            } catch (e) {
+              /* unreadable profile: fall back to the light default */
+            }
+          }
+          var isLight = theme === 'light';
+          document.documentElement.classList.toggle('light-mode', isLight);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', isLight ? '#f4f6f4' : '#0b0f13');
+          var syncBody = function() {
+            if (document.body) document.body.classList.toggle('light-mode', isLight);
+          };
+          if (document.body) syncBody();
+          else document.addEventListener('DOMContentLoaded', syncBody);
+        } catch (e) {
+          /* theme is a preference; the app still works without it */
+        }
+      })();
+    </script>
       <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <link rel="icon" type="image/png" href="./icon-192.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
-    <meta name="theme-color" content="#161614">
+    <meta name="theme-color" content="#f4f6f4">
   </head>
   <body>
     <div id="root"></div>

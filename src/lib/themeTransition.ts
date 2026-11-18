@@ -18,6 +18,8 @@ export function applyThemeClass(theme: UserProfile['theme']): void {
   const isLight = theme === 'light';
   document.documentElement.classList.toggle('light-mode', isLight);
   document.body?.classList.toggle('light-mode', isLight);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', isLight ? '#f4f6f4' : '#0b0f13');
 }
 
 export function isThemeTransitionActive(): boolean {

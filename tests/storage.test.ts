@@ -19,6 +19,7 @@ describe('first run is genuinely empty (no demo data, no invented values)', () =
     expect(NuqtaStorageEngine.getJournalEntries()).toEqual([]);
     expect(NuqtaStorageEngine.getHealthMetrics()).toEqual({});
     expect(NuqtaStorageEngine.getProfile().name).toBe('');
+    expect(NuqtaStorageEngine.getProfile().theme).toBe('light');
     expect(localStorage.length).toBe(0);
   });
   it('exporting a backup does not change stored data', () => {

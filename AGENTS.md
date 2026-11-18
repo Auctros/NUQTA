@@ -25,8 +25,10 @@ with an IndexedDB mirror for recovery.
 ## Theming (light / dark)
 
 - `applyThemeClass()` in `src/lib/themeTransition.ts` toggles the `light-mode` class on
-  `<html>`/`<body>`; `setTheme` in the store drives `runLiquidThemeTransition`. Dark is the
-  default (`:root` in `src/nuqta-theme.css`); `src/index.css` holds the semantic token
+  `<html>`/`<body>`; `setTheme` in the store drives `runLiquidThemeTransition`. Light is the
+  first-run default (`defaultProfile()` in `src/lib/storage.ts`), and `index.html` re-applies
+  the saved theme before first paint so the shell never flashes the wrong mode. `:root` in
+  `src/nuqta-theme.css` holds the dark palette; `src/index.css` holds the semantic token
   layer and the `.light-mode` overrides.
 - Never hardcode a colour. Use the tokens: surfaces `--surface-deep/raised/inset/chip/track/
   active/page`, text `--text-primary/secondary/tertiary/on-state`, `--border-*`, brand
@@ -103,6 +105,9 @@ with an IndexedDB mirror for recovery.
   notifications, backup/data tools and privacy. There is no separate Settings page or
   `settings` nav tab — do not reintroduce one; extend the Profile page instead. The store's
   `profile` record and its `nuqta_profile_v1` key are unchanged.
+- **A first run has no invented identity.** `profile.name` starts as `''`; the UI shows the
+  symbolic placeholder `Sir` / `سيدي` (never a fabricated person like "Ali"/"علي"). Keep every
+  fallback (dock, Profile header, dashboard greeting) on that same placeholder.
 - **The Profile entry is a standalone dock, not a sidebar row.** It lives in a `.profile-dock`
   element that is a fixed sibling of `<aside class="sidebar">` (so it never scrolls with the
   nav list and stays pinned at the rail's foot). It still carries `data-sidebar-nav="true"` for

@@ -101,7 +101,7 @@ export function defaultProfile(): UserProfile {
     typeof navigator !== 'undefined' && /^ar/i.test(navigator.language || '') ? 'ar' : 'en';
   return {
     name: '',
-    theme: 'dark',
+    theme: 'light',
     language: lang,
     experiencePoints: 0,
     level: 1,

@@ -650,10 +650,10 @@ export default function App() {
           className="profile-row"
         >
           <span className="avatar">
-            {(profile.name || (isAr ? 'ع' : 'N')).charAt(0)}
+            {(profile.name || (isAr ? 'سيدي' : 'Sir')).charAt(0)}
           </span>
           <div className="profile-details">
-            <strong>{profile.name || (isAr ? 'علي' : 'User')}</strong>
+            <strong>{profile.name || (isAr ? 'سيدي' : 'Sir')}</strong>
             <small>
               {isAr ? 'ملف محلي · خاص' : 'Local profile · Private'}
             </small>
