@@ -190,7 +190,7 @@ interface NuqtaStoreState {
   isRescueModeOpen: boolean;
   isQuickCaptureOpen: boolean;
   isSundayRitualOpen: boolean;
-  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'settings' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'archive';
+  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'settings' | 'quran' | 'reading' | 'workout' | 'drawing' | 'archive';
   searchQuery: string;
   selectedTagFilter: string | null;
 

@@ -1,6 +1,6 @@
 import { csvCell, downloadBackupFile, downloadTextFile, restoreBackupFromFile } from '../lib/backupActions';
 import { localDateKey } from '../lib/dateKey';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
 import { NuqtaStorageEngine } from '../lib/storage';
@@ -8,13 +8,27 @@ import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 import { NuqtaSelect } from './ui';
 
 export const SettingsView: React.FC = () => {
-  const { profile, setLanguage, setTheme, setActiveNavTab } = useNuqtaStore();
+  const {
+    profile,
+    updateProfileName,
+    setLanguage,
+    setTheme,
+    tasks,
+    habits,
+    goals,
+    journalEntries,
+    savingsGoals
+  } = useNuqtaStore();
   const [importStatus, setImportStatus] = useState<string>('');
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+  const [nameInput, setNameInput] = useState(profile.name);
+  const [nameSaved, setNameSaved] = useState(false);
 
   useEffect(() => {
     setNotifPermission(NuqtaNotificationEngine.getPermission());
   }, []);
+
+  useEffect(() => setNameInput(profile.name), [profile.name]);
 
   const handleRequestPermission = async () => {
     const res = await NuqtaNotificationEngine.requestPermission();
@@ -22,6 +36,28 @@ export const SettingsView: React.FC = () => {
   };
 
   const isAr = profile.language === 'ar';
+
+  const handleSaveName = (e: React.FormEvent) => {
+    e.preventDefault();
+    const next = nameInput.trim();
+    if (!next) return;
+    updateProfileName(next);
+    setNameSaved(true);
+    window.setTimeout(() => setNameSaved(false), 2200);
+  };
+
+  const profileStats = useMemo(
+    () => ({
+      tasks: tasks.filter((t) => t.status === 'completed').length,
+      habits: habits.length,
+      goals: goals.filter((g) => g.status === 'active').length,
+      journal: journalEntries.length,
+      funds: savingsGoals.length
+    }),
+    [tasks, habits, goals, journalEntries, savingsGoals]
+  );
+
+  const avatarInitial = (profile.name || (isAr ? 'ع' : 'N')).charAt(0).toUpperCase();
 
   const handleExportJSON = () => downloadBackupFile('nuqta-backup');
 
@@ -96,28 +132,72 @@ export const SettingsView: React.FC = () => {
       <div className="settings-layout">
         {/* Left Column: Profile, Appearance, Data */}
         <section>
-          {/* Profile lives on its own page; Settings links to it instead of duplicating the form. */}
+          {/* Profile: identity, display name and progress, all owned by Settings now. */}
           <div className="panel settings-section">
             <div className="panel-heading">
               <div>
                 <h2>{isAr ? 'الملف الشخصي' : 'Your Profile'}</h2>
-                <p>{isAr ? 'هويتك وتقدّمك في صفحة مستقلة.' : 'Your identity and progress live on their own page.'}</p>
+                <p>{isAr ? 'هويتك وتقدّمك على هذا الجهاز.' : 'Your identity and progress on this device.'}</p>
               </div>
             </div>
 
             <div className="settings-profile">
-              <span className="settings-avatar">{(profile.name || 'ع').charAt(0)}</span>
+              <span className="settings-avatar">{avatarInitial}</span>
               <div>
                 <strong>{profile.name || (isAr ? 'مستخدم نقطة' : 'NUQTA User')}</strong>
                 <small>{isAr ? 'بيانات محفوظة محلياً وبشكل خاص' : 'Stored locally and privately'}</small>
               </div>
             </div>
 
-            <div className="settings-actions">
-              <button type="button" className="btn" onClick={() => setActiveNavTab('profile')}>
-                <NuqtaIcon name="compass" className="w-4 h-4" />
-                <span>{isAr ? 'فتح الملف الشخصي' : 'Open Profile'}</span>
-              </button>
+            <form onSubmit={handleSaveName} className="space-y-3">
+              <div className="field">
+                <label htmlFor="profile-name-field">{isAr ? 'اسم العرض' : 'Display Name'}</label>
+                <input
+                  id="profile-name-field"
+                  className="input"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  maxLength={60}
+                  placeholder={isAr ? 'اكتب اسمك' : 'Enter your name'}
+                />
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn primary" disabled={!nameInput.trim()}>
+                  {nameSaved ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <NuqtaIcon name="check" className="w-4 h-4" />
+                      {isAr ? 'تم الحفظ' : 'Saved'}
+                    </span>
+                  ) : isAr ? 'حفظ الاسم' : 'Save Name'}
+                </button>
+              </div>
+            </form>
+
+            <div className="subtle-line"></div>
+
+            <h2>{isAr ? 'تقدّمك' : 'Your Progress'}</h2>
+            <p>{isAr ? 'ملخّص لما بنيته على هذا الجهاز.' : 'A snapshot of what you have built on this device.'}</p>
+            <div className="review-score">
+              <div className="review-metric">
+                <strong>{profileStats.tasks}</strong>
+                <span>{isAr ? 'مهام مكتملة' : 'Tasks done'}</span>
+              </div>
+              <div className="review-metric">
+                <strong>{profileStats.habits}</strong>
+                <span>{isAr ? 'عادات' : 'Habits'}</span>
+              </div>
+              <div className="review-metric">
+                <strong>{profileStats.goals}</strong>
+                <span>{isAr ? 'أهداف نشطة' : 'Active goals'}</span>
+              </div>
+              <div className="review-metric">
+                <strong>{profileStats.journal}</strong>
+                <span>{isAr ? 'تدوينات' : 'Journal'}</span>
+              </div>
+              <div className="review-metric">
+                <strong>{profileStats.funds}</strong>
+                <span>{isAr ? 'صناديق ادخار' : 'Funds'}</span>
+              </div>
             </div>
           </div>
 

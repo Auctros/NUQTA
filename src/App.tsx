@@ -24,7 +24,6 @@ import { FinanceView } from './components/FinanceView';
 import { JournalView } from './components/JournalView';
 import { InsightsView } from './components/InsightsView';
 import { SettingsView } from './components/SettingsView';
-import { ProfileView } from './components/ProfileView';
 import { WhatIfSimulator } from './components/WhatIfSimulator';
 import { QuranView } from './components/QuranView';
 import { ReadingView } from './components/ReadingView';
@@ -294,7 +293,6 @@ export default function App() {
       case 'insights': return isAr ? 'الرؤى والأنماط' : 'Insights & Patterns';
       case 'archive': return isAr ? 'الذاكرة الشاملة والأرشيف الموحد' : 'Universal Archive & History';
       case 'settings': return isAr ? 'الإعدادات والبيانات' : 'Settings & Data';
-      case 'profile': return isAr ? 'الملف الشخصي' : 'Your Profile';
       case 'simulator': return isAr ? 'محاكي التراكم' : '"What If" Simulator';
       default: return isAr ? 'نظرة عامة' : 'Overview';
     }
@@ -615,7 +613,7 @@ export default function App() {
           </button>
         </div>
 
-        {/* Bottom Profile and Settings Row */}
+        {/* Bottom Settings Row */}
         <div className="sidebar-bottom">
           {(() => {
             const isSettingsActive = activeNavTab === 'settings';
@@ -655,49 +653,6 @@ export default function App() {
               </button>
             );
           })()}
-
-          <button
-            type="button"
-            data-sidebar-nav="true"
-            aria-label={profile.name || (isAr ? 'الملف الشخصي' : 'Local profile')}
-            aria-current={activeNavTab === 'profile' ? 'page' : undefined}
-            aria-describedby={sidebarTooltip?.id === 'profile' ? 'sidebar-tip-profile' : undefined}
-            onClick={() => {
-              hideCollapsedTooltip();
-              setActiveNavTab('profile');
-              if (window.innerWidth <= 900) setSidebarOpen(false);
-            }}
-            onMouseEnter={(e) =>
-              showCollapsedTooltip(
-                e,
-                'profile',
-                profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
-                isAr ? 'محلي' : 'Private'
-              )
-            }
-            onMouseLeave={hideCollapsedTooltip}
-            onFocus={(e) =>
-              showCollapsedTooltip(
-                e,
-                'profile',
-                profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
-                isAr ? 'محلي' : 'Private'
-              )
-            }
-            onBlur={hideCollapsedTooltip}
-            className="profile-row"
-          >
-            <span className="avatar">
-              {(profile.name || (isAr ? 'ع' : 'N')).charAt(0)}
-            </span>
-            <div className="profile-details">
-              <strong>{profile.name || (isAr ? 'علي' : 'User')}</strong>
-              <small>
-                {isAr ? 'ملف محلي · خاص' : 'Local profile · Private'}
-              </small>
-            </div>
-            <span className="more-dots">···</span>
-          </button>
         </div>
       </aside>
 
@@ -885,7 +840,6 @@ export default function App() {
           {activeNavTab === 'insights' && <InsightsView />}
           {activeNavTab === 'archive' && <ArchiveHistoryView />}
           {activeNavTab === 'settings' && <SettingsView />}
-          {activeNavTab === 'profile' && <ProfileView />}
           {activeNavTab === 'simulator' && <WhatIfSimulator />}
         </main>
 

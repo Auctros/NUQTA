@@ -6,41 +6,36 @@ import { useNuqtaStore } from '../src/store/nuqtaStore';
 
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 80)); });
 
-describe('Profile and Settings are distinct destinations', () => {
-  it('opens the Profile page (not Settings) from the sidebar profile row', async () => {
+describe('Settings is the single destination for profile and configuration', () => {
+  it('has no separate Profile entry in the sidebar', async () => {
     useNuqtaStore.getState().setActiveNavTab('today');
     render(<App />);
     await settle();
 
     const aside = screen.getByRole('complementary', { name: /Primary navigation/i });
-    const profileRow = within(aside).getByRole('button', { name: /Local profile|الملف الشخصي/i });
-    fireEvent.click(profileRow);
-    await settle();
-
-    expect(useNuqtaStore.getState().activeNavTab).toBe('profile');
-    // The Profile experience, not the Settings & Data one.
-    expect(screen.getByRole('heading', { level: 1, name: /Your Profile|الملف الشخصي/i })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: /Your Progress|تقدّمك/i })).toBeTruthy();
-    expect(screen.queryByRole('heading', { level: 1, name: /Settings & Data|الإعدادات والبيانات/i })).toBeNull();
+    // The old profile row is gone; only the Settings entry remains in the bottom slot.
+    expect(within(aside).queryByRole('button', { name: /Local profile|الملف الشخصي/i })).toBeNull();
+    expect(within(aside).getByRole('button', { name: /Settings & Data|الإعدادات والبيانات/i })).toBeTruthy();
   });
 
-  it('links from Profile to Settings and from Settings back to Profile', async () => {
-    useNuqtaStore.getState().setActiveNavTab('profile');
+  it('opens Settings from the sidebar and shows the consolidated profile + data panels', async () => {
+    useNuqtaStore.getState().setActiveNavTab('today');
     render(<App />);
     await settle();
 
-    fireEvent.click(screen.getByRole('button', { name: /Open Settings|فتح الإعدادات/i }));
+    const aside = screen.getByRole('complementary', { name: /Primary navigation/i });
+    fireEvent.click(within(aside).getByRole('button', { name: /Settings & Data|الإعدادات والبيانات/i }));
     await settle();
+
     expect(useNuqtaStore.getState().activeNavTab).toBe('settings');
     expect(screen.getByRole('heading', { level: 1, name: /Settings & Data|الإعدادات والبيانات/i })).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: /Open Profile|فتح الملف الشخصي/i }));
-    await settle();
-    expect(useNuqtaStore.getState().activeNavTab).toBe('profile');
+    // Profile functionality is folded into Settings, not a separate page.
+    expect(screen.getByRole('heading', { level: 2, name: /Your Profile|الملف الشخصي/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: /Your Progress|تقدّمك/i })).toBeTruthy();
   });
 
-  it('saving the display name updates the store profile', async () => {
-    useNuqtaStore.getState().setActiveNavTab('profile');
+  it('saving the display name from Settings updates the store profile', async () => {
+    useNuqtaStore.getState().setActiveNavTab('settings');
     render(<App />);
     await settle();
 
