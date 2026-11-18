@@ -7,7 +7,7 @@ import { NuqtaStorageEngine } from '../lib/storage';
 import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 import { NuqtaSelect } from './ui';
 
-export const SettingsView: React.FC = () => {
+export const ProfileView: React.FC = () => {
   const {
     profile,
     updateProfileName,
@@ -113,13 +113,13 @@ export const SettingsView: React.FC = () => {
         <div>
           <div className="eyebrow">
             <span className="line"></span>
-            <span>NUQTA / CONTROL</span>
+            <span>NUQTA / PROFILE</span>
           </div>
-          <h1>{isAr ? 'الإعدادات والبيانات' : 'Settings & Data'}</h1>
+          <h1>{isAr ? 'الملف الشخصي' : 'Your Profile'}</h1>
           <p>
             {isAr
-              ? 'تحكم كامل في مظهر مساحة العمل، تصدير واستيراد البيانات، والخصوصية المطلقة.'
-              : 'Complete control over workspace preferences, data exports, backups, and local-first privacy.'}
+              ? 'هويتك، تقدّمك، تفضيلات مساحة العمل، وإدارة بياناتك وخصوصيتك — كلها في مكان واحد.'
+              : 'Your identity, progress, workspace preferences, and data — all in one place.'}
           </p>
         </div>
         <div className="heading-actions">
@@ -130,9 +130,8 @@ export const SettingsView: React.FC = () => {
       </div>
 
       <div className="settings-layout">
-        {/* Left Column: Profile, Appearance, Data */}
+        {/* Left Column: Identity, Progress, Preferences, Data */}
         <section>
-          {/* Profile: identity, display name and progress, all owned by Settings now. */}
           <div className="panel settings-section">
             <div className="panel-heading">
               <div>

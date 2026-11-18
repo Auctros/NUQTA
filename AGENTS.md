@@ -93,11 +93,11 @@ with an IndexedDB mirror for recovery.
   from `src/lib/useEscapeKey.ts`, and exposes `role="dialog"` + `aria-modal="true"`.
 - **Prefer inline panels over popups.** Reserve modals for genuinely modal tasks; savings
   and budget editing live in inline panels toggled with `aria-expanded`/`aria-controls`.
-- **Profile lives inside Settings.** `SettingsView` owns identity, the editable display-name
-  form and the "Your Progress" snapshot, alongside preferences, notifications, data tools and
-  privacy. There is no separate Profile destination — do not reintroduce a `profile` nav tab
-  or a `ProfileView`; extend the Settings profile section instead. The store's `profile`
-  record and its `nuqta_profile_v1` key are unchanged.
+- **Profile is the single home for identity and settings.** `ProfileView` owns identity, the
+  editable display-name form, the "Your Progress" snapshot, workspace preferences,
+  notifications, backup/data tools and privacy. There is no separate Settings page or
+  `settings` nav tab — do not reintroduce one; extend the Profile page instead. The store's
+  `profile` record and its `nuqta_profile_v1` key are unchanged.
 
 ## Layout / responsive rules
 

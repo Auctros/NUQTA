@@ -6,36 +6,38 @@ import { useNuqtaStore } from '../src/store/nuqtaStore';
 
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 80)); });
 
-describe('Settings is the single destination for profile and configuration', () => {
-  it('has no separate Profile entry in the sidebar', async () => {
+describe('Profile is the single destination for identity and application settings', () => {
+  it('exposes a Profile entry in the sidebar and no separate Settings entry', async () => {
     useNuqtaStore.getState().setActiveNavTab('today');
     render(<App />);
     await settle();
 
     const aside = screen.getByRole('complementary', { name: /Primary navigation/i });
-    // The old profile row is gone; only the Settings entry remains in the bottom slot.
-    expect(within(aside).queryByRole('button', { name: /Local profile|الملف الشخصي/i })).toBeNull();
-    expect(within(aside).getByRole('button', { name: /Settings & Data|الإعدادات والبيانات/i })).toBeTruthy();
+    expect(within(aside).getByRole('button', { name: /Local profile|الملف الشخصي/i })).toBeTruthy();
+    expect(within(aside).queryByRole('button', { name: /Settings & Data|الإعدادات والبيانات/i })).toBeNull();
   });
 
-  it('opens Settings from the sidebar and shows the consolidated profile + data panels', async () => {
+  it('opens Profile from the sidebar with identity, progress and every settings panel', async () => {
     useNuqtaStore.getState().setActiveNavTab('today');
     render(<App />);
     await settle();
 
     const aside = screen.getByRole('complementary', { name: /Primary navigation/i });
-    fireEvent.click(within(aside).getByRole('button', { name: /Settings & Data|الإعدادات والبيانات/i }));
+    fireEvent.click(within(aside).getByRole('button', { name: /Local profile|الملف الشخصي/i }));
     await settle();
 
-    expect(useNuqtaStore.getState().activeNavTab).toBe('settings');
-    expect(screen.getByRole('heading', { level: 1, name: /Settings & Data|الإعدادات والبيانات/i })).toBeTruthy();
-    // Profile functionality is folded into Settings, not a separate page.
-    expect(screen.getByRole('heading', { level: 2, name: /Your Profile|الملف الشخصي/i })).toBeTruthy();
+    expect(useNuqtaStore.getState().activeNavTab).toBe('profile');
+    expect(screen.getByRole('heading', { level: 1, name: /Your Profile|الملف الشخصي/i })).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: /Your Progress|تقدّمك/i })).toBeTruthy();
+    // Everything that used to be on Settings now lives on Profile.
+    expect(screen.getByRole('heading', { level: 2, name: /Preferences & Theme|التفضيلات والمظهر/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: /Notifications & Audio Alerts|الإشعارات والتنبيهات الصوتية/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: /Data Portability & Backups|أدوات ونقل البيانات/i })).toBeTruthy();
+    expect(screen.getByText(/Absolute Privacy by Design|دستور الخصوصية المطلقة/i)).toBeTruthy();
   });
 
-  it('saving the display name from Settings updates the store profile', async () => {
-    useNuqtaStore.getState().setActiveNavTab('settings');
+  it('saving the display name from Profile updates the store profile', async () => {
+    useNuqtaStore.getState().setActiveNavTab('profile');
     render(<App />);
     await settle();
 

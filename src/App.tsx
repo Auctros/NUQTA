@@ -23,7 +23,7 @@ import { HealthView } from './components/HealthView';
 import { FinanceView } from './components/FinanceView';
 import { JournalView } from './components/JournalView';
 import { InsightsView } from './components/InsightsView';
-import { SettingsView } from './components/SettingsView';
+import { ProfileView } from './components/ProfileView';
 import { WhatIfSimulator } from './components/WhatIfSimulator';
 import { QuranView } from './components/QuranView';
 import { ReadingView } from './components/ReadingView';
@@ -250,12 +250,12 @@ export default function App() {
       run: () => setActiveNavTab(item.id)
     })),
     {
-      id: 'act-settings',
-      label: isAr ? 'الإعدادات والبيانات' : 'Settings & Data',
+      id: 'act-profile',
+      label: isAr ? 'الملف الشخصي والإعدادات' : 'Profile & Settings',
       hint: isAr ? 'إجراء' : 'Action',
       group: isAr ? 'إجراءات' : 'Actions',
-      keywords: ['settings', 'preferences', 'data', 'backup'],
-      run: () => setActiveNavTab('settings')
+      keywords: ['profile', 'settings', 'preferences', 'data', 'backup'],
+      run: () => setActiveNavTab('profile')
     },
     {
       id: 'act-simulator',
@@ -292,7 +292,7 @@ export default function App() {
       case 'journal': return isAr ? 'اليوميات' : 'Journal';
       case 'insights': return isAr ? 'الرؤى والأنماط' : 'Insights & Patterns';
       case 'archive': return isAr ? 'الذاكرة الشاملة والأرشيف الموحد' : 'Universal Archive & History';
-      case 'settings': return isAr ? 'الإعدادات والبيانات' : 'Settings & Data';
+      case 'profile': return isAr ? 'الملف الشخصي والإعدادات' : 'Profile & Settings';
       case 'simulator': return isAr ? 'محاكي التراكم' : '"What If" Simulator';
       default: return isAr ? 'نظرة عامة' : 'Overview';
     }
@@ -613,46 +613,50 @@ export default function App() {
           </button>
         </div>
 
-        {/* Bottom Settings Row */}
+        {/* Bottom Profile Row — the single destination for identity and app settings */}
         <div className="sidebar-bottom">
-          {(() => {
-            const isSettingsActive = activeNavTab === 'settings';
-            const settingsLabel = isAr ? 'الإعدادات والبيانات' : 'Settings & Data';
-            const settingsShort = isAr ? 'الإعدادات' : 'Settings';
-            return (
-              <button
-                type="button"
-                data-sidebar-nav="true"
-                aria-label={settingsLabel}
-                aria-current={isSettingsActive ? 'page' : undefined}
-                aria-describedby={!isSettingsActive && sidebarTooltip?.id === 'settings' ? 'sidebar-tip-settings' : undefined}
-                onClick={() => {
-                  hideCollapsedTooltip();
-                  setActiveNavTab('settings');
-                  if (window.innerWidth <= 900) setSidebarOpen(false);
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSettingsActive) showCollapsedTooltip(e, 'settings', settingsLabel);
-                }}
-                onMouseLeave={hideCollapsedTooltip}
-                onFocus={(e) => {
-                  if (!isSettingsActive) showCollapsedTooltip(e, 'settings', settingsLabel);
-                }}
-                onBlur={hideCollapsedTooltip}
-                className={`nav-item ${isSettingsActive ? 'active' : ''}`}
-              >
-                <span className="nav-icon" aria-hidden="true">
-                  <NuqtaIcon name="settings" className="w-4 h-4" />
-                </span>
-                <span className="nav-item-label truncate flex-1">{settingsLabel}</span>
-                {isSettingsActive && (
-                  <span className="nav-active-mini-label" aria-hidden="true">
-                    {settingsShort}
-                  </span>
-                )}
-              </button>
-            );
-          })()}
+          <button
+            type="button"
+            data-sidebar-nav="true"
+            aria-label={profile.name || (isAr ? 'الملف الشخصي' : 'Local profile')}
+            aria-current={activeNavTab === 'profile' ? 'page' : undefined}
+            aria-describedby={sidebarTooltip?.id === 'profile' ? 'sidebar-tip-profile' : undefined}
+            onClick={() => {
+              hideCollapsedTooltip();
+              setActiveNavTab('profile');
+              if (window.innerWidth <= 900) setSidebarOpen(false);
+            }}
+            onMouseEnter={(e) =>
+              showCollapsedTooltip(
+                e,
+                'profile',
+                profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
+                isAr ? 'محلي' : 'Private'
+              )
+            }
+            onMouseLeave={hideCollapsedTooltip}
+            onFocus={(e) =>
+              showCollapsedTooltip(
+                e,
+                'profile',
+                profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
+                isAr ? 'محلي' : 'Private'
+              )
+            }
+            onBlur={hideCollapsedTooltip}
+            className="profile-row"
+          >
+            <span className="avatar">
+              {(profile.name || (isAr ? 'ع' : 'N')).charAt(0)}
+            </span>
+            <div className="profile-details">
+              <strong>{profile.name || (isAr ? 'علي' : 'User')}</strong>
+              <small>
+                {isAr ? 'ملف محلي · خاص' : 'Local profile · Private'}
+              </small>
+            </div>
+            <span className="more-dots">···</span>
+          </button>
         </div>
       </aside>
 
@@ -807,12 +811,12 @@ export default function App() {
                     </button>
                     <button
                       onClick={() => {
-                        setActiveNavTab('settings');
+                        setActiveNavTab('profile');
                         setShowNotificationModal(false);
                       }}
                       className="text-[11px] text-accent hover:underline"
                     >
-                      {isAr ? 'الإعدادات' : 'Settings'}
+                      {isAr ? 'الملف الشخصي' : 'Profile'}
                       <NuqtaIcon name="arrow" className="w-3 h-3 inline-block" />
                     </button>
                   </div>
@@ -839,7 +843,7 @@ export default function App() {
           {activeNavTab === 'journal' && <JournalView />}
           {activeNavTab === 'insights' && <InsightsView />}
           {activeNavTab === 'archive' && <ArchiveHistoryView />}
-          {activeNavTab === 'settings' && <SettingsView />}
+          {activeNavTab === 'profile' && <ProfileView />}
           {activeNavTab === 'simulator' && <WhatIfSimulator />}
         </main>
 

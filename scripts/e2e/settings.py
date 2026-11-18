@@ -1,5 +1,5 @@
-"""Browser test of Settings: bad backup rejected (nothing written), valid backup restored,
-wipe clears localStorage AND IndexedDB. Same usage/requirements as smoke.py."""
+"""Browser test of the Profile page's data tools: bad backup rejected (nothing written),
+valid backup restored, wipe clears localStorage AND IndexedDB. Same usage/requirements as smoke.py."""
 from playwright.sync_api import sync_playwright
 import json, sys
 URL="http://localhost:4173/"
@@ -10,7 +10,7 @@ with sync_playwright() as p:
     page.on("pageerror", lambda e: errs.append(str(e)))
     page.on("dialog", lambda d: d.accept())
     page.goto(URL, wait_until="networkidle"); page.wait_for_timeout(500)
-    page.get_by_text("Settings", exact=False).first.click(); page.wait_for_timeout(500)
+    page.locator('button[data-sidebar-nav="true"]').last.click(); page.wait_for_timeout(500)
     out["file_input"]=page.locator("input[type=file]").count()
     # 1) bad file is rejected, nothing written
     page.locator("input[type=file]").first.set_input_files({"name":"bad.json","mimeType":"application/json","buffer":b'{"tasks":{}}'})
@@ -24,7 +24,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(800)
     out["tasks_after_restore"]=page.evaluate("JSON.parse(localStorage.getItem('nuqta_tasks_v1')||'[]').map(t=>t.id)")
     # 3) wipe clears localStorage AND IndexedDB
-    page.get_by_text("Settings", exact=False).first.click(); page.wait_for_timeout(400)
+    page.locator('button[data-sidebar-nav="true"]').last.click(); page.wait_for_timeout(400)
     wipe=page.get_by_role("button").filter(has_text="Delete").or_(page.get_by_role("button").filter(has_text="Wipe")).or_(page.get_by_role("button").filter(has_text="مسح"))
     out["wipe_buttons"]=wipe.count()
     if wipe.count():
