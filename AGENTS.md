@@ -40,6 +40,11 @@ with an IndexedDB mirror for recovery.
   one exists.
 - Verify with `scripts/e2e/views.py` (both themes, all widths) — a change that reads well in
   dark but leaves a dark panel in light mode is a regression.
+- **Brand assets mirror the sidebar logo.** `public/favicon.svg` and the PNG app icons
+  (`icon-192.png`, `icon-512.png`) reproduce `.brand-mark`: a mint `#b6f3d3` rounded square
+  with a `#0b1711` centre dot. The SVG keeps the rounded corners for the browser tab; the
+  PNGs are full-bleed so they stay valid `maskable` PWA icons and the notification icon.
+  If the logo changes, regenerate both from the same geometry.
 
 ## Week / date rules (NUQTA week)
 
