@@ -21,6 +21,9 @@ const useOverlayBehaviour = (open: boolean, onClose: () => void) => {
     };
     document.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
+    // Lock the page without reflowing it: the scrollbar gutter is already
+    // reserved (html { scrollbar-gutter: stable }), so hiding the scrollbar
+    // keeps the content width identical while the overlay is open.
     document.body.style.overflow = 'hidden';
     const id = window.setTimeout(() => panelRef.current?.focus(), 30);
     return () => {

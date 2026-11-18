@@ -20,7 +20,7 @@ with an IndexedDB mirror for recovery.
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(16 rules). Add a rule whenever a new safety property must never regress.
+(17 rules). Add a rule whenever a new safety property must never regress.
 
 ## Theming (light / dark)
 
@@ -42,6 +42,15 @@ with an IndexedDB mirror for recovery.
   one exists.
 - Verify with `scripts/e2e/views.py` (both themes, all widths) — a change that reads well in
   dark but leaves a dark panel in light mode is a regression.
+- **The window scrollbar is app-themed and never reflows the layout.** The page scrolls on
+  `<html>`, so a classic OS scrollbar that appears on long pages but not short ones used to
+  change the content width and make navigation feel like switching apps. The `html { … }` rule
+  in `src/index.css` therefore sets `scrollbar-gutter: stable` (space is always reserved) and
+  paints the rail with `scrollbar-color` (Firefox) plus `::-webkit-scrollbar-*` (Chromium),
+  using `--border-strong` for the thumb and `--accent-strong` on hover. Overlays lock scroll
+  via `document.body.style.overflow` (`src/components/ui/overlays.tsx`); the reserved gutter
+  keeps that from shifting the page too. Invariant #17 and the `content_widths` check in
+  `views.py` guard this — do not remove `scrollbar-gutter: stable` from the root.
 - **Brand assets mirror the sidebar logo.** `public/favicon.svg` and the PNG app icons
   (`icon-192.png`, `icon-512.png`) reproduce `.brand-mark`: a mint `#b6f3d3` rounded square
   with a `#0b1711` centre dot. The SVG keeps the rounded corners for the browser tab; the

@@ -1632,6 +1632,40 @@ html.light-mode .glass-surface,
 .sidebar::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* ============================================================
+   PAGE SCROLLBAR — app-themed, and never shifts the layout.
+   The window scrolls on <html>; a classic OS scrollbar that
+   appears/disappears per page changes the content width, so we
+   (a) reserve its space with scrollbar-gutter: stable and
+   (b) paint it in the NUQTA palette like the sidebar rail.
+   ============================================================ */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-gutter: stable;
+}
+html::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+html::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: var(--r-full);
+}
+html::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-strong);
+  background-clip: padding-box;
+}
+html::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .sidebar .primary-nav {
   flex-shrink: 0;
 }

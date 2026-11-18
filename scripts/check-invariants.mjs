@@ -196,8 +196,27 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 17. The window scrollbar must never reflow the layout. The app scrolls on <html>,
+//     so a classic OS scrollbar that appears on some pages but not others changes the
+//     content width and makes navigation feel like switching apps. The root must reserve
+//     the gutter (scrollbar-gutter: stable) and paint the rail in the app palette.
+{
+  const css = readFileSync(join(root, 'src/index.css'), 'utf8');
+  const htmlRule = css.match(/(^|\n)html\s*\{([^}]*)\}/);
+  const body = htmlRule ? htmlRule[2] : '';
+  if (!/scrollbar-gutter\s*:\s*stable/.test(body)) {
+    fail(
+      'Root scrollbar must reserve its space — add `scrollbar-gutter: stable` to the `html { … }` rule',
+      'src/index.css'
+    );
+  }
+  if (!/scrollbar-color\s*:/.test(body)) {
+    fail('Root scrollbar must be themed — add `scrollbar-color` to the `html { … }` rule', 'src/index.css');
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (16 rules).');
+console.log('Invariant check passed (17 rules).');

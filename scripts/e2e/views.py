@@ -70,6 +70,26 @@ with sync_playwright() as p:
             failures.append(f'view "{label}" produced console errors: {errors[:2]}')
     result["views"] = views
 
+    # 1b. The window scrollbar must never reflow the layout. The app scrolls on
+    #     <html>, so a per-page scrollbar used to change the content width and make
+    #     navigation feel like switching apps. Width must stay identical across views.
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.wait_for_timeout(300)
+    widths = {}
+    for label in VIEWS:
+        btn = page.locator(f'button[data-sidebar-nav="true"][aria-label="{label}"]').first
+        if btn.count() == 0:
+            continue
+        btn.click()
+        page.wait_for_timeout(300)
+        widths[label] = page.evaluate(
+            "Math.round(document.querySelector('.page-content').getBoundingClientRect().width)"
+        )
+    result["content_widths"] = widths
+    distinct = sorted(set(widths.values()))
+    if len(distinct) > 1:
+        failures.append(f"content width shifts between views (scrollbar reflow): {widths}")
+
     # 2. Responsive: no horizontal overflow at any width.
     responsive = {}
     for w in WIDTHS:
