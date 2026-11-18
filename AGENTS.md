@@ -251,3 +251,56 @@ posts a `nuqta-notify` message to `navigator.serviceWorker.controller` when pres
 back to a page-level `Notification`), and the worker renders it and focuses/opens a client
 on `notificationclick`. This is NOT background push — with no server the page must be open
 for a reminder to fire; the worker only renders and routes the click.
+
+### Update lifecycle
+
+Two caches can hide a new deploy from a returning visitor: the HTTP cache (GitHub Pages
+serves `index.html` and `sw.js` with `max-age=600`) and the versioned SW shell. The rules
+that keep deploys arriving without a hard refresh:
+
+- Register with `{ updateViaCache: 'none' }` so `sw.js` is never HTTP-cached (invariant 20).
+- The worker never calls `skipWaiting()` on its own; it waits for a `nuqta-skip-waiting`
+  message. Navigation responses are fetched with `cache: 'no-cache'` and are never written
+  to the shell cache.
+- `src/lib/pwaUpdate.ts` owns all client logic: a periodic/on-focus/on-reconnect
+  `registration.update()` check, and an update is applied only on an explicit user action
+  (the `UpdateBanner` "Apply update"). The single `controllerchange` reload is guarded by a
+  flag, and the first-ever install (no prior controller) never reloads.
+- E2E proof: `scripts/e2e/update.py` serves the real build with `max-age=600`, swaps in a
+  "deploy B", and asserts one ordinary reload picks it up with no reload loop. It polls via
+  `page.evaluate` (not `wait_for_function(string, …)`) because the app CSP has no
+  `'unsafe-eval'`.
+
+### Multi-tab safety
+
+`skipWaiting()` is a GLOBAL action: it activates the new worker for every client of the
+origin, so `controllerchange` fires in every open tab. Three rules follow (invariant 21):
+
+- Hiding a tab must never apply an update — `handleVisibility` only *detects* on show.
+  Auto-applying on hide would activate the worker globally and reload a visible tab.
+- Only the tab whose user pressed "Apply update" reloads. `handleControllerChange` gates on
+  `expectsReload` (set solely by `apply()`); every other tab adopts the new controller
+  silently and keeps its page and in-memory work, picking up the new build on its next
+  navigation. `expectsReload` is what makes this deterministic regardless of whether this
+  tab or a sibling drove activation.
+- `apply()` serializes the `skipWaiting` post through a Web Locks lock
+  (`nuqta-update-apply`, `ifAvailable: true`), so only one tab drives activation; absent
+  Web Locks it degrades to single-tab behavior.
+
+Old-cache deletion is deferred and bounded for the same reason. `activate` only
+`clients.claim()`s. A page that has *reloaded* onto the new build posts
+`nuqta-claim-cleanup`, but a reloaded tab is NOT proof that the other tabs migrated, so
+`deleteObsoleteCaches` keeps `RETAINED_PREVIOUS_VERSIONS` (=1) previous version, i.e. the
+current cache plus the immediately previous one. Only caches further behind are reclaimed.
+The fetch handler also falls back to older NUQTA shell caches on a miss, so a tab still
+running the previous build can keep lazy-loading its own assets — including offline —
+(e.g. the anatomy plates) after another tab has moved on. `scripts/e2e/update-multitab.py`
+proves it: build B drops a plate that build A shipped, one tab stays on A, cleanup runs,
+the browser goes offline, and the tab still loads the build-A plate from the retained cache.
+
+Unsaved work: while an update is pending, a `beforeunload` guard warns if the app reports
+in-memory work (`PwaUpdateManager.setHasUnsavedWork`); it is lifted the moment the user
+applies. Note headless Chromium ignores `beforeunload`, so this is unit-tested only — the
+browser-level guarantee is the stronger one: non-initiating tabs never reload at all.
+`scripts/e2e/update-multitab.py` proves that too (working tab keeps `window.__work` across
+another tab's apply; the applying tab reloads exactly once onto the new build).

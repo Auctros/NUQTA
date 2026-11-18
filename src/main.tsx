@@ -16,6 +16,7 @@ import '@fontsource/jetbrains-mono/600.css';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
+import { startPwaUpdates } from './lib/pwaUpdate.ts';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
@@ -24,11 +25,6 @@ createRoot(document.getElementById('root')!).render(
   </ErrorBoundary>
 );
 
-// Offline availability: cache the app shell after the first visit (production only).
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
-      /* offline caching is an enhancement; the app works without it */
-    });
-  });
-}
+// Offline availability + update lifecycle: precache the app shell after the first visit
+// (production only), then detect and apply new deployments safely (see src/lib/pwaUpdate.ts).
+startPwaUpdates();

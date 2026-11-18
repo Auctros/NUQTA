@@ -89,5 +89,13 @@ const testStatus = run(python, [join('scripts', 'e2e', 'offline.py')], { env: { 
 // Browser-level UI audit: every navigable view renders, no horizontal overflow at
 // desktop/tablet/mobile widths, and mobile navigation opens -> navigates -> closes.
 const viewsStatus = run(python, [join('scripts', 'e2e', 'views.py')], { env: { ...process.env, OFFLINE_URL: URL } });
+// Update lifecycle: a new deployment must become visible after one ordinary reload,
+// without a reload loop and without the first install reloading the page.
+const updateStatus = run(python, [join('scripts', 'e2e', 'update.py')], { env: { ...process.env, UPDATE_DIST: 'dist' } });
+// Multi-tab safety: applying an update in one tab must never reload another tab that is
+// holding unsaved work (skipWaiting is global and fires controllerchange everywhere).
+const multiTabStatus = run(python, [join('scripts', 'e2e', 'update-multitab.py')], {
+  env: { ...process.env, UPDATE_DIST: 'dist' }
+});
 shutdown();
-process.exit(testStatus || viewsStatus);
+process.exit(testStatus || viewsStatus || updateStatus || multiTabStatus);

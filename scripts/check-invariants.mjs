@@ -112,13 +112,29 @@ const grep = (re, { except = [] } = {}) =>
   if (!/CACHE_VERSION/.test(sw) || !/nuqta-shell-/.test(sw)) {
     fail('The service worker cache is not versioned under a NUQTA-owned name', 'expected a nuqta-shell- prefix and a CACHE_VERSION');
   }
-  // Deleting caches must be guarded by the NUQTA prefix, never by "delete everything".
-  const deleteLines = sw.split('\n').filter((l) => /caches\.delete\(/.test(l));
-  if (deleteLines.length === 0) {
+  // Deleting caches must be scoped to NUQTA-owned names, never "delete everything".
+  // A deletion is safe if it targets the current CACHE, or a variable produced by a
+  // filter over the NUQTA prefix (e.g. `keys.filter(k => k.startsWith(CACHE_PREFIX))`).
+  if (!/startsWith\(CACHE_PREFIX\)/.test(sw)) {
+    fail(
+      'Service worker does not scope cache deletion to the NUQTA prefix',
+      'expected a filter using startsWith(CACHE_PREFIX) before any caches.delete()'
+    );
+  }
+  const scopedVars = new Set(['CACHE']);
+  for (const m of sw.matchAll(/\.filter\(\s*\(\s*([A-Za-z_$][\w$]*)\s*\)\s*=>[^;{]*startsWith\(CACHE_PREFIX\)/g)) {
+    scopedVars.add(m[1]);
+  }
+  const deleteArgs = [...sw.matchAll(/caches\.delete\(\s*([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
+  if (deleteArgs.length === 0) {
     fail('Service worker never prunes obsolete caches', 'expected a guarded caches.delete() call');
   }
-  if (!deleteLines.every((l) => /startsWith\(|CACHE\b/.test(l))) {
-    fail('Service worker may delete caches that are not NUQTA-owned', deleteLines.join('\n    '));
+  const unsafe = deleteArgs.filter((arg) => !scopedVars.has(arg));
+  if (unsafe.length) {
+    fail(
+      'Service worker may delete caches that are not NUQTA-owned',
+      `caches.delete(${unsafe.join('), caches.delete(')}) is not scoped by a NUQTA-prefix filter`
+    );
   }
 }
 
@@ -276,8 +292,80 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 20. The service worker must be registered with `updateViaCache: 'none'` and the page
+//     must guard against reload loops. GitHub Pages serves sw.js with `max-age=600`; if
+//     the browser is allowed to HTTP-cache the worker script, a new deploy can go
+//     unnoticed for ten minutes — the exact "no visible change" failure. And an unguarded
+//     `controllerchange` reload is how a PWA ends up in a reload loop.
+{
+  const pwa = readFileSync(join(root, 'src/lib/pwaUpdate.ts'), 'utf8');
+  if (!/updateViaCache\s*:\s*['"]none['"]/.test(pwa)) {
+    fail(
+      "Service worker must be registered with { updateViaCache: 'none' }",
+      'src/lib/pwaUpdate.ts registers the worker without it, so sw.js can be served from the HTTP cache'
+    );
+  }
+  if (!/controllerchange/.test(pwa) || !/reloading/.test(pwa)) {
+    fail(
+      'The controllerchange reload must be guarded against loops',
+      'src/lib/pwaUpdate.ts is missing the controllerchange guard'
+    );
+  }
+  const main = readFileSync(join(root, 'src/main.tsx'), 'utf8');
+  if (!/startPwaUpdates/.test(main)) {
+    fail(
+      'The PWA update lifecycle is not started at boot',
+      'src/main.tsx must call startPwaUpdates()'
+    );
+  }
+}
+
+// 21. Multi-tab safety. skipWaiting() is global: it activates the new worker for every
+//     client, so a reload triggered by one tab's update would discard another tab's work.
+//     Hiding a tab must therefore never apply an update, and a reload may only follow the
+//     tab's OWN apply() call. Removing either guard silently reintroduces the multi-tab
+//     data-loss bug.
+{
+  const pwa = readFileSync(join(root, 'src/lib/pwaUpdate.ts'), 'utf8');
+  if (!/expectsReload/.test(pwa)) {
+    fail(
+      'Only the tab that applied the update may reload',
+      'src/lib/pwaUpdate.ts is missing the expectsReload guard, so a controllerchange caused by another tab could reload this one'
+    );
+  }
+  if (!/requestApplyLock/.test(pwa)) {
+    fail(
+      'Applying an update must be serialized across tabs',
+      'src/lib/pwaUpdate.ts must elect a single tab (Web Locks) to post skipWaiting'
+    );
+  }
+  // The hide branch of handleVisibility must return without applying. Guard against a
+  // future edit that reintroduces auto-apply on hide.
+  if (/handleVisibility[\s\S]{0,400}?\bisHidden\(\)[\s\S]{0,120}?apply\(\)/.test(pwa)) {
+    fail(
+      'Hiding a tab must never apply an update',
+      'src/lib/pwaUpdate.ts applies an update from the hidden branch of handleVisibility'
+    );
+  }
+  const sw = readFileSync(join(root, 'public/sw.js'), 'utf8');
+  if (!/nuqta-claim-cleanup/.test(sw)) {
+    fail(
+      'Old caches must be reclaimed only on an explicit cleanup message',
+      'public/sw.js must delete obsolete caches on nuqta-claim-cleanup, not during activate'
+    );
+  }
+  // A reloaded tab does not prove every other tab migrated, so cleanup must retain the
+  // previous version's cache rather than deleting every older cache.
+  if (!/RETAINED_PREVIOUS_VERSIONS/.test(sw) || !/slice\(\s*RETAINED_PREVIOUS_VERSIONS\s*\)/.test(sw)) {
+    fail(
+      'Cleanup must retain the previous version cache (bounded retention)',
+      'public/sw.js must keep RETAINED_PREVIOUS_VERSIONS caches instead of deleting all older ones'
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (19 rules).');
+console.log('Invariant check passed (21 rules).');

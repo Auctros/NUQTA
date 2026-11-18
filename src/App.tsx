@@ -1,5 +1,6 @@
 import { NuqtaStorageEngine } from './lib/storage';
 import { StorageIssueBanner } from './components/StorageIssueBanner';
+import { UpdateBanner } from './components/UpdateBanner';
 import { localDateKey } from './lib/dateKey';
 import { isTaskPending } from './lib/taskStatus';
 import React, { useEffect, useState } from 'react';
@@ -305,6 +306,7 @@ export default function App() {
     >
       <AmbientBackdrop />
       <StorageIssueBanner isAr={isAr} />
+      <UpdateBanner isAr={isAr} />
       {/* Global Modals */}
       <RescueModal />
       <SundayRitualModal />

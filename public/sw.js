@@ -21,7 +21,7 @@
  */
 
 const CACHE_PREFIX = 'nuqta-shell-';
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 const CACHE = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 const SCOPE = self.registration.scope;
 const INDEX_URL = new URL(SCOPE).toString();
@@ -148,21 +148,83 @@ async function precacheShell() {
   }
 }
 
+/*
+ * A newly installed worker deliberately does NOT call skipWaiting() on its own. An update
+ * that activated itself would swap the cache out from under a page the user is still
+ * working in, and any reload that followed could lose their in-progress state. Instead the
+ * worker waits until a page sends `nuqta-skip-waiting` (the user chose "Apply update"), so
+ * the update is applied at a moment a page picked.
+ *
+ * skipWaiting() is a GLOBAL action: it activates this worker for every client of the
+ * origin, and `controllerchange` then fires in every open tab. The page side (see
+ * src/lib/pwaUpdate.ts) elects a single tab to send the message and makes only that tab
+ * reload; every other tab adopts the new controller without reloading.
+ *
+ * The very first install has no controller to displace, so it still activates immediately.
+ */
 self.addEventListener('install', (event) => {
-  event.waitUntil(precacheShell().then(() => self.skipWaiting()));
+  event.waitUntil(precacheShell());
 });
 
+/*
+ * Activation claims the open pages but deliberately does NOT delete the previous version's
+ * cache. A page that is still running the old build may lazy-load assets from it (for
+ * example the anatomical plates), and one tab reloading is not proof that the others have.
+ * Reclaiming happens later, on an explicit `nuqta-claim-cleanup` message from a page that
+ * has already reloaded onto the new build, and even then the immediately previous version
+ * is retained (see deleteObsoleteCaches). The first install has no previous cache to keep.
+ */
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        // Only obsolete NUQTA-owned caches. Other apps' caches are never touched.
-        Promise.all(keys.filter((k) => k.startsWith(CACHE_PREFIX) && k !== CACHE).map((k) => caches.delete(k)))
-      )
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil(self.clients.claim());
 });
+
+/**
+ * How many previous versions' caches to keep. A tab still running an earlier build may
+ * need its assets, and a reloaded tab does not prove every other tab has migrated. Keeping
+ * one previous version bounds storage to two shell caches while letting those tabs keep
+ * working; anything further behind is reclaimed.
+ */
+const RETAINED_PREVIOUS_VERSIONS = 1;
+
+/** Numeric version of a `nuqta-shell-vN` name, so caches can be ordered newest-first. */
+function shellVersion(name) {
+  const match = /^nuqta-shell-v(\d+)$/.exec(name);
+  return match ? Number(match[1]) : 0;
+}
+
+/** NUQTA-owned shell caches other than the current one, newest first. */
+async function olderShellCaches() {
+  const keys = await caches.keys();
+  return keys
+    .filter((k) => k.startsWith(CACHE_PREFIX) && k !== CACHE)
+    .sort((a, b) => shellVersion(b) - shellVersion(a));
+}
+
+/**
+ * Reclaim obsolete NUQTA caches, keeping the current version plus the previous
+ * RETAINED_PREVIOUS_VERSIONS. A tab reloading is not proof that every other tab has
+ * migrated, so the previous cache is preserved for any tab still running the previous
+ * build. Only caches more than RETAINED_PREVIOUS_VERSIONS behind are deleted, and other
+ * applications' caches are never touched.
+ */
+async function deleteObsoleteCaches() {
+  const obsolete = await olderShellCaches();
+  await Promise.all(obsolete.slice(RETAINED_PREVIOUS_VERSIONS).map((k) => caches.delete(k)));
+}
+
+/**
+ * Look for a precached asset in an older NUQTA shell cache. A page still running the
+ * previous build may request an asset that only that build's cache holds; because the
+ * previous cache is retained, we can still serve it here — including offline — until the
+ * cache ages out or that page reloads.
+ */
+async function matchInOlderShellCaches(request) {
+  for (const key of await olderShellCaches()) {
+    const hit = await (await caches.open(key)).match(request, { ignoreVary: true });
+    if (hit) return hit;
+  }
+  return undefined;
+}
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -179,9 +241,14 @@ self.addEventListener('fetch', (event) => {
   // Pages: network first (always get the latest build), fall back to the cached shell.
   // The network response is NOT written to the cache: navigations can carry dynamic
   // content and the cached shell must stay exactly what was precached at install.
+  //
+  // `cache: 'no-cache'` forces the browser to revalidate the document with the server
+  // instead of serving it from the HTTP cache. GitHub Pages marks index.html
+  // `max-age=600`, so without this a reload within ten minutes would keep handing back the
+  // OLD document — and therefore the OLD hashed bundle — even after a new deploy.
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req).catch(async () => {
+      fetch(req, { cache: 'no-cache' }).catch(async () => {
         const cache = await caches.open(CACHE);
         return (await cache.match(INDEX_URL, { ignoreVary: true })) || Response.error();
       })
@@ -194,11 +261,15 @@ self.addEventListener('fetch', (event) => {
   // ignoreVary matters because the preview/dev server sends `Vary: Origin`, and the
   // browser issues CORS-mode requests for module scripts and fonts; without it a cached
   // response would fail to match and the asset would be lost when offline.
+  //
+  // On a miss in the current cache we check older NUQTA shell caches before the network:
+  // a page still running the previous build may need an asset only that build precached,
+  // and the old cache is deliberately kept until that page reloads (see activate above).
   event.respondWith(
     caches
       .open(CACHE)
       .then((cache) => cache.match(req, { ignoreVary: true }))
-      .then((hit) => hit || fetch(req))
+      .then(async (hit) => hit || (await matchInOlderShellCaches(req)) || fetch(req))
   );
 });
 
@@ -213,7 +284,26 @@ self.addEventListener('fetch', (event) => {
  */
 self.addEventListener('message', (event) => {
   const data = event.data;
-  if (!data || data.type !== 'nuqta-notify') return;
+  if (!data) return;
+
+  // A page decided now is a safe moment to apply a pending update (its user pressed
+  // "Apply update"). Only a *waiting* worker needs this; calling it on the active worker is
+  // a harmless no-op. Activation then fires `controllerchange` in EVERY open tab; the page
+  // side makes only the tab that asked reload, so no other tab is interrupted.
+  if (data.type === 'nuqta-skip-waiting') {
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
+
+  // A page that has reloaded onto this build asks us to reclaim the previous version's
+  // cache now. Doing it here — and not during activate — keeps assets the not-yet-reloaded
+  // tabs may still lazy-load available until they have moved on.
+  if (data.type === 'nuqta-claim-cleanup') {
+    event.waitUntil(deleteObsoleteCaches());
+    return;
+  }
+
+  if (data.type !== 'nuqta-notify') return;
   const { title, body, tag, url, route } = data;
   if (!title) return;
   event.waitUntil(

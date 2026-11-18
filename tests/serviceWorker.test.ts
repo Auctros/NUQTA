@@ -8,8 +8,11 @@ import vm from 'node:vm';
  * the isolation rules are enforced by the code that actually ships:
  *   - install precaches only the discovered shell assets,
  *   - a failed install removes only its own candidate cache and keeps the working version,
- *   - activate deletes only NUQTA-owned caches (other apps' caches survive),
- *   - the fetch handler never writes to the cache (no dynamic/API/user data is stored).
+ *   - activate KEEPS the previous cache (a not-yet-reloaded tab may still need it) and only
+ *     deletes NUQTA-owned caches when a reloaded page asks via `nuqta-claim-cleanup`,
+ *   - the fetch handler never writes to the cache (no dynamic/API/user data is stored),
+ *   - a new worker WAITS on install (it never self-activates) and only skips waiting when
+ *     a page explicitly asks it to, so an update cannot interrupt a working page.
  */
 
 const ORIGIN = 'http://localhost:4173';
@@ -72,11 +75,13 @@ function loadServiceWorker(options: {
   const handlers: Record<string, (event: unknown) => void> = {};
   const skipped: boolean[] = [];
   const claimed: boolean[] = [];
+  const fetchCalls: { url: string; init?: RequestInit }[] = [];
 
   const sandbox: Record<string, unknown> = {
     caches,
-    fetch: async (req: { url: string } | string) => {
+    fetch: async (req: { url: string } | string, init?: RequestInit) => {
       const url = typeof req === 'string' ? req : req.url;
+      fetchCalls.push({ url, init });
       const r = options.fetchImpl(url);
       if (r === 'reject' || !r.ok) throw new Error(`network error: ${url}`);
       return makeResponse(url, r.body ?? '');
@@ -122,8 +127,13 @@ function loadServiceWorker(options: {
     handlers.fetch({ request: req, respondWith: (p: Promise<unknown>) => (response = p) });
     return response;
   };
+  const runMessage = async (data: unknown) => {
+    let promise: Promise<unknown> = Promise.resolve();
+    handlers.message({ data, waitUntil: (p: Promise<unknown>) => (promise = p) });
+    return promise;
+  };
 
-  return { caches, runInstall, runActivate, runFetch, skipped, claimed, handlers };
+  return { caches, runInstall, runActivate, runFetch, runMessage, skipped, claimed, handlers, fetchCalls };
 }
 
 const INDEX_HTML =
@@ -169,7 +179,9 @@ describe('service worker install', () => {
         `${ORIGIN}/anatomy/masks/lats_back.webp`
       ].sort()
     );
-    expect(sw.skipped).toHaveLength(1);
+    // A new worker must WAIT on install — it must not activate itself and swap the cache
+    // out from under a page the user is still working in.
+    expect(sw.skipped).toHaveLength(0);
   });
 
   it('precaches every anatomical plate the manifest lists, so the reference works offline', async () => {
@@ -224,7 +236,7 @@ describe('service worker install', () => {
 });
 
 describe('service worker activate', () => {
-  it('deletes only obsolete NUQTA caches and leaves other applications alone', async () => {
+  it('claims the open pages but KEEPS the previous cache for not-yet-reloaded tabs', async () => {
     const sw = loadServiceWorker({
       initialCaches: ['nuqta-shell-v1', PREV_CACHE, 'other-app-cache', 'workbox-precache'],
       fetchImpl: happyFetch
@@ -232,13 +244,41 @@ describe('service worker activate', () => {
     await sw.runInstall(); // creates the current version cache
     await sw.runActivate();
 
+    // The previous version's cache survives activation: a page still running the old build
+    // may lazy-load assets (e.g. anatomy plates) from it until it reloads.
     const remaining = [...sw.caches._stores.keys()].sort();
     expect(remaining).toContain(CACHE);
-    expect(remaining).not.toContain('nuqta-shell-v1');
-    expect(remaining).not.toContain(PREV_CACHE);
+    expect(remaining).toContain(PREV_CACHE);
+    expect(sw.claimed).toHaveLength(1);
+  });
+
+  it('cleanup keeps the previous version but reclaims older caches and other apps are untouched', async () => {
+    const sw = loadServiceWorker({
+      initialCaches: ['nuqta-shell-v1', PREV_CACHE, 'other-app-cache', 'workbox-precache'],
+      fetchImpl: happyFetch
+    });
+    await sw.runInstall();
+    await sw.runActivate();
+    await sw.runMessage({ type: 'nuqta-claim-cleanup' });
+
+    const remaining = [...sw.caches._stores.keys()].sort();
+    expect(remaining).toContain(CACHE); // current
+    expect(remaining).toContain(PREV_CACHE); // previous — a tab may still be running it
+    expect(remaining).not.toContain('nuqta-shell-v1'); // older than one version back
     expect(remaining).toContain('other-app-cache');
     expect(remaining).toContain('workbox-precache');
-    expect(sw.claimed).toHaveLength(1);
+  });
+
+  it('retains exactly the current plus one previous version, and no more', async () => {
+    const sw = loadServiceWorker({
+      initialCaches: ['nuqta-shell-v4', 'nuqta-shell-v5', PREV_CACHE],
+      fetchImpl: happyFetch
+    });
+    await sw.runInstall();
+    await sw.runMessage({ type: 'nuqta-claim-cleanup' });
+
+    const shell = [...sw.caches._stores.keys()].filter((k) => k.startsWith('nuqta-shell-')).sort();
+    expect(shell).toEqual([PREV_CACHE, CACHE].sort());
   });
 });
 
@@ -251,6 +291,27 @@ describe('service worker fetch handler', () => {
     const res = (await sw.runFetch({ url: `${ORIGIN}/assets/index-abc.js` })) as { ok: boolean };
     expect(res.ok).toBe(true);
     expect(sw.caches.entries(CACHE).length).toBe(before);
+  });
+
+  it('serves an asset from the PREVIOUS build cache when the current one lacks it', async () => {
+    // A page still running the old build requests an asset only that build precached. The
+    // old cache is kept on activation, and the fetch handler must fall back to it (even
+    // offline) rather than failing — or worse, hitting the network for a hashed name.
+    const staleAsset = `${ORIGIN}/assets/index-OLD.js`;
+    const sw = loadServiceWorker({
+      initialCaches: [PREV_CACHE],
+      fetchImpl: (url) => {
+        if (url === staleAsset) return 'reject'; // offline: only the old cache can serve it
+        return happyFetch(url);
+      }
+    });
+    sw.caches._stores.get(PREV_CACHE)!.set(staleAsset, { url: staleAsset, body: 'old-bundle' });
+    await sw.runInstall();
+
+    const res = (await sw.runFetch({ url: staleAsset })) as { text: () => Promise<string> };
+    expect(await res.text()).toBe('old-bundle');
+    // The current cache is untouched: the old asset is served, not re-cached.
+    expect(sw.caches.has(CACHE, staleAsset)).toBe(false);
   });
 
   it('does NOT cache a dynamic (non-precached) request', async () => {
@@ -285,5 +346,62 @@ describe('service worker fetch handler', () => {
     expect(await res.text()).toBe('<html>fresh-network</html>');
     // The precached shell is unchanged: the navigation response was not written.
     expect(sw.caches._stores.get(CACHE)!.get(`${ORIGIN}/`)!.body).toBe(INDEX_HTML);
+  });
+
+  it('revalidates the navigation document instead of trusting the HTTP cache', async () => {
+    // GitHub Pages serves index.html with `max-age=600`. Without revalidation a reload
+    // within that window would return the OLD document (and so the OLD hashed bundle).
+    const sw = loadServiceWorker({ fetchImpl: happyFetch });
+    await sw.runInstall();
+    sw.fetchCalls.length = 0;
+
+    await sw.runFetch({ url: `${ORIGIN}/`, mode: 'navigate' });
+
+    const nav = sw.fetchCalls.find((c) => c.url === `${ORIGIN}/`);
+    expect(nav).toBeDefined();
+    expect(nav!.init?.cache).toBe('no-cache');
+  });
+
+  it('still serves the cached shell when a navigation cannot reach the network', async () => {
+    let online = true;
+    const sw = loadServiceWorker({
+      fetchImpl: (url) => {
+        if (url === SCOPE || url === ORIGIN + '/') return online ? { ok: true, body: INDEX_HTML } : 'reject';
+        if (url.endsWith('.css')) return { ok: true, body: CSS };
+        return { ok: true, body: 'binary' };
+      }
+    });
+    await sw.runInstall();
+    online = false;
+
+    const res = (await sw.runFetch({ url: `${ORIGIN}/`, mode: 'navigate' })) as { text: () => Promise<string> };
+    expect(await res.text()).toBe(INDEX_HTML);
+  });
+});
+
+describe('service worker update lifecycle', () => {
+  it('only skips waiting when the page explicitly asks it to', async () => {
+    const sw = loadServiceWorker({ fetchImpl: happyFetch });
+    await sw.runInstall();
+    expect(sw.skipped).toHaveLength(0); // install alone never self-activates
+
+    await sw.runMessage({ type: 'nuqta-skip-waiting' });
+    expect(sw.skipped).toHaveLength(1);
+  });
+
+  it('ignores unrelated and empty messages', async () => {
+    const sw = loadServiceWorker({ fetchImpl: happyFetch });
+    await sw.runInstall();
+    await sw.runMessage(null);
+    await sw.runMessage({ type: 'something-else' });
+    expect(sw.skipped).toHaveLength(0);
+  });
+
+  it('does not reclaim caches just because a skip-waiting message arrived', async () => {
+    const sw = loadServiceWorker({ initialCaches: [PREV_CACHE], fetchImpl: happyFetch });
+    await sw.runInstall();
+    await sw.runMessage({ type: 'nuqta-skip-waiting' });
+    // Applying an update must not delete the old cache out from under other tabs.
+    expect(sw.caches._stores.has(PREV_CACHE)).toBe(true);
   });
 });
