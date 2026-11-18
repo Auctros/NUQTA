@@ -7,23 +7,25 @@ import { useNuqtaStore } from '../src/store/nuqtaStore';
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 80)); });
 
 describe('Profile is the single destination for identity and application settings', () => {
-  it('exposes a Profile entry in the sidebar and no separate Settings entry', async () => {
+  it('exposes a standalone Profile entry outside the sidebar and no Settings entry', async () => {
     useNuqtaStore.getState().setActiveNavTab('today');
     render(<App />);
     await settle();
 
+    const profileBtn = screen.getByRole('button', { name: /Local profile|الملف الشخصي/i });
+    // The Profile destination is its own dock, separate from the nav rail.
     const aside = screen.getByRole('complementary', { name: /Primary navigation/i });
-    expect(within(aside).getByRole('button', { name: /Local profile|الملف الشخصي/i })).toBeTruthy();
+    expect(aside.contains(profileBtn)).toBe(false);
+    expect(profileBtn.closest('.profile-dock')).not.toBeNull();
     expect(within(aside).queryByRole('button', { name: /Settings & Data|الإعدادات والبيانات/i })).toBeNull();
   });
 
-  it('opens Profile from the sidebar with identity, progress and every settings panel', async () => {
+  it('opens Profile from the standalone dock with identity, progress and every settings panel', async () => {
     useNuqtaStore.getState().setActiveNavTab('today');
     render(<App />);
     await settle();
 
-    const aside = screen.getByRole('complementary', { name: /Primary navigation/i });
-    fireEvent.click(within(aside).getByRole('button', { name: /Local profile|الملف الشخصي/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Local profile|الملف الشخصي/i }));
     await settle();
 
     expect(useNuqtaStore.getState().activeNavTab).toBe('profile');

@@ -98,6 +98,11 @@ with an IndexedDB mirror for recovery.
   notifications, backup/data tools and privacy. There is no separate Settings page or
   `settings` nav tab — do not reintroduce one; extend the Profile page instead. The store's
   `profile` record and its `nuqta_profile_v1` key are unchanged.
+- **The Profile entry is a standalone dock, not a sidebar row.** It lives in a `.profile-dock`
+  element that is a fixed sibling of `<aside class="sidebar">` (so it never scrolls with the
+  nav list and stays pinned at the rail's foot). It still carries `data-sidebar-nav="true"` for
+  the e2e nav sweep. On desktop the rail's `inset-block-end` leaves room for the dock; on
+  mobile the dock rides the off-canvas drawer via the shared `open` class.
 
 ## Layout / responsive rules
 

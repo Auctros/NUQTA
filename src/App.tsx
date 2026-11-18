@@ -613,52 +613,54 @@ export default function App() {
           </button>
         </div>
 
-        {/* Bottom Profile Row — the single destination for identity and app settings */}
-        <div className="sidebar-bottom">
-          <button
-            type="button"
-            data-sidebar-nav="true"
-            aria-label={profile.name || (isAr ? 'الملف الشخصي' : 'Local profile')}
-            aria-current={activeNavTab === 'profile' ? 'page' : undefined}
-            aria-describedby={sidebarTooltip?.id === 'profile' ? 'sidebar-tip-profile' : undefined}
-            onClick={() => {
-              hideCollapsedTooltip();
-              setActiveNavTab('profile');
-              if (window.innerWidth <= 900) setSidebarOpen(false);
-            }}
-            onMouseEnter={(e) =>
-              showCollapsedTooltip(
-                e,
-                'profile',
-                profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
-                isAr ? 'محلي' : 'Private'
-              )
-            }
-            onMouseLeave={hideCollapsedTooltip}
-            onFocus={(e) =>
-              showCollapsedTooltip(
-                e,
-                'profile',
-                profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
-                isAr ? 'محلي' : 'Private'
-              )
-            }
-            onBlur={hideCollapsedTooltip}
-            className="profile-row"
-          >
-            <span className="avatar">
-              {(profile.name || (isAr ? 'ع' : 'N')).charAt(0)}
-            </span>
-            <div className="profile-details">
-              <strong>{profile.name || (isAr ? 'علي' : 'User')}</strong>
-              <small>
-                {isAr ? 'ملف محلي · خاص' : 'Local profile · Private'}
-              </small>
-            </div>
-            <span className="more-dots">···</span>
-          </button>
-        </div>
       </aside>
+
+      {/* Profile dock — a standalone destination kept outside the scrolling
+          rail so it stays pinned in place and never moves with the nav list. */}
+      <div className={`profile-dock ${sidebarOpen ? 'open' : ''}`}>
+        <button
+          type="button"
+          data-sidebar-nav="true"
+          aria-label={profile.name || (isAr ? 'الملف الشخصي' : 'Local profile')}
+          aria-current={activeNavTab === 'profile' ? 'page' : undefined}
+          aria-describedby={sidebarTooltip?.id === 'profile' ? 'sidebar-tip-profile' : undefined}
+          onClick={() => {
+            hideCollapsedTooltip();
+            setActiveNavTab('profile');
+            if (window.innerWidth <= 900) setSidebarOpen(false);
+          }}
+          onMouseEnter={(e) =>
+            showCollapsedTooltip(
+              e,
+              'profile',
+              profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
+              isAr ? 'محلي' : 'Private'
+            )
+          }
+          onMouseLeave={hideCollapsedTooltip}
+          onFocus={(e) =>
+            showCollapsedTooltip(
+              e,
+              'profile',
+              profile.name || (isAr ? 'الملف الشخصي' : 'Local profile'),
+              isAr ? 'محلي' : 'Private'
+            )
+          }
+          onBlur={hideCollapsedTooltip}
+          className="profile-row"
+        >
+          <span className="avatar">
+            {(profile.name || (isAr ? 'ع' : 'N')).charAt(0)}
+          </span>
+          <div className="profile-details">
+            <strong>{profile.name || (isAr ? 'علي' : 'User')}</strong>
+            <small>
+              {isAr ? 'ملف محلي · خاص' : 'Local profile · Private'}
+            </small>
+          </div>
+          <span className="more-dots">···</span>
+        </button>
+      </div>
 
       {/* ==================== MAIN CONTENT AREA ==================== */}
       <div className="main-area">

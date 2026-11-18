@@ -672,6 +672,12 @@ body.light-mode {
   color: #14231a !important;
 }
 
+.light-mode .profile-dock {
+  background-color: var(--glass-bg) !important;
+  border-color: var(--glass-border-strong) !important;
+  color: #14231a !important;
+}
+
 .light-mode .topbar {
   background-color: var(--glass-bg) !important;
   border-color: var(--glass-border-strong) !important;
@@ -776,7 +782,7 @@ body.light-mode {
   color: #63776b !important;
 }
 
-.light-mode .sidebar-bottom {
+.light-mode .profile-dock {
   border-color: #d6e0d8 !important;
 }
 
@@ -1592,7 +1598,8 @@ html.light-mode .glass-surface,
 /* Readable fallback when backdrop-filter is unavailable */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .sidebar,
-  .topbar {
+  .topbar,
+  .profile-dock {
     background-color: var(--surface-raised) !important;
   }
   .glass-surface,
@@ -1856,10 +1863,28 @@ html.light-mode .glass-surface,
     border-width 200ms ease;
 }
 
-/* Profile row anchored to the exact 42px icon centerline */
-.sidebar .profile-row {
-  padding-block: 10px 6px;
-  padding-inline-start: 13px;
+/* Profile dock — a standalone glass card pinned below the rail. It is a fixed
+   sibling of the sidebar, so it never scrolls or shifts with the nav list. */
+.profile-dock {
+  position: fixed;
+  z-index: 30;
+  bottom: 14px;
+  inset-inline-start: 14px;
+  width: 254px;
+  padding: 8px;
+  border-radius: 18px;
+  -webkit-backdrop-filter: blur(var(--blur-chrome)) saturate(140%);
+  backdrop-filter: blur(var(--blur-chrome)) saturate(140%);
+  background-color: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border-strong) !important;
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  transition: width var(--dur-sidebar) var(--ease-spring);
+}
+
+.profile-dock .profile-row {
+  min-height: 44px;
+  padding-block: 6px;
+  padding-inline-start: 8px;
   padding-inline-end: 8px;
   gap: 10px;
   overflow: hidden;
@@ -1867,18 +1892,18 @@ html.light-mode .glass-surface,
   transition: background-color 160ms ease;
 }
 
-.sidebar .profile-row:hover {
+.profile-dock .profile-row:hover {
   background: var(--surface-faint);
 }
 
-.sidebar .avatar {
+.profile-dock .avatar {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
 }
 
-.sidebar .profile-details,
-.sidebar .more-dots {
+.profile-dock .profile-details,
+.profile-dock .more-dots {
   white-space: nowrap;
   transition: opacity 180ms ease, transform var(--dur-sidebar) var(--ease-spring);
 }
@@ -1887,7 +1912,7 @@ html.light-mode .glass-surface,
 @media (min-width: 901px) {
   .sidebar {
     width: 254px;
-    inset-block: 14px;
+    inset-block: 14px 88px;
     inset-inline-start: 14px;
     border-radius: 22px;
     border: 1px solid var(--glass-border-strong) !important;
@@ -1918,6 +1943,11 @@ html.light-mode .glass-surface,
     width: 84px;
     padding: 18px 12px 14px;
     transform: none !important;
+  }
+
+  /* The dock narrows in step with the collapsed rail */
+  .app-shell.sidebar-collapsed .profile-dock {
+    width: 84px;
   }
 
   [dir="rtl"] .app-shell.sidebar-collapsed .sidebar {
@@ -1999,6 +2029,9 @@ html.light-mode .glass-surface,
 
 @media (min-width: 901px) and (max-width: 1150px) {
   .app-shell:not(.sidebar-collapsed) .sidebar {
+    width: 224px;
+  }
+  .app-shell:not(.sidebar-collapsed) .profile-dock {
     width: 224px;
   }
   .app-shell:not(.sidebar-collapsed) .main-area {
@@ -2085,6 +2118,32 @@ html.light-mode .glass-surface,
     transform: translateX(0);
   }
 
+  /* The dock rides with the off-canvas drawer instead of floating over content */
+  .profile-dock {
+    z-index: 31;
+    inset-inline-start: 0;
+    width: min(290px, 86vw);
+    transform: translateX(-105%);
+    transition: transform 300ms var(--ease-spring);
+  }
+
+  .profile-dock.open {
+    transform: translateX(0);
+  }
+
+  [dir="rtl"] .profile-dock {
+    transform: translateX(105%);
+  }
+
+  [dir="rtl"] .profile-dock.open {
+    transform: translateX(0);
+  }
+
+  /* Reserve room at the drawer's foot so the dock never covers the last item */
+  .sidebar {
+    padding-bottom: 88px;
+  }
+
   .sidebar-scrim {
     display: block !important;
     position: fixed;
@@ -2144,8 +2203,9 @@ html.light-mode .glass-surface,
   .sidebar .capture-kbd,
   .sidebar .sidebar-footer-card,
   .sidebar .nav-active-mini-label,
-  .sidebar .profile-details,
-  .sidebar .more-dots {
+  .profile-dock,
+  .profile-dock .profile-details,
+  .profile-dock .more-dots {
     transition: none !important;
     animation: none !important;
   }
