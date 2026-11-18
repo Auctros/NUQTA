@@ -14,7 +14,7 @@ import {
   ArchivedItemSummary
 } from '../types';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
-import { NuqtaSelect } from './ui';
+import { NuqtaDatePicker, NuqtaSelect } from './ui';
 import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const ArchiveHistoryView: React.FC = () => {
@@ -396,22 +396,16 @@ export const ArchiveHistoryView: React.FC = () => {
             <NuqtaIcon name="search" className="w-3.5 h-3.5 absolute start-2.5 top-2.5 text-muted pointer-events-none" />
           </div>
 
-          <input
-            type="date"
+          <NuqtaDatePicker
+            className="text-xs"
+            style={{ width: 'auto' }}
             value={dateQuery}
+            isAr={isAr}
+            clearable
+            placeholder={isAr ? 'التاريخ' : 'Date'}
+            ariaLabel={isAr ? 'تصفية حسب التاريخ' : 'Filter by exact date'}
             onChange={(e) => setDateQuery(e.target.value)}
-            className="input text-xs py-1.5"
-            title={isAr ? 'تصفية حسب التاريخ' : 'Filter by exact date'}
           />
-          {dateQuery && (
-            <button
-              onClick={() => setDateQuery('')}
-              className="px-2 py-1 text-muted hover:text-[var(--text-primary)]"
-              title={isAr ? 'إلغاء تصفية التاريخ' : 'Clear date'}
-            >
-              <NuqtaIcon name="close" className="w-3.5 h-3.5" />
-            </button>
-          )}
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Goal, KeyResult, KeyResultDataSource, GoalMilestone, SpecializedHabitType } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { evaluateGoalProgress, pacingIconName } from '../lib/goalProgressEngine';
-import { NuqtaSelect } from './ui';
+import { NuqtaDatePicker, NuqtaSelect } from './ui';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
 
 interface GoalDetailModalProps {
@@ -678,11 +678,12 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                     </div>
                     <div className="field">
                       <label className="text-xs text-muted mb-1 block">{isAr ? 'الموعد المستهدف' : 'Target Date'}</label>
-                      <input
-                        type="date"
+                      <NuqtaDatePicker
+                        className="text-xs"
                         value={msTargetDate}
+                        isAr={isAr}
+                        clearable
                         onChange={(e) => setMsTargetDate(e.target.value)}
-                        className="input w-full text-xs font-mono"
                       />
                     </div>
                   </div>
@@ -844,10 +845,10 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                           <option value={3}>{isAr ? 'Q3 - عاجل' : 'Q3 - Urgent'}</option>
                           <option value={4}>{isAr ? 'Q4 - عادي' : 'Q4 - Normal'}</option>
                         </NuqtaSelect>
-                        <input
-                          type="date"
-                          className="input text-xs py-1"
+                        <NuqtaDatePicker
+                          className="text-xs"
                           value={quickTaskDate}
+                          isAr={isAr}
                           onChange={(e) => setQuickTaskDate(e.target.value)}
                         />
                       </div>

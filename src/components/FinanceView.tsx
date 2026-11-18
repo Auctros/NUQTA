@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { ExpenseRecord } from '../types';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
-import { NuqtaSelect } from './ui';
+import { NuqtaDatePicker, NuqtaSelect } from './ui';
 import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const FinanceView: React.FC = () => {
@@ -371,11 +371,10 @@ export const FinanceView: React.FC = () => {
 
               <div className="field" style={{ marginTop: '13px' }}>
                 <label htmlFor="saving-target-date">{isAr ? 'التاريخ المستهدف' : 'Target Date'}</label>
-                <input
+                <NuqtaDatePicker
                   id="saving-target-date"
-                  type="date"
-                  className="input"
                   value={savingTargetDate}
+                  isAr={isAr}
                   onChange={(e) => setSavingTargetDate(e.target.value)}
                 />
               </div>

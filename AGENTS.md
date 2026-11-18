@@ -20,7 +20,7 @@ with an IndexedDB mirror for recovery.
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(17 rules). Add a rule whenever a new safety property must never regress.
+(18 rules). Add a rule whenever a new safety property must never regress.
 
 ## Theming (light / dark)
 
@@ -94,12 +94,18 @@ with an IndexedDB mirror for recovery.
 
 ## Shared UI primitives
 
-- `src/components/ui/` exports the kit: `primitives`, `layout`, `forms`, `overlays`, and
-  `NuqtaSelect`. Import from `./ui`, do not re-implement.
+- `src/components/ui/` exports the kit: `primitives`, `layout`, `forms`, `overlays`,
+  `NuqtaSelect` and `NuqtaPickers`. Import from `./ui`, do not re-implement.
 - **`NuqtaSelect` replaces every native `<select>`.** It keeps the native contract (an event
   whose `target.value` is the chosen option's value) and accepts `<option>` children, so it
   is a drop-in swap. It is portal-rendered, RTL-aware, keyboard-accessible and theme-aware.
   Do not add a new native `<select>`; the styling and behaviour would drift.
+- **`NuqtaDatePicker` / `NuqtaTimePicker` replace every native `<input type="date">` and
+  `<input type="time">`.** They keep the same contract (an event whose `target.value` is
+  `"YYYY-MM-DD"` — a local day, via `src/lib/dateKey.ts` — or `"HH:mm"`), so persisted values,
+  handlers and tests are untouched. They share `NuqtaSelect`'s trigger/panel design, are
+  portal-rendered, RTL-aware and theme-aware, and honour `min`/`max`, `clearable` and
+  `minuteStep`. Do not add a new native date/time input.
 - **Icons come from `NuqtaIcon` only.** `IconName` (exported from `./NuqtaIcon`) is the single
   icon union; interface controls, nav items, tiles and status markers must render a
   `NuqtaIcon`, never a bare emoji or a text glyph. Emoji that is *user content* (journal

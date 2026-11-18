@@ -215,8 +215,23 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 18. Date and time are chosen with the branded pickers, never the native controls.
+//     NuqtaDatePicker / NuqtaTimePicker keep the native value contract ("YYYY-MM-DD" local
+//     day / "HH:mm") while matching NuqtaSelect's design, theming and RTL. A stray
+//     <input type="date|time|datetime-local"> silently reverts to the OS widget and drifts
+//     from the kit — the exact regression this rule prevents.
+{
+  const hits = grep(/type\s*=\s*["'](?:date|time|datetime-local)["']/);
+  if (hits.length) {
+    fail(
+      'Native date/time input found — use NuqtaDatePicker / NuqtaTimePicker from ./ui',
+      hits.slice(0, 8).join('\n    ')
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (17 rules).');
+console.log('Invariant check passed (18 rules).');

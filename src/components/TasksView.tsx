@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { PriorityLevel, RecurrenceFrequency, RecurrenceRule, Task, TaskStatus } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { EmptyState, NuqtaSelect, PageHeader, Surface, TabBar } from './ui';
+import { EmptyState, NuqtaDatePicker, NuqtaSelect, NuqtaTimePicker, PageHeader, Surface, TabBar } from './ui';
 import { suggestSmartReschedule } from '../lib/energyAlgorithm';
 
 /**
@@ -710,20 +710,18 @@ export const TasksView: React.FC = () => {
 
                 <div className="field">
                   <label>{isAr ? 'تاريخ الاستحقاق' : 'Scheduled Date'}</label>
-                  <input
-                    type="date"
-                    className="input"
+                  <NuqtaDatePicker
                     value={formDate}
+                    isAr={isAr}
                     onChange={(e) => setFormDate(e.target.value)}
                   />
                 </div>
 
                 <div className="field">
                   <label>{isAr ? 'الوقت المفضل' : 'Scheduled Time'}</label>
-                  <input
-                    type="time"
-                    className="input"
+                  <NuqtaTimePicker
                     value={formTime}
+                    isAr={isAr}
                     onChange={(e) => setFormTime(e.target.value)}
                   />
                 </div>

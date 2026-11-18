@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Goal, GoalPriority, KeyResult, KeyResultDataSource } from '../types';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
-import { EmptyState, NuqtaSelect, PageHeader } from './ui';
+import { EmptyState, NuqtaDatePicker, NuqtaSelect, PageHeader } from './ui';
 import { GoalDetailModal } from './GoalDetailModal';
 import { evaluateGoalProgress, pacingIconName } from '../lib/goalProgressEngine';
 import { useEscapeKey } from '../lib/useEscapeKey';
@@ -599,19 +599,20 @@ export const GoalsView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="field">
                   <label className="text-xs text-muted mb-1 block">{isAr ? 'تاريخ البداية' : 'Start Date'}</label>
-                  <input
-                    type="date"
-                    className="input w-full text-xs font-mono"
+                  <NuqtaDatePicker
+                    className="text-xs"
                     value={formStartDate}
+                    isAr={isAr}
                     onChange={(e) => setFormStartDate(e.target.value)}
                   />
                 </div>
                 <div className="field">
                   <label className="text-xs text-muted mb-1 block">{isAr ? 'الموعد المستهدف' : 'Target Deadline'}</label>
-                  <input
-                    type="date"
-                    className="input w-full text-xs font-mono"
+                  <NuqtaDatePicker
+                    className="text-xs"
                     value={formDeadline}
+                    isAr={isAr}
+                    clearable
                     onChange={(e) => setFormDeadline(e.target.value)}
                   />
                 </div>
