@@ -52,23 +52,50 @@ describe('Profile is the single destination for identity and application setting
     expect(useNuqtaStore.getState().profile.name).toBe('Layla');
   });
 
-  it('shows a symbolic placeholder name, never an invented persona, before a name is set', async () => {
+  it('shows no invented persona in the dock before a name is set', async () => {
     NuqtaStorageEngine.saveProfile({ ...defaultProfile(), name: '', language: 'en' });
     render(<App />);
     await settle();
 
     const dock = screen.getByRole('button', { name: /Local profile|الملف الشخصي/i });
-    expect(within(dock).getByText('Sir')).toBeTruthy();
-    expect(screen.queryByText(/^User$/)).toBeNull();
-    expect(screen.queryByText('Ali')).toBeNull();
+    // With no name the dock falls back to the destination label, never a person.
+    expect(within(dock).getByText('Local profile')).toBeTruthy();
+    expect(within(dock).queryByText('Sir')).toBeNull();
+    expect(within(dock).queryByText('User')).toBeNull();
+    expect(within(dock).queryByText('Ali')).toBeNull();
   });
 
-  it('uses the Arabic symbolic name when the language is Arabic', async () => {
+  it('greets without a name until one is set', async () => {
+    NuqtaStorageEngine.saveProfile({ ...defaultProfile(), name: '', language: 'en' });
+    useNuqtaStore.getState().setActiveNavTab('today');
+    render(<App />);
+    await settle();
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading.textContent).toMatch(/Good (morning|afternoon|evening)/);
+    expect(heading.textContent).not.toMatch(/,/);
+  });
+
+  it('uses the generic profile label and the destination label in Arabic when no name is set', async () => {
     NuqtaStorageEngine.saveProfile({ ...defaultProfile(), name: '', language: 'ar' });
     render(<App />);
     await settle();
 
     const dock = screen.getByRole('button', { name: /Local profile|الملف الشخصي/i });
-    expect(within(dock).getByText('سيدي')).toBeTruthy();
+    expect(within(dock).getByText('الملف الشخصي')).toBeTruthy();
+    expect(within(dock).queryByText('سيدي')).toBeNull();
+  });
+
+  it('shows a generic "User" identity in Profile (not a persona) before a name is set', async () => {
+    NuqtaStorageEngine.saveProfile({ ...defaultProfile(), name: '', language: 'en' });
+    render(<App />);
+    await settle();
+
+    fireEvent.click(screen.getByRole('button', { name: /Local profile|الملف الشخصي/i }));
+    await settle();
+
+    const card = screen.getByText(/Stored locally and privately/i).closest('.settings-profile') as HTMLElement;
+    expect(within(card).getByText('User')).toBeTruthy();
+    expect(within(card).queryByText('Sir')).toBeNull();
   });
 });

@@ -101,8 +101,11 @@ export const DashboardView: React.FC = () => {
       : 'Good evening';
 
   const trimmedFirstName = (profile.name || '').trim().split(/\s+/)[0] || '';
-  const displayName = trimmedFirstName || (isAr ? 'سيدي' : 'Sir');
-  const greetingLine = isAr ? `${greeting}، ${displayName}` : `${greeting}, ${displayName}`;
+  const greetingLine = trimmedFirstName
+    ? isAr
+      ? `${greeting}، ${trimmedFirstName}`
+      : `${greeting}, ${trimmedFirstName}`
+    : greeting;
 
   const formattedDate = new Intl.DateTimeFormat(isAr ? 'ar-EG' : 'en-US', {
     weekday: 'short',

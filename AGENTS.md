@@ -105,9 +105,11 @@ with an IndexedDB mirror for recovery.
   notifications, backup/data tools and privacy. There is no separate Settings page or
   `settings` nav tab — do not reintroduce one; extend the Profile page instead. The store's
   `profile` record and its `nuqta_profile_v1` key are unchanged.
-- **A first run has no invented identity.** `profile.name` starts as `''`; the UI shows the
-  symbolic placeholder `Sir` / `سيدي` (never a fabricated person like "Ali"/"علي"). Keep every
-  fallback (dock, Profile header, dashboard greeting) on that same placeholder.
+- **A first run has no invented identity.** `profile.name` starts as `''`. The interface never
+  greets a person that was not entered: the dashboard greeting stays nameless ("Good morning")
+  and the Profile dock shows its destination label ("Local profile") until a name is set. The
+  Profile page's identity card shows the generic "User" / "المستخدم" as a label, not a persona.
+  Never invent a name like "Ali"/"علي".
 - **The Profile entry is a standalone dock, not a sidebar row.** It lives in a `.profile-dock`
   element that is a fixed sibling of `<aside class="sidebar">` (so it never scrolls with the
   nav list and stays pinned at the rail's foot). It still carries `data-sidebar-nav="true"` for

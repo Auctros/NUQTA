@@ -650,13 +650,19 @@ export default function App() {
           className="profile-row"
         >
           <span className="avatar">
-            {(profile.name || (isAr ? 'سيدي' : 'Sir')).charAt(0)}
+            {profile.name ? (
+              profile.name.charAt(0)
+            ) : (
+              <NuqtaIcon name="user" className="w-4 h-4" />
+            )}
           </span>
           <div className="profile-details">
-            <strong>{profile.name || (isAr ? 'سيدي' : 'Sir')}</strong>
-            <small>
-              {isAr ? 'ملف محلي · خاص' : 'Local profile · Private'}
-            </small>
+            <strong>{profile.name || (isAr ? 'الملف الشخصي' : 'Local profile')}</strong>
+            {profile.name && (
+              <small>
+                {isAr ? 'ملف محلي · خاص' : 'Local profile · Private'}
+              </small>
+            )}
           </div>
           <span className="more-dots">···</span>
         </button>

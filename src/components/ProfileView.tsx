@@ -57,7 +57,7 @@ export const ProfileView: React.FC = () => {
     [tasks, habits, goals, journalEntries, savingsGoals]
   );
 
-  const avatarInitial = (profile.name || (isAr ? 'سيدي' : 'Sir')).charAt(0).toUpperCase();
+  const avatarInitial = profile.name ? profile.name.charAt(0).toUpperCase() : '';
 
   const handleExportJSON = () => downloadBackupFile('nuqta-backup');
 
@@ -141,9 +141,11 @@ export const ProfileView: React.FC = () => {
             </div>
 
             <div className="settings-profile">
-              <span className="settings-avatar">{avatarInitial}</span>
+              <span className="settings-avatar">
+                {avatarInitial || <NuqtaIcon name="user" className="w-5 h-5" />}
+              </span>
               <div>
-                <strong>{profile.name || (isAr ? 'سيدي' : 'Sir')}</strong>
+                <strong>{profile.name || (isAr ? 'المستخدم' : 'User')}</strong>
                 <small>{isAr ? 'بيانات محفوظة محلياً وبشكل خاص' : 'Stored locally and privately'}</small>
               </div>
             </div>
