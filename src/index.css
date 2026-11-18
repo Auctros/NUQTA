@@ -2509,6 +2509,38 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .ex-anat-secondary { fill: color-mix(in srgb, var(--studio-accent, var(--brand)) 46%, var(--ex-body-2)); }
 .ex-illustration--anat .ex-anat-primary { filter: saturate(1.05); }
 
+/* ---------- authentic anatomical écorché reference ----------
+   Photographic plates of a real muscular system (Z-Anatomy, CC BY-SA 4.0). The base
+   plate is the body; each trained muscle has a silhouette plate painted over it in the
+   studio accent. Masks are rendered from the same camera as their base, so they register
+   pixel-for-pixel and can be composited with CSS masks — no 3D runtime, works offline. */
+.ec-figure { display: flex; flex-direction: column; gap: var(--sp-2); align-items: center; }
+.ec-plates { display: flex; gap: var(--sp-5, var(--sp-4)); justify-content: center; align-items: flex-end; width: 100%; }
+.ec-plate { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
+.ec-plate-stack { position: relative; height: clamp(180px, 38vh, 330px); aspect-ratio: 448 / 1095; }
+.ec-plate-base { display: block; width: 100%; height: 100%; object-fit: contain; }
+.ec-muscle {
+  position: absolute; inset: 0;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center; mask-position: center;
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+.ec-muscle-primary { background: var(--studio-accent, var(--brand)); }
+.ec-muscle-secondary { background: color-mix(in srgb, var(--studio-accent, var(--brand)) 40%, transparent); }
+.ec-plate-caption { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
+.ec-legend { display: flex; flex-wrap: wrap; gap: var(--sp-3); justify-content: center; margin: 0; padding: 0; list-style: none; font-size: var(--fs-micro); color: var(--text-secondary); }
+.ec-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.ec-swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-default); flex: none; }
+.ec-swatch-primary { background: var(--studio-accent, var(--brand)); }
+.ec-swatch-secondary { background: color-mix(in srgb, var(--studio-accent, var(--brand)) 40%, transparent); }
+.ec-credit { color: var(--text-tertiary); }
+
+/* the écorché reference block inside the exercise detail sheet */
+.ex-anatomy { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--studio-line, var(--border-default)); border-radius: var(--r-md); background: var(--surface-inset); }
+.ex-anatomy-title { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--text-primary); margin: 0; }
+.ex-anatomy-note { font-size: var(--fs-micro); color: var(--text-tertiary); margin: 0; line-height: 1.5; }
+
 /* props: floor, mat, wall, chair, bar — quiet, never competing with the body */
 .ex-ground { stroke: var(--border-strong); stroke-width: 2.4; stroke-linecap: round; }
 .ex-mat { fill: color-mix(in srgb, var(--studio-accent, var(--brand)) 22%, transparent); stroke: color-mix(in srgb, var(--studio-accent, var(--brand)) 40%, transparent); stroke-width: 1; }

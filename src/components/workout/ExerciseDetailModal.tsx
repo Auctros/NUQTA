@@ -10,6 +10,7 @@ import {
 } from '../../lib/exerciseCatalog';
 import { Modal, Button } from '../ui';
 import { ExerciseIllustration } from './illustration/ExerciseIllustration';
+import { EcorcheFigure } from './illustration/EcorcheFigure';
 import { getIllustration } from './illustration/registry';
 import { MuscleMap } from './MuscleMap';
 
@@ -105,6 +106,16 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
           </div>
           <MuscleMap primary={exercise.primary} secondary={exercise.secondary} isAr={isAr} />
         </div>
+
+        <section className="ex-anatomy">
+          <h3 className="ex-anatomy-title">{isAr ? 'المرجع التشريحي' : 'Anatomical reference'}</h3>
+          <p className="ex-anatomy-note">
+            {isAr
+              ? 'رسم تشريحي واقعي للجهاز العضلي، مُظلَّل عليه العضلات التي يستهدفها التمرين.'
+              : 'A realistic rendering of the muscular system, with the muscles this exercise targets highlighted.'}
+          </p>
+          <EcorcheFigure primary={exercise.primary} secondary={exercise.secondary} isAr={isAr} facing={facing} />
+        </section>
 
         <div className="ex-detail-blocks">
           <div className="ex-meta">

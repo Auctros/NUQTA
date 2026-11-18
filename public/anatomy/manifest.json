@@ -1,0 +1,78 @@
+{
+ "width": 448,
+ "height": 1095,
+ "base": [
+  "front",
+  "back"
+ ],
+ "masks": {
+  "chest": [
+   "front",
+   "back"
+  ],
+  "front_delts": [
+   "front",
+   "back"
+  ],
+  "rear_delts": [
+   "front",
+   "back"
+  ],
+  "biceps": [
+   "front",
+   "back"
+  ],
+  "triceps": [
+   "front",
+   "back"
+  ],
+  "forearms": [
+   "front",
+   "back"
+  ],
+  "abs": [
+   "front",
+   "back"
+  ],
+  "obliques": [
+   "front",
+   "back"
+  ],
+  "hip_flexors": [
+   "front",
+   "back"
+  ],
+  "quads": [
+   "front",
+   "back"
+  ],
+  "calves": [
+   "front",
+   "back"
+  ],
+  "traps": [
+   "front",
+   "back"
+  ],
+  "upper_back": [
+   "front",
+   "back"
+  ],
+  "lats": [
+   "front",
+   "back"
+  ],
+  "lower_back": [
+   "front",
+   "back"
+  ],
+  "glutes": [
+   "front",
+   "back"
+  ],
+  "hamstrings": [
+   "front",
+   "back"
+  ]
+ }
+}

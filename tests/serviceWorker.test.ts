@@ -29,7 +29,8 @@ function makeResponse(url: string, body: string) {
     ok: true,
     url,
     clone: () => makeResponse(url, body),
-    text: async () => body
+    text: async () => body,
+    json: async () => JSON.parse(body)
   };
   return res;
 }
@@ -130,9 +131,20 @@ const INDEX_HTML =
   '<body><script type="module" src="/assets/index-abc.js"></script></body></html>';
 const CSS = 'body{background:url("/assets/font-abc.woff2")}';
 
+// The anatomy plates are discovered only through their manifest (nothing in the shell
+// HTML/CSS references them), so the fixture mirrors the real public/anatomy/manifest.json.
+const ANATOMY_MANIFEST_URL = `${ORIGIN}/anatomy/manifest.json`;
+const ANATOMY_MANIFEST = JSON.stringify({
+  width: 448,
+  height: 1095,
+  base: ['front', 'back'],
+  masks: { chest: ['front', 'back'], lats: ['front', 'back'] }
+});
+
 const happyFetch = (url: string) => {
   if (url === SCOPE || url === ORIGIN + '/') return { ok: true, body: INDEX_HTML };
   if (url.endsWith('.css')) return { ok: true, body: CSS };
+  if (url === ANATOMY_MANIFEST_URL) return { ok: true, body: ANATOMY_MANIFEST };
   return { ok: true, body: 'binary' };
 };
 
@@ -144,9 +156,46 @@ describe('service worker install', () => {
     expect([...sw.caches._stores.keys()]).toEqual([CACHE]);
     const urls = sw.caches.entries(CACHE).sort();
     expect(urls).toEqual(
-      [`${ORIGIN}/`, `${ORIGIN}/assets/font-abc.woff2`, `${ORIGIN}/assets/index-abc.css`, `${ORIGIN}/assets/index-abc.js`].sort()
+      [
+        `${ORIGIN}/`,
+        `${ORIGIN}/assets/font-abc.woff2`,
+        `${ORIGIN}/assets/index-abc.css`,
+        `${ORIGIN}/assets/index-abc.js`,
+        `${ORIGIN}/anatomy/base_front.webp`,
+        `${ORIGIN}/anatomy/base_back.webp`,
+        `${ORIGIN}/anatomy/masks/chest_front.webp`,
+        `${ORIGIN}/anatomy/masks/chest_back.webp`,
+        `${ORIGIN}/anatomy/masks/lats_front.webp`,
+        `${ORIGIN}/anatomy/masks/lats_back.webp`
+      ].sort()
     );
     expect(sw.skipped).toHaveLength(1);
+  });
+
+  it('precaches every anatomical plate the manifest lists, so the reference works offline', async () => {
+    const sw = loadServiceWorker({ fetchImpl: happyFetch });
+    await sw.runInstall();
+    for (const url of [
+      `${ORIGIN}/anatomy/base_front.webp`,
+      `${ORIGIN}/anatomy/base_back.webp`,
+      `${ORIGIN}/anatomy/masks/chest_front.webp`,
+      `${ORIGIN}/anatomy/masks/lats_back.webp`
+    ]) {
+      expect(sw.caches.has(CACHE, url)).toBe(true);
+    }
+  });
+
+  it('still installs when the anatomy manifest is missing (best-effort plates)', async () => {
+    const sw = loadServiceWorker({
+      fetchImpl: (url) => {
+        if (url === ANATOMY_MANIFEST_URL) return 'reject';
+        return happyFetch(url);
+      }
+    });
+    await sw.runInstall();
+    expect([...sw.caches._stores.keys()]).toEqual([CACHE]);
+    expect(sw.caches.has(CACHE, `${ORIGIN}/assets/index-abc.js`)).toBe(true);
+    expect(sw.caches.has(CACHE, `${ORIGIN}/anatomy/base_front.webp`)).toBe(false);
   });
 
   it('never caches a dynamic URL it did not discover in the shell', async () => {
