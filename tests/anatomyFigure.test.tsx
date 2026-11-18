@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { EcorcheFigure } from '../src/components/workout/illustration/EcorcheFigure';
+import { StudioAnatomy, DEFAULT_FULL_BODY } from '../src/components/workout/StudioAnatomy';
 import { MUSCLE_IDS } from '../src/components/workout/MuscleMap';
 import { EXERCISE_CATALOG } from '../src/lib/exerciseCatalog';
 
@@ -86,5 +87,24 @@ describe('EcorcheFigure', () => {
     const { container } = render(<EcorcheFigure primary={['lats']} secondary={[]} isAr={false} facing="back" />);
     const firstCaption = container.querySelector('.ec-plate-caption')?.textContent;
     expect(firstCaption).toBe('Back');
+  });
+});
+
+describe('StudioAnatomy', () => {
+  it('renders the écorché with the studio-anatomy hook and the given muscles', () => {
+    const { container } = render(
+      <StudioAnatomy primary={['chest', 'lats']} secondary={['triceps']} isAr={false} facing="front" />
+    );
+    expect(container.querySelector('.studio-anatomy')).toBeTruthy();
+    expect(container.querySelector('.ec-figure')).toBeTruthy();
+    // chest (front) + lats (back) primaries each paint on their own side.
+    expect(container.querySelectorAll('.ec-muscle-primary').length).toBe(2);
+  });
+
+  it('falls back to a full-body default that always paints at least one muscle', () => {
+    const { container } = render(
+      <StudioAnatomy primary={DEFAULT_FULL_BODY.primary} secondary={DEFAULT_FULL_BODY.secondary} isAr={false} />
+    );
+    expect(container.querySelectorAll('.ec-muscle').length).toBeGreaterThan(0);
   });
 });

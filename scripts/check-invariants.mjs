@@ -364,8 +364,46 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 22. The anatomical écorché must be visible the moment the Workout Studio opens, not
+//     only buried inside a per-exercise detail sheet. It regressed once by living solely
+//     in ExerciseDetailModal, so the studio's landing tab must render StudioAnatomy, and
+//     the component must be fed real muscles (never left as an empty body).
+{
+  const view = readFileSync(join(root, 'src/components/WorkoutView.tsx'), 'utf8');
+  if (!/<StudioAnatomy/.test(view)) {
+    fail(
+      'The écorché must be on the Workout Studio landing page',
+      'src/components/WorkoutView.tsx no longer renders <StudioAnatomy>, so the anatomy reference is hidden again'
+    );
+  }
+  // It must be inside the `today` (default) tab, which is what the user sees on open.
+  const todayIdx = view.indexOf("activeTab === 'today'");
+  const nextTabIdx = view.indexOf('activeTab ===', todayIdx + 1);
+  const todayBlock = todayIdx === -1 ? '' : view.slice(todayIdx, nextTabIdx === -1 ? undefined : nextTabIdx);
+  if (!/<StudioAnatomy/.test(todayBlock)) {
+    fail(
+      'The écorché must be on the default (Today) tab, not a secondary tab',
+      "WorkoutView must render <StudioAnatomy> inside the activeTab === 'today' block"
+    );
+  }
+  // An empty figure (no muscles) would paint nothing; the view must fall back to a body.
+  if (!/DEFAULT_FULL_BODY/.test(view)) {
+    fail(
+      'The studio écorché must never render an empty body',
+      'WorkoutView must fall back to DEFAULT_FULL_BODY when the routine yields no muscles'
+    );
+  }
+  const studio = readFileSync(join(root, 'src/components/workout/StudioAnatomy.tsx'), 'utf8');
+  if (!/EcorcheFigure/.test(studio) || !/DEFAULT_FULL_BODY/.test(studio)) {
+    fail(
+      'StudioAnatomy must reuse the shared écorché reference',
+      'src/components/workout/StudioAnatomy.tsx must render EcorcheFigure and export DEFAULT_FULL_BODY'
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (21 rules).');
+console.log('Invariant check passed (22 rules).');

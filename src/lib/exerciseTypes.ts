@@ -140,10 +140,26 @@ export interface PrebuiltExercise {
  * (hinges, glutes, hamstrings, back) read best from behind; everything else
  * defaults to the front view. Explicit per-illustration `facing` wins.
  */
-export const facingForExercise = (e: Pick<PrebuiltExercise, 'category' | 'pattern' | 'primary'>): 'front' | 'back' => {
-  const backPatterns: MovementPattern[] = ['hinge', 'carry'];
-  if (backPatterns.includes(e.pattern)) return 'back';
-  const backPrimary: MuscleId[] = ['glutes', 'hamstrings', 'lats', 'upper_back', 'traps', 'lower_back', 'rear_delts'];
-  if (e.primary.some((m) => backPrimary.includes(m))) return 'back';
-  return 'front';
+export const facingForExercise = (e: Pick<PrebuiltExercise, 'category' | 'pattern' | 'primary'>): 'front' | 'back' =>
+  facingForMuscles(e.primary, e.pattern);
+
+/** Muscles that read best from behind; drives which plate the écorché presents first. */
+export const BACK_VIEW_MUSCLES: MuscleId[] = [
+  'glutes',
+  'hamstrings',
+  'lats',
+  'upper_back',
+  'traps',
+  'lower_back',
+  'rear_delts'
+];
+
+/**
+ * Which side to present for a set of trained muscles. Posterior-chain muscles
+ * (glutes, hamstrings, back) read best from behind; anything else defaults to
+ * the front view. Used when the caller has muscles but no single exercise.
+ */
+export const facingForMuscles = (primary: MuscleId[], pattern?: MovementPattern): 'front' | 'back' => {
+  if (pattern && (['hinge', 'carry'] as MovementPattern[]).includes(pattern)) return 'back';
+  return primary.some((m) => BACK_VIEW_MUSCLES.includes(m)) ? 'back' : 'front';
 };

@@ -20,7 +20,7 @@ with an IndexedDB mirror for recovery.
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(19 rules). Add a rule whenever a new safety property must never regress.
+(22 rules). Add a rule whenever a new safety property must never regress.
 
 ## Theming (light / dark)
 
@@ -200,6 +200,17 @@ with an IndexedDB mirror for recovery.
 - `MuscleMap` draws front/back anatomical views and highlights primary/secondary muscles;
   `ExerciseCard` and `ExerciseDetailModal` compose the illustration, muscle map, cues and
   variations. Both `WorkoutView` (Exercises tab) and `WorkoutAppModal` use the same card.
+- **The photographic écorché opens the Workout Studio.** `EcorcheFigure`
+  (`src/components/workout/illustration/EcorcheFigure.tsx`) composites the Z-Anatomy base
+  plates (`public/anatomy/base_{front,back}.webp`) with per-muscle CSS mask layers; it is
+  surfaced first, above everything else, by `StudioAnatomy`
+  (`src/components/workout/StudioAnatomy.tsx`) on the studio's default "Today" tab (and on
+  the pre-enable landing). It must never regress to living only inside the per-exercise
+  detail sheet. `musclesForEntries` (`exerciseCatalog.ts`) resolves a routine's exercise
+  names back to muscles; when a routine yields none the panel falls back to
+  `DEFAULT_FULL_BODY` so the reference is never an empty body. `facingForMuscles`
+  (`exerciseTypes.ts`) picks the presented side. Invariant #22 and the `studio_anatomy`
+  check in `scripts/e2e/views.py` pin this.
 - Goal linkage: sessions carry `linkedGoalId` and the store defaults it from the habit.
   Do not compute goal progress in a studio — `goalProgressEngine` owns that.
 - **Programs are a superset of routines, not a new entity.** `WorkoutRoutine.program`

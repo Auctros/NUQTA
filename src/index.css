@@ -2541,6 +2541,11 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .ex-anatomy-title { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--text-primary); margin: 0; }
 .ex-anatomy-note { font-size: var(--fs-micro); color: var(--text-tertiary); margin: 0; line-height: 1.5; }
 
+/* the écorché reference as the opening panel of the Workout Studio — larger, because
+   here it is the point of the panel rather than an aside inside a detail sheet */
+.studio-anatomy { display: flex; flex-direction: column; align-items: center; }
+.studio-anatomy .ec-plate-stack { height: clamp(220px, 44vh, 420px); }
+
 /* props: floor, mat, wall, chair, bar — quiet, never competing with the body */
 .ex-ground { stroke: var(--border-strong); stroke-width: 2.4; stroke-linecap: round; }
 .ex-mat { fill: color-mix(in srgb, var(--studio-accent, var(--brand)) 22%, transparent); stroke: color-mix(in srgb, var(--studio-accent, var(--brand)) 40%, transparent); stroke-width: 1; }

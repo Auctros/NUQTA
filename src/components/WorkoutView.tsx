@@ -12,9 +12,11 @@ import {
   StudioEmpty,
   StudioTab
 } from './studios/StudioKit';
-import { PrebuiltExercise, exerciseEntryFromCatalog, movementLabel } from '../lib/exerciseCatalog';
+import { PrebuiltExercise, exerciseEntryFromCatalog, movementLabel, musclesForEntries } from '../lib/exerciseCatalog';
+import { facingForMuscles } from '../lib/exerciseTypes';
 import { ExerciseCatalog } from './workout/ExerciseCatalog';
 import { ProgramBuilder } from './workout/ProgramBuilder';
+import { StudioAnatomy, DEFAULT_FULL_BODY } from './workout/StudioAnatomy';
 import { PROGRAM_TEMPLATES, ProgramTemplate } from '../lib/programTemplates';
 import { programFromTemplate, splitLabel, goalLabel, statusLabel, routineStatus, programProgress, flattenProgramExercises } from '../lib/program';
 
@@ -219,6 +221,19 @@ export const WorkoutView: React.FC = () => {
     return dist;
   }, [sessions]);
 
+  /**
+   * The muscles the studio opens on: the saved routine's muscles when one exists,
+   * otherwise a full-body default so the reference is never an empty body. The
+   * figure is the same écorché used in the exercise sheet, surfaced first.
+   */
+  const studioAnatomy = useMemo(() => {
+    const entries = routines[0]?.exercises ?? [];
+    const muscles = entries.length ? musclesForEntries(entries) : DEFAULT_FULL_BODY;
+    const hasMuscles = muscles.primary.length + muscles.secondary.length > 0;
+    const resolved = hasMuscles ? muscles : DEFAULT_FULL_BODY;
+    return { ...resolved, facing: facingForMuscles(resolved.primary) };
+  }, [routines]);
+
   // ---------- active workout helpers ----------
   const startWorkout = (title: string, entries: ExerciseEntry[]) => {
     const drafts = entries.length ? entries.map(makeDraftFromEntry) : [];
@@ -422,6 +437,16 @@ export const WorkoutView: React.FC = () => {
             }
           />
         </StudioSection>
+        <div className="mt-[var(--sp-4)]">
+          <StudioSection title={isAr ? 'المرجع التشريحي' : 'Anatomical reference'}>
+            <StudioAnatomy
+              primary={studioAnatomy.primary}
+              secondary={studioAnatomy.secondary}
+              isAr={isAr}
+              facing={studioAnatomy.facing}
+            />
+          </StudioSection>
+        </div>
       </div>
     );
   }
@@ -793,6 +818,15 @@ export const WorkoutView: React.FC = () => {
       {/* ---------------- TODAY ---------------- */}
       {activeTab === 'today' && (
         <div className="space-y-[var(--sp-4)]">
+          <StudioSection title={isAr ? 'المرجع التشريحي' : 'Anatomical reference'}>
+            <StudioAnatomy
+              primary={studioAnatomy.primary}
+              secondary={studioAnatomy.secondary}
+              isAr={isAr}
+              facing={studioAnatomy.facing}
+            />
+          </StudioSection>
+
           <StudioSection title={isAr ? 'حصة اليوم' : "Today's session"}>
             {todaySession ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
