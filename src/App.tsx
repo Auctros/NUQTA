@@ -5,9 +5,11 @@ import { localDateKey } from './lib/dateKey';
 import { isTaskPending } from './lib/taskStatus';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from './store/nuqtaStore';
-import { NuqtaIcon, IconName } from './components/NuqtaIcon';
+import { NuqtaIcon } from './components/NuqtaIcon';
 import { AmbientBackdrop } from './components/AmbientBackdrop';
+import { SidebarNavGroup, SidebarNavItem } from './components/sidebar/SidebarNavGroup';
 import { applyThemeClass } from './lib/themeTransition';
+import { readSidebarCollapsed, writeSidebarCollapsed } from './lib/uiPrefs';
 
 // Modals
 import { RescueModal } from './components/RescueModal';
@@ -55,7 +57,8 @@ export default function App() {
   } = useNuqtaStore();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
+  const [sidebarHasMore, setSidebarHasMore] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -152,6 +155,7 @@ export default function App() {
     if (!sidebarCollapsed) {
       setSidebarTooltip(null);
     }
+    writeSidebarCollapsed(sidebarCollapsed);
   }, [sidebarCollapsed]);
 
   const showCollapsedTooltip = (
@@ -174,6 +178,37 @@ export default function App() {
   const hideCollapsedTooltip = () => {
     setSidebarTooltip(null);
   };
+
+  const handleNavSelect = (tab: typeof activeNavTab) => {
+    setActiveNavTab(tab);
+    if (window.innerWidth <= 900) setSidebarOpen(false);
+  };
+
+  // Reveal a bottom fade only while the rail actually has unreachable content
+  // below the fold, so the indicator disappears the moment the end is reached.
+  const syncSidebarOverflow = React.useCallback(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+    setSidebarHasMore(el.scrollHeight - el.scrollTop - el.clientHeight > 4);
+  }, []);
+
+  useEffect(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+    syncSidebarOverflow();
+    // Observe the rail's box AND its content, so a badge appearing or a label
+    // wrapping (which changes scrollHeight but not clientHeight) cannot leave a
+    // stale fade behind.
+    const observer = new ResizeObserver(syncSidebarOverflow);
+    observer.observe(el);
+    Array.from(el.children).forEach((child) => observer.observe(child));
+    return () => observer.disconnect();
+  }, [syncSidebarOverflow, sidebarCollapsed, isAr]);
+
+  useEffect(() => {
+    window.addEventListener('resize', syncSidebarOverflow);
+    return () => window.removeEventListener('resize', syncSidebarOverflow);
+  }, [syncSidebarOverflow]);
 
   const handleSidebarKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     if (e.key === 'Escape') {
@@ -209,13 +244,7 @@ export default function App() {
     items[nextIndex]?.focus();
   };
 
-  type NavDef = {
-    id: typeof activeNavTab;
-    label: string;
-    shortLabel?: string;
-    icon: IconName;
-    count?: number;
-  };
+  type NavDef = SidebarNavItem<typeof activeNavTab>;
 
   const workspaceNav: NavDef[] = [
     { id: 'today', label: isAr ? 'نظرة عامة' : 'Overview', icon: 'grid', count: todayDueCount },
@@ -358,9 +387,12 @@ export default function App() {
       <aside
         ref={sidebarRef}
         aria-label={isAr ? 'التنقل الرئيسي' : 'Primary navigation'}
-        onScroll={hideCollapsedTooltip}
+        onScroll={() => {
+          hideCollapsedTooltip();
+          syncSidebarOverflow();
+        }}
         onKeyDown={handleSidebarKeyDown}
-        className={`sidebar ${sidebarOpen ? 'open' : ''}`}
+        className={`sidebar ${sidebarOpen ? 'open' : ''} ${sidebarHasMore ? 'has-more' : ''}`}
       >
         {/* Brand Row with Collapse Toggle */}
         <div className="brand-row">
@@ -456,143 +488,37 @@ export default function App() {
           <kbd className="capture-kbd">Q</kbd>
         </button>
 
-        {/* Workspace Nav Group */}
-        <div className="nav-label">
-          <span>{isAr ? 'مساحة العمل' : 'Workspace'}</span>
-        </div>
-        <nav className="primary-nav" aria-label={isAr ? 'مساحة العمل' : 'Workspace'}>
-          {workspaceNav.map((item) => {
-            const isActive = activeNavTab === item.id;
-            const badgeText = item.count !== undefined && item.count > 0 ? String(item.count) : undefined;
-            return (
-              <button
-                type="button"
-                key={item.id}
-                data-sidebar-nav="true"
-                aria-label={item.label}
-                aria-current={isActive ? 'page' : undefined}
-                aria-describedby={!isActive && sidebarTooltip?.id === item.id ? `sidebar-tip-${item.id}` : undefined}
-                onClick={() => {
-                  hideCollapsedTooltip();
-                  setActiveNavTab(item.id);
-                  if (window.innerWidth <= 900) setSidebarOpen(false);
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) showCollapsedTooltip(e, item.id, item.label, badgeText);
-                }}
-                onMouseLeave={hideCollapsedTooltip}
-                onFocus={(e) => {
-                  if (!isActive) showCollapsedTooltip(e, item.id, item.label, badgeText);
-                }}
-                onBlur={hideCollapsedTooltip}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-              >
-                <span className="nav-icon" aria-hidden="true">
-                  <NuqtaIcon name={item.icon} className="w-4 h-4" />
-                </span>
-                <span className="nav-item-label truncate flex-1">{item.label}</span>
-                {item.count !== undefined && item.count > 0 && (
-                  <span className="nav-trailing tabular-nums">
-                    {item.count}
-                  </span>
-                )}
-                {isActive && (
-                  <span className="nav-active-mini-label" aria-hidden="true">
-                    {item.shortLabel ?? item.label}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        <SidebarNavGroup
+          label={isAr ? 'مساحة العمل' : 'Workspace'}
+          items={workspaceNav}
+          activeId={activeNavTab}
+          onNavigate={handleNavSelect}
+          tooltipId={sidebarTooltip?.id ?? null}
+          onShowTooltip={showCollapsedTooltip}
+          onHideTooltip={hideCollapsedTooltip}
+        />
 
-        {/* Specialized Habit Studios Group */}
-        <div className="nav-label nav-label-spaced">
-          <span>{isAr ? 'استوديوهات الإتقان' : 'Habit Studios'}</span>
-        </div>
-        <nav className="primary-nav" aria-label={isAr ? 'استوديوهات الإتقان' : 'Habit Studios'}>
-          {studiosNav.map((item) => {
-            const isActive = activeNavTab === item.id;
-            return (
-              <button
-                type="button"
-                key={item.id}
-                data-sidebar-nav="true"
-                aria-label={item.label}
-                aria-current={isActive ? 'page' : undefined}
-                aria-describedby={!isActive && sidebarTooltip?.id === item.id ? `sidebar-tip-${item.id}` : undefined}
-                onClick={() => {
-                  hideCollapsedTooltip();
-                  setActiveNavTab(item.id);
-                  if (window.innerWidth <= 900) setSidebarOpen(false);
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) showCollapsedTooltip(e, item.id, item.label);
-                }}
-                onMouseLeave={hideCollapsedTooltip}
-                onFocus={(e) => {
-                  if (!isActive) showCollapsedTooltip(e, item.id, item.label);
-                }}
-                onBlur={hideCollapsedTooltip}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-              >
-                <span className="nav-icon" aria-hidden="true">
-                  <NuqtaIcon name={item.icon} className="w-4 h-4" />
-                </span>
-                <span className="nav-item-label truncate flex-1">{item.label}</span>
-                {isActive && (
-                  <span className="nav-active-mini-label" aria-hidden="true">
-                    {item.shortLabel ?? item.label}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        <SidebarNavGroup
+          spaced
+          label={isAr ? 'استوديوهات الإتقان' : 'Habit Studios'}
+          items={studiosNav}
+          activeId={activeNavTab}
+          onNavigate={handleNavSelect}
+          tooltipId={sidebarTooltip?.id ?? null}
+          onShowTooltip={showCollapsedTooltip}
+          onHideTooltip={hideCollapsedTooltip}
+        />
 
-        {/* Life & Self Group */}
-        <div className="nav-label nav-label-spaced">
-          <span>{isAr ? 'الحياة والذات' : 'Life & Self'}</span>
-        </div>
-        <nav className="primary-nav" aria-label={isAr ? 'الحياة والذات' : 'Life & Self'}>
-          {lifeNav.map((item) => {
-            const isActive = activeNavTab === item.id;
-            return (
-              <button
-                type="button"
-                key={item.id}
-                data-sidebar-nav="true"
-                aria-label={item.label}
-                aria-current={isActive ? 'page' : undefined}
-                aria-describedby={!isActive && sidebarTooltip?.id === item.id ? `sidebar-tip-${item.id}` : undefined}
-                onClick={() => {
-                  hideCollapsedTooltip();
-                  setActiveNavTab(item.id);
-                  if (window.innerWidth <= 900) setSidebarOpen(false);
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) showCollapsedTooltip(e, item.id, item.label);
-                }}
-                onMouseLeave={hideCollapsedTooltip}
-                onFocus={(e) => {
-                  if (!isActive) showCollapsedTooltip(e, item.id, item.label);
-                }}
-                onBlur={hideCollapsedTooltip}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-              >
-                <span className="nav-icon" aria-hidden="true">
-                  <NuqtaIcon name={item.icon} className="w-4 h-4" />
-                </span>
-                <span className="nav-item-label truncate flex-1">{item.label}</span>
-                {isActive && (
-                  <span className="nav-active-mini-label" aria-hidden="true">
-                    {item.shortLabel ?? item.label}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+        <SidebarNavGroup
+          spaced
+          label={isAr ? 'الحياة والذات' : 'Life & Self'}
+          items={lifeNav}
+          activeId={activeNavTab}
+          onNavigate={handleNavSelect}
+          tooltipId={sidebarTooltip?.id ?? null}
+          onShowTooltip={showCollapsedTooltip}
+          onHideTooltip={hideCollapsedTooltip}
+        />
 
         <div className="sidebar-spacer"></div>
 
