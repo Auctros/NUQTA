@@ -51,11 +51,14 @@ function isConstrainedDevice(): boolean {
 }
 
 /**
- * Performs a bottom-left -> top-right liquid-spill theme reveal using
- * the browser's compositor-level View Transitions API when available.
+ * Performs a bottom-left -> top-right liquid reveal using the browser's
+ * compositor-level View Transitions API when available. The mask geometry and
+ * its timing live in `index.css`; this function only owns the class lifecycle
+ * and the synchronous theme swap inside the snapshot callback.
+ *
  * Falls back to an instant switch under reduced-motion preferences or
- * unsupported environments. Ignores overlapping clicks mid-pour so the
- * advancing front completes cleanly without visual tears.
+ * unsupported environments. Ignores overlapping toggles mid-pour so the
+ * advancing front completes cleanly instead of tearing.
  */
 export function runLiquidThemeTransition(
   currentTheme: UserProfile['theme'],
