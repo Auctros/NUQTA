@@ -49,6 +49,10 @@
   --text-tertiary: var(--muted-2);
   --text-on-accent: var(--accent-ink);
   --text-on-state: #ffffff;
+  /* Ink that sits on a solid accent fill. In dark mode the studio accents are
+     light (e.g. #34d399), so white would land at 1.9:1 — the fill needs dark
+     ink there and light ink in light mode. */
+  --on-accent-ink: #06231a;
 
   /* --- borders (semantic) --- */
   --border-default: var(--border);
@@ -453,6 +457,7 @@ body.light-mode {
   --accent: #1e6344;
   --accent-strong: #278157;
   --accent-ink: #effff5;
+  --on-accent-ink: #ffffff;
   background-color: #f4f6f4 !important;
   color: #14231a !important;
 }
@@ -2455,6 +2460,9 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .studio-tab:hover { color: var(--text-primary); background: var(--surface-chip); }
 .studio-tab:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring-color); }
 .studio-tab[aria-selected='true'] { color: var(--studio-accent-ink, var(--text-primary)); background: var(--studio-accent-soft, var(--surface-active)); border-color: var(--studio-accent-line, var(--border-strong)); }
+/* Once the shared indicator is measured it owns the selection surface, so the
+   per-item paint is dropped and the two cannot double up. */
+.liquid-tabs[data-liquid-ready='true'] .studio-tab[aria-selected='true'] { background: transparent; border-color: transparent; }
 .studio-tab-icon { display: inline-grid; place-items: center; width: 18px; height: 18px; flex-shrink: 0; }
 .studio-tab-count { font-family: ui-monospace, monospace; font-size: var(--fs-micro); padding: 0 6px; border-radius: var(--r-full); background: var(--surface-track); color: var(--text-secondary); }
 
@@ -2463,7 +2471,12 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 
 .studio-rail--segmented { border-radius: var(--r-full); padding: 5px; }
 .studio-rail--segmented .studio-tab { border-radius: var(--r-full); }
-.studio-rail--segmented .studio-tab[aria-selected='true'] { color: var(--text-on-state); background: var(--studio-accent, var(--brand)); border-color: transparent; }
+.studio-rail--segmented .studio-tab[aria-selected='true'] { color: var(--on-accent-ink); background: var(--studio-accent, var(--brand)); border-color: transparent; }
+.liquid-tabs[data-liquid-ready='true'] .studio-rail--segmented .studio-tab[aria-selected='true'],
+.studio-rail--segmented .liquid-tabs[data-liquid-ready='true'] .studio-tab[aria-selected='true'] { background: transparent; }
+/* Segmented ink follows the shape, not the selection: whichever tab the
+   capsule is currently over gets the on-state colour. */
+.studio-rail--segmented .liquid-tabs[data-liquid-ready='true'] .studio-tab[aria-selected='true']:not([data-liquid-covered='true']) { color: var(--text-secondary); }
 
 .studio-rail--shelf { border: none; border-bottom: 1px solid var(--studio-line, var(--border-default)); border-radius: 0; background: transparent; box-shadow: none; padding: 0; gap: var(--sp-4); }
 .studio-rail--shelf .studio-tab { border-radius: 0; padding: 0 2px; min-height: 44px; color: var(--text-secondary); font-weight: var(--fw-medium); }
@@ -2485,6 +2498,111 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 }
 
 .studio-body { min-width: 0; }
+
+/* ============================================================
+   LIQUID SELECTION INDICATOR
+   One shared element slides between the items of a mutually-exclusive
+   group instead of each item painting its own active state. The element
+   is moved and shaped from JS (spring + velocity stretch); everything
+   here is only appearance, so a failed script leaves a readable rail.
+   ============================================================ */
+
+.liquid-tabs { position: relative; }
+
+.liquid-tabs-indicator {
+  position: absolute;
+  /* Physical, not logical: the offset is a measured pixel value from the left
+     edge, so in RTL this must not flip to `right`. */
+  top: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--liquid-indicator-bg, var(--studio-accent, var(--brand)));
+  border: 1px solid var(--liquid-indicator-line, transparent);
+  box-shadow: var(--liquid-indicator-shadow, none);
+  /* No transition: the spring writes every frame, and an extra easing on top
+     would lag behind the measured position and smear the arrival. */
+  transition: none;
+  will-change: transform, width, height;
+  transform-origin: center;
+  contain: layout style;
+}
+
+/* The indicator only exists once it has been measured; before that the
+   items keep their own fallback highlight so nothing flashes unstyled. */
+.liquid-tabs[data-liquid-ready='true'] > *:not(.liquid-tabs-indicator) {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-tabs-indicator { will-change: auto; }
+}
+
+/* ---------- studio rails ---------- */
+
+/* Structured: soft accent wash with a crisp edge. */
+.studio-rail--structured .liquid-tabs-indicator {
+  --liquid-indicator-bg: var(--studio-accent-soft, var(--surface-active));
+  --liquid-indicator-line: var(--studio-accent-line, var(--border-strong));
+  box-shadow: var(--elev-1);
+}
+
+/* Segmented: the solid capsule — the one place the indicator is the ink. */
+.studio-rail--segmented .liquid-tabs-indicator {
+  --liquid-indicator-bg: var(--studio-accent, var(--brand));
+  --liquid-indicator-line: transparent;
+  box-shadow: none;
+}
+.studio-rail--segmented .studio-tab[data-liquid-covered='true'] { color: var(--on-accent-ink); }
+
+/* Shelf: a thin rule riding the baseline. */
+.studio-rail--shelf .liquid-tabs-indicator {
+  --liquid-indicator-bg: var(--studio-accent, var(--brand));
+  --liquid-indicator-line: transparent;
+  box-shadow: none;
+}
+.studio-rail--shelf .liquid-tabs[data-liquid-ready='true'] .studio-tab[aria-selected='true']::after { display: none; }
+
+/* Workspace: card-shaped, matching the tile geometry it sits inside. */
+.studio-rail--workspace .liquid-tabs-indicator {
+  --liquid-indicator-bg: var(--studio-accent-soft, var(--surface-active));
+  --liquid-indicator-line: var(--studio-accent-line, var(--border-strong));
+  box-shadow: inset 0 0 0 1px var(--studio-accent-line, var(--border-strong));
+}
+
+/* ---------- generic TabBar ---------- */
+
+.tabbar-pill .liquid-tabs-indicator {
+  --liquid-indicator-bg: var(--surface-raised);
+  --liquid-indicator-line: transparent;
+  box-shadow: var(--elev-1);
+}
+
+.tabbar-underline .liquid-tabs-indicator {
+  --liquid-indicator-bg: var(--brand-strong);
+  --liquid-indicator-line: transparent;
+  box-shadow: none;
+}
+
+/* The rule replaces the per-button bottom border, so drop it once measured. */
+.tabbar-underline .liquid-tabs[data-liquid-ready='true'] [role='tab'] { border-bottom-color: transparent !important; }
+
+/* ---------- FilterBar chips ---------- */
+
+.filterbar-chips .liquid-tabs-indicator {
+  --liquid-indicator-bg: var(--brand-soft);
+  --liquid-indicator-line: var(--brand-soft-border);
+  box-shadow: none;
+}
+.filterbar-chips .filterbar-chip[data-liquid-covered='true'] { color: var(--brand-strong); }
+/* Chips keep a resting fill; only the covered one hands its surface to the
+   indicator, so the shape reads as one chip moving rather than a hole. */
+.filterbar-chips .filterbar-chip[aria-pressed='true'][data-liquid-covered='true'] {
+  background: transparent;
+  border-color: transparent;
+}
+
 .studio-section { border: 1px solid var(--studio-line, var(--border-default)); border-radius: var(--r-lg); background: var(--studio-panel, var(--surface-raised)); padding: var(--sp-4); }
 .studio-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-3); }
 .studio-section-title { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--text-primary); display: inline-flex; align-items: center; gap: var(--sp-2); }

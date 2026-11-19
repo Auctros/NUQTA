@@ -1,6 +1,7 @@
 import React from 'react';
 import { NuqtaIcon, IconName } from '../NuqtaIcon';
 import { Badge, BadgeTone, Surface } from './primitives';
+import { LiquidTabs } from './LiquidTabs';
 
 /* ============================================================
    NUQTA — layout components
@@ -67,7 +68,13 @@ export const TabBar: React.FC<TabBarProps> = ({
 }) => {
   if (variant === 'underline') {
     return (
-      <div role="tablist" aria-label={ariaLabel} className={`flex items-center gap-1 border-b border-[var(--border-subtle)] overflow-x-auto ${className}`}>
+      <LiquidTabs
+        mode="underline"
+        remeasureKey={items.map((it) => `${it.id}:${it.label}`).join('|')}
+        role="tablist"
+        aria-label={ariaLabel}
+        className={`tabbar-underline flex items-center gap-1 border-b border-[var(--border-subtle)] overflow-x-auto ${className}`}
+      >
         {items.map((it) => {
           const active = it.id === value;
           return (
@@ -80,7 +87,7 @@ export const TabBar: React.FC<TabBarProps> = ({
                 'inline-flex items-center gap-2 px-3 py-2 -mb-px border-b-2 text-[var(--fs-sm)] whitespace-nowrap',
                 'transition-colors duration-[var(--dur-fast)]',
                 active
-                  ? 'border-[var(--brand-strong)] text-[var(--text-primary)] font-semibold'
+                  ? 'border-transparent text-[var(--text-primary)] font-semibold'
                   : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               ].join(' ')}
             >
@@ -90,15 +97,16 @@ export const TabBar: React.FC<TabBarProps> = ({
             </button>
           );
         })}
-      </div>
+      </LiquidTabs>
     );
   }
 
   return (
-    <div
+    <LiquidTabs
+      remeasureKey={items.map((it) => `${it.id}:${it.label}`).join('|')}
       role="tablist"
       aria-label={ariaLabel}
-      className={`flex items-center gap-1 p-1 rounded-[var(--r-sm)] bg-[var(--surface-sunken)] border border-[var(--border-subtle)] overflow-x-auto ${className}`}
+      className={`tabbar-pill flex items-center gap-1 p-1 rounded-[var(--r-sm)] bg-[var(--surface-sunken)] border border-[var(--border-subtle)] overflow-x-auto ${className}`}
     >
       {items.map((it) => {
         const active = it.id === value;
@@ -112,7 +120,7 @@ export const TabBar: React.FC<TabBarProps> = ({
               'inline-flex items-center gap-2 px-3 h-9 rounded-[var(--r-xs)] text-[var(--fs-sm)] whitespace-nowrap',
               'transition-colors duration-[var(--dur-fast)]',
               active
-                ? 'bg-[var(--surface-raised)] text-[var(--text-primary)] font-semibold shadow-[var(--elev-1)]'
+                ? 'text-[var(--text-primary)] font-semibold'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-chip)]'
             ].join(' ')}
           >
@@ -122,7 +130,7 @@ export const TabBar: React.FC<TabBarProps> = ({
           </button>
         );
       })}
-    </div>
+    </LiquidTabs>
   );
 };
 
@@ -160,26 +168,34 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   >
     <div className="flex items-center gap-2 flex-wrap">
       {leading}
-      {chips.map((c) => {
-        const active = c.id === value;
-        return (
-          <button
-            key={c.id}
-            aria-pressed={active}
-            onClick={() => onChange(c.id)}
-            className={[
-              'inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--r-full)] border text-[var(--fs-xs)]',
-              'transition-colors duration-[var(--dur-fast)]',
-              active
-                ? 'bg-[var(--brand-soft)] border-[var(--brand-soft-border)] text-[var(--brand-strong)] font-semibold'
-                : 'bg-[var(--surface-raised)] border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-chip)]'
-            ].join(' ')}
-          >
-            <span>{c.label}</span>
-            {typeof c.count === 'number' && <span className="tabular-nums opacity-70">{c.count}</span>}
-          </button>
-        );
-      })}
+      <LiquidTabs
+        className="filterbar-chips flex items-center gap-2 flex-wrap"
+        remeasureKey={chips.map((c) => `${c.id}:${c.label}`).join('|')}
+        role="group"
+        aria-label={ariaLabel}
+        squash={false}
+      >
+        {chips.map((c) => {
+          const active = c.id === value;
+          return (
+            <button
+              key={c.id}
+              aria-pressed={active}
+              onClick={() => onChange(c.id)}
+              className={[
+                'filterbar-chip inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--r-full)] border text-[var(--fs-xs)]',
+                'transition-colors duration-[var(--dur-fast)]',
+                active
+                  ? 'border-transparent text-[var(--brand-strong)] font-semibold'
+                  : 'bg-[var(--surface-raised)] border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-chip)]'
+              ].join(' ')}
+            >
+              <span>{c.label}</span>
+              {typeof c.count === 'number' && <span className="tabular-nums opacity-70">{c.count}</span>}
+            </button>
+          );
+        })}
+      </LiquidTabs>
     </div>
     {trailing && <div className="flex items-center gap-2">{trailing}</div>}
   </Surface>

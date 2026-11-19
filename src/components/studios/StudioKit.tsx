@@ -1,5 +1,6 @@
 import React from 'react';
 import { NuqtaIcon, IconName } from '../NuqtaIcon';
+import { LiquidTabs } from '../ui/LiquidTabs';
 
 export type StudioId = 'quran' | 'workout' | 'reading' | 'drawing';
 export type StudioNavVariant = 'structured' | 'segmented' | 'shelf' | 'workspace';
@@ -62,7 +63,16 @@ export const StudioFrame: React.FC<StudioFrameProps> = ({
       className={`studio-rail studio-rail--${navVariant}`}
       aria-label={typeof title === 'string' ? title : eyebrow}
     >
-      <div className="studio-rail-track" role="tablist" aria-label={eyebrow}>
+      <LiquidTabs
+        className="studio-rail-track"
+        role="tablist"
+        aria-label={eyebrow}
+        remeasureKey={tabs.map((t) => `${t.id}:${t.label}`).join('|')}
+        mode={navVariant === 'shelf' ? 'underline' : 'fill'}
+        underlineThickness={navVariant === 'shelf' ? 2 : undefined}
+        indicatorRadius={navVariant === 'segmented' ? 'pill' : undefined}
+        squash={navVariant !== 'shelf'}
+      >
         {tabs.map((t) => {
           const active = t.id === activeTab;
           return (
@@ -85,7 +95,7 @@ export const StudioFrame: React.FC<StudioFrameProps> = ({
             </button>
           );
         })}
-      </div>
+      </LiquidTabs>
       {context && <div className="studio-rail-context">{context}</div>}
     </nav>
 

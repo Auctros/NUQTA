@@ -4,3 +4,4 @@ export * from './forms';
 export * from './overlays';
 export * from './NuqtaSelect';
 export * from './NuqtaPickers';
+export * from './LiquidTabs';
