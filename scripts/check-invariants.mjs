@@ -18,7 +18,7 @@ function walk(dir, out = []) {
   }
   return out;
 }
-const srcFiles = walk(join(root, 'src')).map((p) => ({ path: relative(root, p), text: readFileSync(p, 'utf8') }));
+const srcFiles = walk(join(root, 'src')).map((p) => ({ path: relative(root, p).replace(/\\/g, '/'), text: readFileSync(p, 'utf8') }));
 const isComment = (line) => /^\s*(\*|\/\/|\/\*)/.test(line);
 const grep = (re, { except = [] } = {}) =>
   srcFiles.flatMap((f) =>
