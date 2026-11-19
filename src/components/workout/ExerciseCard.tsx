@@ -1,10 +1,10 @@
 import React from 'react';
-import { PrebuiltExercise, facingForExercise } from '../../lib/exerciseTypes';
+import { PrebuiltExercise } from '../../lib/exerciseTypes';
 import { categoryLabel, difficultyLabel, muscleLabel } from '../../lib/exerciseCatalog';
 import { ExerciseIllustration } from './illustration/ExerciseIllustration';
 
 /**
- * One tile in the exercise library grid: a small code-generated illustration,
+ * One tile in the exercise library grid: the shared exercise illustration,
  * the exercise name, its primary muscles, and a difficulty indicator.
  *
  * The whole tile is a button — clicking anywhere opens the detail sheet — and
@@ -38,16 +38,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, isAr, onOp
         aria-label={name}
       >
         <span className="ex-card-media" aria-hidden="true">
-          <ExerciseIllustration
-            illustrationKey={exercise.illustrationKey}
-            isAr={isAr}
-            name={name}
-            mode="static"
-            showMotion={false}
-            primary={exercise.primary}
-            secondary={exercise.secondary}
-            facing={facingForExercise(exercise)}
-          />
+          <ExerciseIllustration illustrationKey={exercise.illustrationKey} isAr={isAr} name={name} />
         </span>
         <span className="block mt-2 ex-card-name">{name}</span>
       </button>

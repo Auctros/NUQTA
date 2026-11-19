@@ -93,39 +93,41 @@ with sync_playwright() as p:
     if len(distinct) > 1:
         failures.append(f"content width shifts between views (scrollbar reflow): {widths}")
 
-    # 1c. The Workout Studio must open on the anatomical écorché: the reference has to be
-    #     on the first (Today) tab and inside the viewport the moment the studio loads,
-    #     not buried inside a per-exercise detail sheet. It regressed that way once.
+    # 1c. The exercise library must render the shared illustration set: every card is
+    #     painted from one vendored character set, so the figures stay visually
+    #     consistent. A broken mask shows up as a card with no ink at all.
     page.locator('button[data-sidebar-nav="true"][aria-label="Home Workout"]').first.click()
     page.wait_for_timeout(500)
     enable = page.get_by_role("button", name="Enable Workout Studio")
     if enable.count() > 0:
         enable.first.click()
         page.wait_for_timeout(600)
-    anatomy = page.evaluate(
+    page.get_by_role("tab", name="Exercises").first.click()
+    page.wait_for_timeout(800)
+    art = page.evaluate(
         """() => {
-          const fig = document.querySelector('.studio-anatomy .ec-figure');
-          const base = document.querySelector('.studio-anatomy .ec-plate-base');
-          const r = fig ? fig.getBoundingClientRect() : null;
-          const vh = window.innerHeight;
+          const cards = [...document.querySelectorAll('.ex-card .ex-art')];
+          const painted = cards.filter((el) => {
+            const cs = getComputedStyle(el);
+            const mask = cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage;
+            // The SVG is only a mask; the visible ink is the element background.
+            return !!mask && mask !== 'none' && cs.backgroundColor !== 'rgba(0, 0, 0, 0)';
+          });
           return {
-            present: !!fig,
-            muscles: document.querySelectorAll('.studio-anatomy .ec-muscle').length,
-            base_loaded: base ? (base.complete && base.naturalWidth > 0) : false,
-            in_viewport: r ? (r.top < vh && r.bottom > 0) : false,
-            visible_fraction: r ? Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height : 0
+            cards: cards.length,
+            painted: painted.length,
+            art_ids: [...new Set(cards.map((el) => el.getAttribute('data-art')))].length,
+            first_mask: cards[0] ? (getComputedStyle(cards[0]).maskImage || '') : ''
           };
         }"""
     )
-    result["studio_anatomy"] = anatomy
-    if not anatomy["present"]:
-        failures.append("Workout Studio did not render the anatomical écorché on open")
-    if anatomy["muscles"] < 1:
-        failures.append("Workout Studio écorché painted no muscles")
-    if not anatomy["base_loaded"]:
-        failures.append("Workout Studio écorché base plate did not load")
-    if not anatomy["in_viewport"]:
-        failures.append("Workout Studio écorché opened below the fold")
+    result["exercise_art"] = art
+    if art["cards"] < 1:
+        failures.append("Exercise library rendered no illustrations")
+    if art["painted"] < art["cards"]:
+        failures.append(f"{art['cards'] - art['painted']} exercise cards rendered no ink")
+    if not art["first_mask"] or art["first_mask"] == "none":
+        failures.append("exercise illustrations are not masked from the shared set")
 
     # 2. Responsive: no horizontal overflow at any width.
     responsive = {}

@@ -103,7 +103,7 @@ class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
 def deploy_version_b():
     """Mimic a new commit landing: new hashed bundle, new document, bumped worker version.
 
-    Build B also DROPS an asset that build A shipped (an anatomy plate), so the plate exists
+    Build B also DROPS an asset that build A shipped (an exercise illustration), so it exists
     only in build A's precache. That is what lets us prove a tab still on A can keep loading
     its own build's assets — offline — after another tab has moved to B and run cleanup.
     """
@@ -129,9 +129,9 @@ def deploy_version_b():
     )
     open(sw_path, "w", encoding="utf-8").write(sw)
 
-    # Build B no longer ships this plate. A tab still on A must still be able to load it
+    # Build B no longer ships this drawing. A tab still on A must still be able to load it
     # from A's retained cache, even offline, after B's worker has run cleanup.
-    dropped_asset = "anatomy/masks/hamstrings_back.webp"
+    dropped_asset = "exercise-art/hip-airplane.svg"
     dropped_path = os.path.join(ROOT, dropped_asset)
     if os.path.isfile(dropped_path):
         os.remove(dropped_path)
@@ -208,7 +208,7 @@ with sync_playwright() as p:
     for page in (working, applying):
         page.evaluate("() => navigator.serviceWorker.getRegistration().then(r => r.update())")
 
-    # The plate is precached by A's worker (it is in A's manifest), so it is already in A's
+    # The drawing is precached by A's worker (it is in A's manifest), so it is already in A's
     # cache; assert it is reachable while still online before the offline check below.
     result["old_asset_online_status"] = working.evaluate(
         """async (url) => {
@@ -219,7 +219,7 @@ with sync_playwright() as p:
     )
     if result["old_asset_online_status"] != 200:
         failures.append(
-            f"the build-A plate was not reachable online before the offline check (status {result['old_asset_online_status']})"
+            f"the build-A illustration was not reachable online before the offline check (status {result['old_asset_online_status']})"
         )
 
     # Wait until the new worker is installed and waiting.

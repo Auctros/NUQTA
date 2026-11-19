@@ -1,0 +1,285 @@
+{
+ "generated": "vendored from Open Exercise Art (Alex Mollard)",
+ "artworkLicense": "CC-BY-SA-4.0",
+ "source": "https://github.com/AlexMollard/Open-Exercise-Art",
+ "attribution": "Exercise illustrations: Open Exercise Art / Alex Mollard, CC BY-SA 4.0.",
+ "count": 69,
+ "art": {
+  "arm-circles": {
+   "w": 1024,
+   "h": 1001
+  },
+  "banded-alternating-curl": {
+   "w": 438,
+   "h": 1024
+  },
+  "bear-crawl": {
+   "w": 1024,
+   "h": 711
+  },
+  "bench-dip": {
+   "w": 1024,
+   "h": 858
+  },
+  "bicep-curl": {
+   "w": 452,
+   "h": 1024
+  },
+  "bicycle-crunch": {
+   "w": 1024,
+   "h": 444
+  },
+  "bird-dog": {
+   "w": 1024,
+   "h": 405
+  },
+  "bodyweight-squat": {
+   "w": 750,
+   "h": 1024
+  },
+  "bulgarian-split-squat": {
+   "w": 1022,
+   "h": 1024
+  },
+  "burpee": {
+   "w": 1024,
+   "h": 603
+  },
+  "calf-raise": {
+   "w": 255,
+   "h": 1024
+  },
+  "cat-cow-stretch": {
+   "w": 1024,
+   "h": 798
+  },
+  "child-s-pose": {
+   "w": 1024,
+   "h": 547
+  },
+  "chin-up": {
+   "w": 931,
+   "h": 1024
+  },
+  "dead-bug": {
+   "w": 1024,
+   "h": 520
+  },
+  "dead-hang": {
+   "w": 707,
+   "h": 1024
+  },
+  "decline-push-up": {
+   "w": 1024,
+   "h": 646
+  },
+  "diamond-push-up": {
+   "w": 1024,
+   "h": 576
+  },
+  "dip": {
+   "w": 805,
+   "h": 1024
+  },
+  "donkey-kick": {
+   "w": 1024,
+   "h": 816
+  },
+  "dumbbell-step-up": {
+   "w": 724,
+   "h": 1024
+  },
+  "dumbbell-sumo-squat": {
+   "w": 960,
+   "h": 1024
+  },
+  "fire-hydrant": {
+   "w": 1024,
+   "h": 642
+  },
+  "flutter-kick": {
+   "w": 1024,
+   "h": 491
+  },
+  "frog-pump": {
+   "w": 1024,
+   "h": 519
+  },
+  "glute-bridge": {
+   "w": 1024,
+   "h": 475
+  },
+  "good-morning": {
+   "w": 1024,
+   "h": 874
+  },
+  "hamstring-stretch": {
+   "w": 921,
+   "h": 1024
+  },
+  "high-knees": {
+   "w": 463,
+   "h": 1024
+  },
+  "hip-airplane": {
+   "w": 1024,
+   "h": 991
+  },
+  "hip-thrust": {
+   "w": 1024,
+   "h": 835
+  },
+  "hollow-hold": {
+   "w": 1024,
+   "h": 594
+  },
+  "inchworm": {
+   "w": 1024,
+   "h": 568
+  },
+  "incline-push-up": {
+   "w": 1024,
+   "h": 834
+  },
+  "inverted-row": {
+   "w": 1024,
+   "h": 965
+  },
+  "jumping-jack": {
+   "w": 619,
+   "h": 1024
+  },
+  "knee-push-up": {
+   "w": 1024,
+   "h": 569
+  },
+  "kneeling-hip-flexor-stretch": {
+   "w": 1024,
+   "h": 1002
+  },
+  "leg-swing-stretch": {
+   "w": 739,
+   "h": 1024
+  },
+  "lying-leg-raise": {
+   "w": 1024,
+   "h": 779
+  },
+  "mountain-climber": {
+   "w": 1024,
+   "h": 611
+  },
+  "negative-pull-up": {
+   "w": 840,
+   "h": 1024
+  },
+  "nordic-curl": {
+   "w": 992,
+   "h": 1024
+  },
+  "pike-press": {
+   "w": 1024,
+   "h": 890
+  },
+  "pike-push-up": {
+   "w": 1024,
+   "h": 784
+  },
+  "planche-push-up": {
+   "w": 1024,
+   "h": 329
+  },
+  "plank": {
+   "w": 1024,
+   "h": 424
+  },
+  "plank-shoulder-tap": {
+   "w": 1024,
+   "h": 689
+  },
+  "prone-y-raise": {
+   "w": 1024,
+   "h": 824
+  },
+  "pull-up": {
+   "w": 786,
+   "h": 1024
+  },
+  "push-up": {
+   "w": 1024,
+   "h": 358
+  },
+  "reverse-crunch": {
+   "w": 907,
+   "h": 1024
+  },
+  "reverse-lunge": {
+   "w": 685,
+   "h": 1024
+  },
+  "reverse-snow-angel": {
+   "w": 1024,
+   "h": 410
+  },
+  "russian-twist": {
+   "w": 1024,
+   "h": 740
+  },
+  "seated-calf-raise": {
+   "w": 711,
+   "h": 1024
+  },
+  "side-plank": {
+   "w": 1024,
+   "h": 490
+  },
+  "single-leg-calf-raise": {
+   "w": 729,
+   "h": 1024
+  },
+  "single-leg-glute-bridge": {
+   "w": 1024,
+   "h": 739
+  },
+  "sissy-squat": {
+   "w": 439,
+   "h": 1024
+  },
+  "sprawl": {
+   "w": 1024,
+   "h": 642
+  },
+  "superman": {
+   "w": 1024,
+   "h": 285
+  },
+  "torso-twist-stretch": {
+   "w": 391,
+   "h": 1024
+  },
+  "towel-hamstring-curl": {
+   "w": 1024,
+   "h": 426
+  },
+  "wall-handstand": {
+   "w": 448,
+   "h": 1024
+  },
+  "wall-sit": {
+   "w": 586,
+   "h": 1024
+  },
+  "wide-push-up": {
+   "w": 1024,
+   "h": 579
+  },
+  "wrist-curl": {
+   "w": 815,
+   "h": 1024
+  },
+  "wrist-extension": {
+   "w": 791,
+   "h": 1024
+  }
+ }
+}

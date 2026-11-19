@@ -171,23 +171,24 @@ with an IndexedDB mirror for recovery.
     lives in `src/lib/exerciseTypes.ts`. It is never persisted — logged sessions keep
     using the legacy `MuscleMovement` unions, so the catalog can grow without a
     backup-schema change.
-- Exercise visuals are code-generated SVG, not images. `ExerciseIllustration`
-  (`src/components/workout/illustration/`) renders one shared anatomical `Figure` driven
-  by keypoint `poses`; `registry.ts` keys each exercise by `PrebuiltExercise.illustrationKey`.
-  Add a key → it appears on the card and in the detail view. Entries marked `animated`
-  must have phases that actually differ, and every pose must stay inside the 200×200
-  viewBox — `tests/exerciseLibrary.test.tsx` enforces both.
-  - When `primary` muscles are supplied, `ExerciseIllustration` renders the *volumetric*
-    `AnatomicalFigure` (grayscale body volumes + highlighted trained muscles) instead of
-    the schematic `Figure`. `anatomy.ts` builds the body volumes and the limb-aware
-    muscle patches; `facing` (`front`/`back`, from `facingForExercise`) picks the muscle
-    set. Keep both renderers working — the schematic is the fallback when no muscle data
-    is available.
-  - The detail view shows a static start/end pose pair. The end pose passes
-    `decorative` so assistive tech is not given two identically-named images (the
-    captions name them). Movement *animation* is deliberately out of scope here
-    for now — the `ExerciseIllustration` `mode="animated"` path exists but is not
-    wired into the detail view.
+- **Exercise visuals are one shared, licensed illustration set.** `ExerciseIllustration`
+  (`src/components/workout/illustration/`) renders a drawing from **Open Exercise Art**
+  (Alex Mollard, artwork CC BY-SA 4.0) vendored under `public/exercise-art/`. The whole
+  library draws the *same character*, which is what makes 72 movements read as one set
+  instead of 72 unrelated sketches. `exerciseArt.ts` is the only registry: it maps each
+  `PrebuiltExercise.illustrationKey` to an art id plus bilingual alt text.
+  - The SVGs are `currentColor` line art, so they are used as a **CSS mask** and painted
+    with `background: var(--studio-accent)`. This is deliberate: `currentColor` resolves to
+    black inside an `<img>` and would vanish in the dark theme. Masking keeps one file
+    correct in every theme and tints every figure identically. Do not switch to `<img>`,
+    and do not bake colours into the vendored SVGs.
+  - Adding an exercise means adding a key to `exerciseArt.ts` pointing at a vendored id
+    (plus a file in `public/exercise-art/` and its `manifest.json` entry). Unmapped keys
+    render a labelled placeholder rather than throwing.
+  - Attribution is required by the licence: `ART_SOURCE` holds the credit, the library
+    footer renders it, and invariant #22 fails if the credit or the mapping breaks.
+  - `tests/exerciseLibrary.test.tsx` enforces that every key resolves, every referenced
+    SVG exists on disk, and no vendored SVG hard-codes a colour.
 - **The exercise browser is one component: `ExerciseCatalog`**
   (`src/components/workout/ExerciseCatalog.tsx`). It owns the search box, the filter row,
   the result grid, the detail sheet, and the "recently performed" quick-pick; the Workout
@@ -200,17 +201,6 @@ with an IndexedDB mirror for recovery.
 - `MuscleMap` draws front/back anatomical views and highlights primary/secondary muscles;
   `ExerciseCard` and `ExerciseDetailModal` compose the illustration, muscle map, cues and
   variations. Both `WorkoutView` (Exercises tab) and `WorkoutAppModal` use the same card.
-- **The photographic écorché opens the Workout Studio.** `EcorcheFigure`
-  (`src/components/workout/illustration/EcorcheFigure.tsx`) composites the Z-Anatomy base
-  plates (`public/anatomy/base_{front,back}.webp`) with per-muscle CSS mask layers; it is
-  surfaced first, above everything else, by `StudioAnatomy`
-  (`src/components/workout/StudioAnatomy.tsx`) on the studio's default "Today" tab (and on
-  the pre-enable landing). It must never regress to living only inside the per-exercise
-  detail sheet. `musclesForEntries` (`exerciseCatalog.ts`) resolves a routine's exercise
-  names back to muscles; when a routine yields none the panel falls back to
-  `DEFAULT_FULL_BODY` so the reference is never an empty body. `facingForMuscles`
-  (`exerciseTypes.ts`) picks the presented side. Invariant #22 and the `studio_anatomy`
-  check in `scripts/e2e/views.py` pin this.
 - Goal linkage: sessions carry `linkedGoalId` and the store defaults it from the habit.
   Do not compute goal progress in a studio — `goalProgressEngine` owns that.
 - **Programs are a superset of routines, not a new entity.** `WorkoutRoutine.program`
@@ -305,9 +295,9 @@ Old-cache deletion is deferred and bounded for the same reason. `activate` only
 current cache plus the immediately previous one. Only caches further behind are reclaimed.
 The fetch handler also falls back to older NUQTA shell caches on a miss, so a tab still
 running the previous build can keep lazy-loading its own assets — including offline —
-(e.g. the anatomy plates) after another tab has moved on. `scripts/e2e/update-multitab.py`
-proves it: build B drops a plate that build A shipped, one tab stays on A, cleanup runs,
-the browser goes offline, and the tab still loads the build-A plate from the retained cache.
+(e.g. an exercise illustration) after another tab has moved on. `scripts/e2e/update-multitab.py`
+proves it: build B drops an illustration that build A shipped, one tab stays on A, cleanup runs,
+the browser goes offline, and the tab still loads the build-A asset from the retained cache.
 
 Unsaved work: while an update is pending, a `beforeunload` guard warns if the app reports
 in-memory work (`PwaUpdateManager.setHasUnsavedWork`); it is lifted the moment the user

@@ -5,11 +5,9 @@ import {
   categoryLabel,
   muscleLabel,
   difficultyLabel,
-  patternLabel,
-  musclesForEntries
+  patternLabel
 } from '../src/lib/exerciseCatalog';
-import { facingForMuscles } from '../src/lib/exerciseTypes';
-import { getIllustration, ILLUSTRATION_KEYS } from '../src/components/workout/illustration/registry';
+import { getExerciseArt, ILLUSTRATION_KEYS } from '../src/components/workout/illustration/exerciseArt';
 import { MUSCLE_IDS } from '../src/components/workout/MuscleMap';
 
 /**
@@ -28,15 +26,15 @@ describe('exercise catalog integrity', () => {
   });
 
   it('every entry has an illustration registered for its key', () => {
-    const missing = EXERCISE_CATALOG.filter((e) => !getIllustration(e.illustrationKey));
+    const missing = EXERCISE_CATALOG.filter((e) => !getExerciseArt(e.illustrationKey));
     expect(missing.map((e) => `${e.id} -> ${e.illustrationKey}`)).toEqual([]);
   });
 
   it('every illustration key in the registry is a real illustration', () => {
     for (const key of ILLUSTRATION_KEYS) {
-      const illo = getIllustration(key);
-      expect(illo, key).toBeTruthy();
-      expect(illo!.phases.length, key).toBeGreaterThanOrEqual(1);
+      const art = getExerciseArt(key);
+      expect(art, key).toBeTruthy();
+      expect(art!.art, key).toBeTruthy();
     }
   });
 
@@ -142,46 +140,5 @@ describe('catalog illustration coverage', () => {
   it('has no orphan illustrations', () => {
     const used = new Set(EXERCISE_CATALOG.map((e) => e.illustrationKey));
     expect(ILLUSTRATION_KEYS.filter((k) => !used.has(k))).toEqual([]);
-  });
-});
-
-describe('musclesForEntries', () => {
-  it('unions the muscles of a routine in order of first appearance', () => {
-    const pushUp = EXERCISE_CATALOG.find((e) => e.illustrationKey === 'push-up')!;
-    const row = EXERCISE_CATALOG.find((e) => e.pattern === 'pull')!;
-    const { primary, secondary } = musclesForEntries([
-      exerciseEntryFromCatalog(pushUp, false),
-      exerciseEntryFromCatalog(row, false)
-    ]);
-    // push-up's primaries come first, then the row's not already covered.
-    expect(primary.slice(0, pushUp.primary.length)).toEqual(pushUp.primary);
-    expect(new Set(primary).size).toBe(primary.length);
-    // A muscle can never be both primary and secondary.
-    for (const m of secondary) expect(primary).not.toContain(m);
-  });
-
-  it('ignores entries whose name is not in the catalog', () => {
-    const { primary, secondary } = musclesForEntries([
-      { id: 'x', name: 'Not A Real Exercise', category: 'core', sets: [] }
-    ]);
-    expect(primary).toEqual([]);
-    expect(secondary).toEqual([]);
-  });
-});
-
-describe('facingForMuscles', () => {
-  it('presents the back when a posterior-chain muscle is trained', () => {
-    expect(facingForMuscles(['glutes'])).toBe('back');
-    expect(facingForMuscles(['lats'])).toBe('back');
-  });
-
-  it('presents the front for anterior muscles and for an empty set', () => {
-    expect(facingForMuscles(['chest', 'abs'])).toBe('front');
-    expect(facingForMuscles([])).toBe('front');
-  });
-
-  it('agrees with facingForExercise for the same exercise', () => {
-    const pushUp = EXERCISE_CATALOG.find((e) => e.illustrationKey === 'push-up')!;
-    expect(facingForMuscles(pushUp.primary, pushUp.pattern)).toBe('front');
   });
 });

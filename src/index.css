@@ -42,12 +42,6 @@
   --surface-active: var(--panel-active);
   --surface-faint: var(--panel-faint);
 
-  /* --- exercise anatomy figure (grayscale body + definition lines) --- */
-  --ex-body-1: #d5dbd7;     /* body fill, lit side                */
-  --ex-body-2: #aeb8b2;     /* body fill, shadow side             */
-  --ex-body-3: #8f9a94;     /* neutral (untargeted) muscle tone   */
-  --ex-body-line: #6c7972;  /* outlines + muscle definition       */
-  --ex-body-shadow: #0a0f0c;/* drop-shadow colour                 */
 
   /* --- text (semantic) --- */
   --text-primary: var(--text);
@@ -483,12 +477,6 @@ body.light-mode {
   --brand-soft: rgba(30, 99, 68, 0.1);
   --brand-soft-border: rgba(30, 99, 68, 0.26);
 
-  /* Exercise anatomy figure — light edition: pale body, dark definition. */
-  --ex-body-1: #e7ece9;
-  --ex-body-2: #c3cdc7;
-  --ex-body-3: #aab4ae;
-  --ex-body-line: #7f8c85;
-  --ex-body-shadow: #33443b;
 
   --state-success: #137a4d;
   --state-success-strong: #0f6b43;
@@ -2480,83 +2468,25 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
    studio accent so it reads as part of the studio, not bolted on.
    ============================================================ */
 
-/* ---------- code-generated exercise illustrations ---------- */
-.ex-illustration { display: block; width: 100%; height: auto; overflow: visible; }
-
-.ex-fig-torso { fill: var(--surface-chip); stroke: var(--text-secondary); stroke-width: 2; stroke-linejoin: round; }
-.ex-fig-limb { fill: none; stroke: var(--text-secondary); stroke-width: 7.5; stroke-linecap: round; stroke-linejoin: round; }
-.ex-fig-spine { stroke: var(--text-tertiary); stroke-width: 1.2; stroke-dasharray: 2 3; opacity: 0.7; }
-.ex-fig-head { fill: var(--surface-raised); stroke: var(--text-secondary); stroke-width: 2; }
-.ex-fig-eye { fill: var(--text-secondary); }
-.ex-fig-joint { fill: var(--studio-accent, var(--brand)); stroke: var(--surface-raised); stroke-width: 1.2; }
-.ex-fig-extremity { fill: var(--studio-accent, var(--brand)); }
-.ex-fig-far { opacity: 0.34; }
-.ex-fig-far.ex-fig-limb { stroke-width: 7; }
-
-/* ---------- volumetric anatomical figure ----------
-   Grayscale body volumes with highlighted trained muscles. The body fills come
-   from --ex-body-* tokens so the same art works in every theme; primary and
-   secondary highlights reuse the studio accent so the figure belongs to NUQTA
-   rather than looking like a foreign medical clip-art. */
-.ex-anat { }
-.ex-anat-body { fill: var(--ex-fill, var(--surface-chip)); stroke: var(--ex-body-line); stroke-width: 1.1; stroke-linejoin: round; }
-.ex-anat-line { fill: none; stroke: var(--ex-body-line); stroke-width: 0.9; stroke-linecap: round; opacity: 0.75; }
-.ex-anat-far { opacity: 0.42; }
-.ex-anat-joint { fill: var(--ex-body-line); opacity: 0.55; }
-.ex-anat-muscle { stroke: var(--ex-body-1); stroke-width: 0.6; }
-.ex-anat-neutral { fill: var(--ex-body-3); opacity: 0.9; }
-.ex-anat-primary { fill: var(--studio-accent, var(--brand)); }
-.ex-anat-secondary { fill: color-mix(in srgb, var(--studio-accent, var(--brand)) 46%, var(--ex-body-2)); }
-.ex-illustration--anat .ex-anat-primary { filter: saturate(1.05); }
-
-/* ---------- authentic anatomical écorché reference ----------
-   Photographic plates of a real muscular system (Z-Anatomy, CC BY-SA 4.0). The base
-   plate is the body; each trained muscle has a silhouette plate painted over it in the
-   studio accent. Masks are rendered from the same camera as their base, so they register
-   pixel-for-pixel and can be composited with CSS masks — no 3D runtime, works offline. */
-.ec-figure { display: flex; flex-direction: column; gap: var(--sp-2); align-items: center; }
-.ec-plates { display: flex; gap: var(--sp-5, var(--sp-4)); justify-content: center; align-items: flex-end; width: 100%; }
-.ec-plate { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
-.ec-plate-stack { position: relative; height: clamp(180px, 38vh, 330px); aspect-ratio: 448 / 1095; }
-.ec-plate-base { display: block; width: 100%; height: 100%; object-fit: contain; }
-.ec-muscle {
-  position: absolute; inset: 0;
-  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+/* ---------- shared exercise illustrations ----------
+   One authored character set (Open Exercise Art, CC BY-SA 4.0). Each drawing is used
+   as a mask and painted with the studio accent, so the same file reads correctly in
+   the light and dark themes and every figure is tinted identically. */
+.ex-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--studio-accent, var(--brand));
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-position: center; mask-position: center;
-  transition: opacity var(--dur-base) var(--ease-standard);
+  -webkit-mask-size: contain; mask-size: contain;
+  opacity: 0.92;
 }
-.ec-muscle-primary { background: var(--studio-accent, var(--brand)); }
-.ec-muscle-secondary { background: color-mix(in srgb, var(--studio-accent, var(--brand)) 40%, transparent); }
-.ec-plate-caption { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
-.ec-legend { display: flex; flex-wrap: wrap; gap: var(--sp-3); justify-content: center; margin: 0; padding: 0; list-style: none; font-size: var(--fs-micro); color: var(--text-secondary); }
-.ec-legend li { display: inline-flex; align-items: center; gap: 6px; }
-.ec-swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-default); flex: none; }
-.ec-swatch-primary { background: var(--studio-accent, var(--brand)); }
-.ec-swatch-secondary { background: color-mix(in srgb, var(--studio-accent, var(--brand)) 40%, transparent); }
-.ec-credit { color: var(--text-tertiary); }
+.ex-art-fallback { display: grid; place-items: center; width: 100%; height: 100%; color: var(--text-tertiary); }
+.ex-art-fallback svg { width: 2rem; height: 2rem; }
 
-/* the écorché reference block inside the exercise detail sheet */
-.ex-anatomy { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--studio-line, var(--border-default)); border-radius: var(--r-md); background: var(--surface-inset); }
-.ex-anatomy-title { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--text-primary); margin: 0; }
-.ex-anatomy-note { font-size: var(--fs-micro); color: var(--text-tertiary); margin: 0; line-height: 1.5; }
-
-/* the écorché reference as the opening panel of the Workout Studio — larger, because
-   here it is the point of the panel rather than an aside inside a detail sheet */
-.studio-anatomy { display: flex; flex-direction: column; align-items: center; }
-.studio-anatomy .ec-plate-stack { height: clamp(220px, 44vh, 420px); }
-
-/* props: floor, mat, wall, chair, bar — quiet, never competing with the body */
-.ex-ground { stroke: var(--border-strong); stroke-width: 2.4; stroke-linecap: round; }
-.ex-mat { fill: color-mix(in srgb, var(--studio-accent, var(--brand)) 22%, transparent); stroke: color-mix(in srgb, var(--studio-accent, var(--brand)) 40%, transparent); stroke-width: 1; }
-.ex-prop-line { fill: none; stroke: var(--border-strong); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.ex-bar { stroke: var(--text-tertiary); stroke-width: 4; }
-
-/* movement arrow */
-.ex-motion-path { fill: none; stroke: var(--studio-accent, var(--brand)); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 7 5; }
-.ex-motion-head { fill: var(--studio-accent, var(--brand)); }
-.ex-motion { animation: ex-motion-flow 1.6s linear infinite; }
-@keyframes ex-motion-flow { to { stroke-dashoffset: -24; } }
+/* the illustration stage inside the exercise detail sheet */
+.ex-detail-art { height: 100%; }
 
 /* ---------- anatomical muscle map ---------- */
 .ex-mm { display: flex; flex-direction: column; gap: var(--sp-3); }
@@ -2577,8 +2507,7 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 /* ---------- library cards ---------- */
 .ex-card { display: flex; flex-direction: column; gap: var(--sp-2); text-align: start; width: 100%; border: 1px solid var(--studio-line, var(--border-default)); border-radius: var(--r-md); background: var(--studio-panel, var(--surface-raised)); padding: var(--sp-3); transition: border-color var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-standard); }
 .ex-card:hover { border-color: var(--studio-accent-line, var(--border-strong)); transform: translateY(-2px); }
-.ex-card-media { display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: var(--r-sm); background: var(--surface-inset); overflow: hidden; }
-.ex-card-media .ex-illustration { width: 78%; max-height: 100%; }
+.ex-card-media { display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: var(--r-sm); background: var(--surface-inset); overflow: hidden; padding: var(--sp-2); }
 .ex-card-name { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-primary); }
 .ex-card-muscles { display: flex; flex-wrap: wrap; gap: 4px; }
 .ex-chip { font-size: var(--fs-micro); padding: 1px 7px; border-radius: var(--r-full); border: 1px solid var(--studio-line, var(--border-default)); color: var(--text-secondary); }
@@ -2595,11 +2524,6 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .ex-detail-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: var(--sp-4); align-items: center; }
 @media (max-width: 640px) { .ex-detail-hero { grid-template-columns: 1fr; } }
 .ex-detail-stage { display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: var(--r-md); background: var(--surface-inset); border: 1px solid var(--studio-line, var(--border-default)); overflow: hidden; }
-.ex-detail-stage .ex-illustration { width: 86%; max-height: 100%; }
-.ex-poses { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); width: 100%; align-items: center; }
-.ex-pose { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.ex-pose .ex-illustration { width: 100%; }
-.ex-pose-caption { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-tertiary); }
 
 /* program status pill + day progress */
 .ex-status { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: var(--r-full, 999px); border: 1px solid var(--border-default); color: var(--text-tertiary); white-space: nowrap; }
@@ -2647,6 +2571,5 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .ex-variations { display: grid; gap: var(--sp-2); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ex-motion { animation: none; }
   .ex-card:hover { transform: none; }
 }

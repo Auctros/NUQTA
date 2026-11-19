@@ -240,33 +240,3 @@ export const recentlyPerformedExercises = (sessions: WorkoutSessionLog[], limit 
   }
   return out;
 };
-
-/**
- * The muscles a routine works, resolved from its exercise names back to the catalog.
- * Entries store names (not ids), so an unknown/renamed exercise is simply skipped.
- * Primary and secondary muscles are unioned across exercises in order of first
- * appearance, so the caller can feed the result straight to the écorché reference.
- */
-export const musclesForEntries = (entries: ExerciseEntry[]): { primary: MuscleId[]; secondary: MuscleId[] } => {
-  const primary: MuscleId[] = [];
-  const secondary: MuscleId[] = [];
-  const seenPrimary = new Set<MuscleId>();
-  const seenSecondary = new Set<MuscleId>();
-  for (const entry of entries) {
-    const cat = catalogExerciseByName(entry.name);
-    if (!cat) continue;
-    for (const m of cat.primary) {
-      if (!seenPrimary.has(m)) {
-        seenPrimary.add(m);
-        primary.push(m);
-      }
-    }
-    for (const m of cat.secondary) {
-      if (!seenPrimary.has(m) && !seenSecondary.has(m)) {
-        seenSecondary.add(m);
-        secondary.push(m);
-      }
-    }
-  }
-  return { primary, secondary };
-};

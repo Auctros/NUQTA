@@ -364,41 +364,50 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
-// 22. The anatomical écorché must be visible the moment the Workout Studio opens, not
-//     only buried inside a per-exercise detail sheet. It regressed once by living solely
-//     in ExerciseDetailModal, so the studio's landing tab must render StudioAnatomy, and
-//     the component must be fed real muscles (never left as an empty body).
+// 22. Every exercise must render the one shared illustration set. The library used to
+//     hand-draw each movement (and, briefly, ship a separate écorché reference); both
+//     made the library look like unrelated clip-art. One authored character set is what
+//     makes the figures consistent, so the registry must map every catalog key to art
+//     that is actually vendored, and nothing may reintroduce the old renderers.
 {
-  const view = readFileSync(join(root, 'src/components/WorkoutView.tsx'), 'utf8');
-  if (!/<StudioAnatomy/.test(view)) {
+  const art = readFileSync(join(root, 'src/components/workout/illustration/exerciseArt.ts'), 'utf8');
+  const catalogFiles = ['src/lib/catalog/upperBody.ts', 'src/lib/catalog/lowerBody.ts'];
+  const keys = new Set();
+  for (const file of catalogFiles) {
+    const src = readFileSync(join(root, file), 'utf8');
+    for (const m of src.matchAll(/illustrationKey:\s*'([^']+)'/g)) keys.add(m[1]);
+  }
+  const missing = [...keys].filter((k) => !new RegExp(`'${k}':\\s*\\{`).test(art));
+  if (missing.length) {
     fail(
-      'The écorché must be on the Workout Studio landing page',
-      'src/components/WorkoutView.tsx no longer renders <StudioAnatomy>, so the anatomy reference is hidden again'
+      'Every catalog exercise must resolve to shared art',
+      `illustration/exerciseArt.ts is missing: ${missing.join(', ')}`
     );
   }
-  // It must be inside the `today` (default) tab, which is what the user sees on open.
-  const todayIdx = view.indexOf("activeTab === 'today'");
-  const nextTabIdx = view.indexOf('activeTab ===', todayIdx + 1);
-  const todayBlock = todayIdx === -1 ? '' : view.slice(todayIdx, nextTabIdx === -1 ? undefined : nextTabIdx);
-  if (!/<StudioAnatomy/.test(todayBlock)) {
+  const manifest = JSON.parse(readFileSync(join(root, 'public/exercise-art/manifest.json'), 'utf8'));
+  const vendored = new Set(Object.keys(manifest.art || {}));
+  const absent = [...new Set([...art.matchAll(/art:\s*'([^']+)'/g)].map((m) => m[1]))].filter((id) => !vendored.has(id));
+  if (absent.length) {
     fail(
-      'The écorché must be on the default (Today) tab, not a secondary tab',
-      "WorkoutView must render <StudioAnatomy> inside the activeTab === 'today' block"
+      'Illustration keys must point at vendored artwork',
+      `public/exercise-art is missing: ${absent.join(', ')}`
     );
   }
-  // An empty figure (no muscles) would paint nothing; the view must fall back to a body.
-  if (!/DEFAULT_FULL_BODY/.test(view)) {
+  if (!/CC-BY-SA-4\.0/.test(art) || !/Open-Exercise-Art/.test(art)) {
     fail(
-      'The studio écorché must never render an empty body',
-      'WorkoutView must fall back to DEFAULT_FULL_BODY when the routine yields no muscles'
+      'The illustration set must stay attributed',
+      'illustration/exerciseArt.ts must credit Open Exercise Art under CC BY-SA 4.0'
     );
   }
-  const studio = readFileSync(join(root, 'src/components/workout/StudioAnatomy.tsx'), 'utf8');
-  if (!/EcorcheFigure/.test(studio) || !/DEFAULT_FULL_BODY/.test(studio)) {
-    fail(
-      'StudioAnatomy must reuse the shared écorché reference',
-      'src/components/workout/StudioAnatomy.tsx must render EcorcheFigure and export DEFAULT_FULL_BODY'
-    );
+  // The removed renderers must not creep back in beside the shared set.
+  for (const dead of ['EcorcheFigure', 'StudioAnatomy', 'illustration/registry', 'illustration/poses']) {
+    const hit = [...walk(join(root, 'src'))].find((f) => /\.(ts|tsx)$/.test(f) && readFileSync(f, 'utf8').includes(dead));
+    if (hit) {
+      fail(
+        'The library renders one shared illustration set',
+        `${hit} still references "${dead}"; the per-exercise/procedural art was replaced by exerciseArt.ts`
+      );
+    }
   }
 }
 

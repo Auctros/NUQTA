@@ -26,7 +26,7 @@ const CACHE = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 const SCOPE = self.registration.scope;
 const INDEX_URL = new URL(SCOPE).toString();
 const NOTIFICATION_ICON = new URL('icon-192.png', SCOPE).toString();
-const ANATOMY_MANIFEST = new URL('anatomy/manifest.json', SCOPE).toString();
+const ART_MANIFEST = new URL('exercise-art/manifest.json', SCOPE).toString();
 
 /** Absolute, same-origin URL, or null if the reference is external/data/inline. */
 function toSameOriginUrl(ref, base) {
@@ -73,33 +73,28 @@ function discoverStylesheetAssets(css, base) {
 }
 
 /**
- * The anatomical écorché plates are only discovered through the manifest, so they are not
- * reachable from the shell HTML/CSS the generic discovery walks. Read the manifest and
- * precache every base plate and muscle mask it lists, so the anatomy reference is
- * available offline exactly like the rest of the shell. Best-effort: a missing manifest
- * (older build, partial deploy) is skipped rather than failing the whole install.
+ * The exercise illustrations are referenced from CSS masks, not from the shell HTML,
+ * so the generic discovery cannot see them. Read their manifest and precache every
+ * drawing, so the exercise library is complete offline exactly like the rest of the
+ * shell. Best-effort: a missing manifest (older build, partial deploy) is skipped
+ * rather than failing the whole install.
  */
-async function precacheAnatomy(cache) {
+async function precacheExerciseArt(cache) {
   let manifest;
   try {
-    const res = await fetch(new Request(ANATOMY_MANIFEST, { cache: 'reload', credentials: 'same-origin' }));
+    const res = await fetch(new Request(ART_MANIFEST, { cache: 'reload', credentials: 'same-origin' }));
     if (!res || !res.ok) return;
     manifest = await res.json();
   } catch {
     return;
   }
-  const refs = new Set();
-  for (const view of manifest.base || []) refs.add(`anatomy/base_${view}.webp`);
-  for (const [id, views] of Object.entries(manifest.masks || {})) {
-    for (const view of views) refs.add(`anatomy/masks/${id}_${view}.webp`);
-  }
-  for (const ref of refs) {
-    const url = toSameOriginUrl(ref, INDEX_URL);
+  for (const id of Object.keys(manifest.art || {})) {
+    const url = toSameOriginUrl(`exercise-art/${id}.svg`, INDEX_URL);
     if (!url || (await cache.match(url, { ignoreVary: true }))) continue;
     try {
       await fetchAndCache(cache, url);
     } catch {
-      /* one missing plate must not abort the whole install */
+      /* one missing drawing must not abort the whole install */
     }
   }
 }
@@ -140,8 +135,8 @@ async function precacheShell() {
       }
     }
 
-    // The anatomical écorché plates (base + per-muscle masks) listed in their manifest.
-    await precacheAnatomy(cache);
+    // The exercise illustrations listed in their manifest.
+    await precacheExerciseArt(cache);
   } catch (error) {
     await caches.delete(CACHE);
     throw error;

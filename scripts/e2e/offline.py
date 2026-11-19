@@ -103,10 +103,9 @@ with sync_playwright() as p:
     result["has_js"] = any(u.endswith(".js") for u in cached)
     result["has_css"] = any(u.endswith(".css") for u in cached)
     result["has_manifest"] = any(u.endswith("manifest.webmanifest") for u in cached)
-    # The anatomical écorché reference is part of the offline shell: its base plates and
-    # per-muscle masks are discovered through their manifest, so confirm they were precached.
-    result["has_anatomy_base"] = sum(u.endswith(("/anatomy/base_front.webp", "/anatomy/base_back.webp")) for u in cached)
-    result["anatomy_mask_count"] = sum("/anatomy/masks/" in u and u.endswith(".webp") for u in cached)
+    # The exercise illustrations are part of the offline shell: they are referenced from
+    # CSS masks rather than the shell HTML, so they are discovered through their manifest.
+    result["exercise_art_count"] = sum("/exercise-art/" in u and u.endswith(".svg") for u in cached)
     # 4. Isolation: the versioned cache must exist, and every cached entry must be a
     # same-origin shell asset (never a cross-origin / API / data URL).
     result["versioned_cache_present"] = any(n.startswith(EXPECTED_CACHE_PREFIX) for n in cache_names)
@@ -123,10 +122,10 @@ with sync_playwright() as p:
         failures.append("no CSS asset was precached")
     if not result["has_manifest"]:
         failures.append("the manifest was not precached")
-    if result["has_anatomy_base"] < 2:
-        failures.append("the anatomical base plates were not precached")
-    if result["anatomy_mask_count"] < 1:
-        failures.append("no anatomical muscle masks were precached")
+    if result["exercise_art_count"] < 10:
+        failures.append(
+            f"only {result['exercise_art_count']} exercise illustrations were precached; the library must work offline"
+        )
     if not result["cached_all_same_origin"]:
         failures.append("a cross-origin URL was cached; only same-origin shell assets may be cached")
     if not result["cached_has_no_data_urls"]:

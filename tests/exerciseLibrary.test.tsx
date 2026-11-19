@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { ExerciseCard } from '../src/components/workout/ExerciseCard';
 import { ExerciseDetailModal } from '../src/components/workout/ExerciseDetailModal';
 import { MuscleMap, MUSCLE_IDS } from '../src/components/workout/MuscleMap';
@@ -8,118 +10,62 @@ import { WorkoutAppModal } from '../src/components/WorkoutAppModal';
 import { useNuqtaStore } from '../src/store/nuqtaStore';
 import { EXERCISE_CATALOG, recentlyPerformedExercises } from '../src/lib/exerciseCatalog';
 import { ExerciseCatalog } from '../src/components/workout/ExerciseCatalog';
-import { ILLUSTRATION_KEYS, getIllustration } from '../src/components/workout/illustration/registry';
+import { ILLUSTRATION_KEYS, ART_IDS, EXERCISE_ART, artUrl } from '../src/components/workout/illustration/exerciseArt';
 
 const pushUp = EXERCISE_CATALOG.find((e) => e.illustrationKey === 'push-up')!;
 
 describe('ExerciseIllustration', () => {
-  it('keeps every pose inside the illustration viewBox', () => {
-    // The viewBox is 200x200. A joint outside it means a limb is clipped or the
-    // figure is drawn off-canvas, which reads as a broken illustration.
-    const outside: string[] = [];
-    for (const key of ILLUSTRATION_KEYS) {
-      const illo = getIllustration(key)!;
-      illo.phases.forEach((pose, i) => {
-        const joints = [pose.head, pose.neck, pose.hip, ...pose.armNear, ...pose.armFar, ...pose.legNear, ...pose.legFar];
-        for (const q of joints) {
-          if (!(q.x >= -6 && q.x <= 206 && q.y >= -6 && q.y <= 206)) {
-            outside.push(`${key}#${i} (${q.x.toFixed(0)}, ${q.y.toFixed(0)})`);
-          }
-        }
-      });
-    }
-    expect(outside).toEqual([]);
+  it('draws every exercise from the shared character set', () => {
+    // One authored set is the whole point: every exercise must resolve to art,
+    // so no card falls back to the placeholder and breaks the visual run.
+    const missing = ILLUSTRATION_KEYS.filter((k) => !EXERCISE_ART[k]?.art);
+    expect(missing).toEqual([]);
+    expect(ART_IDS.length).toBeGreaterThan(0);
   });
 
-  it('draws limbs at plausible lengths and a consistent torso', () => {
-    const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
-    const broken: string[] = [];
-    for (const key of ILLUSTRATION_KEYS) {
-      const illo = getIllustration(key)!;
-      illo.phases.forEach((pose, i) => {
-        const torso = dist(pose.hip, pose.neck);
-        if (torso < 28 || torso > 62) broken.push(`${key}#${i} torso ${torso.toFixed(0)}`);
-        const chains: [string, typeof pose.armNear][] = [
-          ['armNear', pose.armNear],
-          ['armFar', pose.armFar],
-          ['legNear', pose.legNear],
-          ['legFar', pose.legFar]
-        ];
-        for (const [name, c] of chains) {
-          const upper = dist(c[0], c[1]);
-          const lower = dist(c[1], c[2]);
-          if (upper < 14 || upper > 48 || lower < 12 || lower > 46) {
-            broken.push(`${key}#${i} ${name} ${upper.toFixed(0)}/${lower.toFixed(0)}`);
-          }
-        }
-      });
-    }
-    expect(broken).toEqual([]);
+  it('points each key at a vendored SVG that exists on disk', () => {
+    // A key mapped to a file that was never vendored would 404 at runtime and
+    // render as an empty (invisible) mask, which reads as a missing illustration.
+    const missing = ART_IDS.filter((id) => !existsSync(join(process.cwd(), 'public/exercise-art', `${id}.svg`)));
+    expect(missing).toEqual([]);
   });
 
-  it('marks an illustration animated only when its phases actually differ', () => {
-    // An entry flagged `animated` with identical phases animates nothing, which
-    // reads as a broken player in the detail view.
-    const poseKey = (pose: {
-      head: { x: number; y: number };
-      neck: { x: number; y: number };
-      hip: { x: number; y: number };
-      armNear: { x: number; y: number }[];
-      armFar: { x: number; y: number }[];
-      legNear: { x: number; y: number }[];
-      legFar: { x: number; y: number }[];
-    }) =>
-      [pose.head, pose.neck, pose.hip, ...pose.armNear, ...pose.armFar, ...pose.legNear, ...pose.legFar]
-        .map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`)
-        .join('|');
-    const staticAnimated: string[] = [];
-    for (const key of ILLUSTRATION_KEYS) {
-      const illo = getIllustration(key)!;
-      if (!illo.animated) continue;
-      if (illo.phases.length < 2 || illo.phases.every((p) => poseKey(p) === poseKey(illo.phases[0]))) {
-        staticAnimated.push(key);
-      }
-    }
-    expect(staticAnimated).toEqual([]);
+  it('paints every figure with the same ink, so the set is visually consistent', () => {
+    // The ink is the element background (the SVG is only a mask). Any drawing that
+    // carried its own colour would break the consistent tint across the library.
+    const { container } = render(<ExerciseIllustration illustrationKey="push-up" isAr={false} name="Push-up" />);
+    const art = container.querySelector<HTMLElement>('.ex-art')!;
+    expect(art).toBeTruthy();
+    const mask = art.style.getPropertyValue('mask-image') || art.style.getPropertyValue('-webkit-mask-image');
+    expect(mask).toContain(artUrl('push-up'));
   });
 
-  it('keeps motion arrows and ground props inside the viewBox', () => {
-    const inside = (x: number, y: number) => x >= -4 && x <= 204 && y >= -4 && y <= 204;
-    const bad: string[] = [];
-    for (const key of ILLUSTRATION_KEYS) {
-      const illo = getIllustration(key)!;
-      if (illo.motion) {
-        if (!inside(illo.motion.from.x, illo.motion.from.y)) bad.push(`${key} motion.from`);
-        if (!inside(illo.motion.to.x, illo.motion.to.y)) bad.push(`${key} motion.to`);
-      }
-      const g = illo.ground;
-      if (g?.bar && (!inside(g.bar.x1, g.bar.y) || !inside(g.bar.x2, g.bar.y))) bad.push(`${key} bar`);
-      if (g?.chair && !inside(g.chair.x, g.chair.y)) bad.push(`${key} chair`);
-      if (g?.floor && (g.floor.from < -4 || g.floor.to > 204 || !inside(g.floor.from, g.floor.y))) bad.push(`${key} floor`);
-      if (g?.mat && (g.mat.from < -4 || g.mat.to > 204)) bad.push(`${key} mat`);
-      if (g?.wall && (g.wall.from < -4 || g.wall.to > 204 || !inside(g.wall.x, g.wall.from))) bad.push(`${key} wall`);
-    }
-    expect(bad).toEqual([]);
+  it('keeps the vendored SVGs as uncoloured line art (no hard-coded fill)', () => {
+    // `currentColor` / no fill keeps the drawing usable as a mask and tintable by
+    // the theme; a baked-in fill would render one colour in every theme.
+    const offenders = ART_IDS.filter((id) => {
+      const svg = readFileSync(join(process.cwd(), 'public/exercise-art', `${id}.svg`), 'utf8');
+      return /fill="#[0-9a-fA-F]{3,6}"/.test(svg) || /stroke="#[0-9a-fA-F]{3,6}"/.test(svg);
+    });
+    expect(offenders).toEqual([]);
   });
 
   it('gives every illustration an accessible description in both languages', () => {
-    const bad = ILLUSTRATION_KEYS.filter((k) => {
-      const i = getIllustration(k)!;
-      return !i.altEn || !i.altAr;
-    });
+    const bad = ILLUSTRATION_KEYS.filter((k) => !EXERCISE_ART[k].altEn || !EXERCISE_ART[k].altAr);
     expect(bad).toEqual([]);
   });
 
-  it('renders a labelled SVG for a known exercise', () => {
+  it('renders a labelled illustration for a known exercise', () => {
     render(<ExerciseIllustration illustrationKey="push-up" isAr={false} name="Standard Push-up" />);
-    const svg = screen.getByRole('img', { name: /Standard Push-up/ });
-    expect(svg.tagName.toLowerCase()).toBe('svg');
-    expect(svg.querySelectorAll('polyline').length).toBeGreaterThan(0);
+    const art = screen.getByRole('img', { name: /Standard Push-up/ });
+    expect(art.getAttribute('data-art')).toBe('push-up');
+    expect(art.getAttribute('aria-description')).toMatch(/push/i);
   });
 
-  it('renders Arabic description when isAr is set', () => {
+  it('renders the Arabic description when isAr is set', () => {
     render(<ExerciseIllustration illustrationKey="air-squat" isAr name="القرفصاء" />);
-    expect(screen.getByRole('img', { name: /القرفصاء/ })).toBeTruthy();
+    const art = screen.getByRole('img', { name: /القرفصاء/ });
+    expect(art.getAttribute('aria-description')).toBe(EXERCISE_ART['air-squat'].altAr);
   });
 
   it('falls back to a placeholder for an unknown key instead of throwing', () => {

@@ -17,6 +17,7 @@ import {
 import { WorkoutSessionLog } from '../../types';
 import { ExerciseCard } from './ExerciseCard';
 import { ExerciseDetailModal } from './ExerciseDetailModal';
+import { ART_SOURCE } from './illustration/exerciseArt';
 
 /**
  * The one exercise-library browser.
@@ -194,6 +195,10 @@ export const ExerciseCatalog: React.FC<ExerciseCatalogProps> = ({
           ))}
         </div>
       )}
+
+      <p className="mt-3 text-[var(--fs-micro)] text-[var(--text-tertiary)]">
+        {isAr ? ART_SOURCE.creditAr : ART_SOURCE.creditEn}
+      </p>
 
       <ExerciseDetailModal
         exercise={openExercise}

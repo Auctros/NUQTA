@@ -1,5 +1,5 @@
 import React from 'react';
-import { PrebuiltExercise, facingForExercise } from '../../lib/exerciseTypes';
+import { PrebuiltExercise } from '../../lib/exerciseTypes';
 import {
   categoryLabel,
   difficultyLabel,
@@ -10,8 +10,6 @@ import {
 } from '../../lib/exerciseCatalog';
 import { Modal, Button } from '../ui';
 import { ExerciseIllustration } from './illustration/ExerciseIllustration';
-import { EcorcheFigure } from './illustration/EcorcheFigure';
-import { getIllustration } from './illustration/registry';
 import { MuscleMap } from './MuscleMap';
 
 /**
@@ -52,9 +50,6 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
   const name = isAr ? exercise.nameAr : exercise.nameEn;
   const tips = isAr ? exercise.tipsAr : exercise.tipsEn;
   const c = exercise.coaching;
-  const facing = facingForExercise(exercise);
-  const phaseCount = getIllustration(exercise.illustrationKey)?.phases.length ?? 1;
-
   const pick = <T,>(ar: T, en: T): T => (isAr ? ar : en);
 
   return (
@@ -62,60 +57,15 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
       <div className="ex-detail">
         <div className="ex-detail-hero">
           <div className="ex-detail-stage">
-            {phaseCount > 1 ? (
-              <div className="ex-poses">
-                <figure className="ex-pose">
-                  <ExerciseIllustration
-                    illustrationKey={exercise.illustrationKey}
-                    isAr={isAr}
-                    name={name}
-                    mode="static"
-                    phaseIndex={0}
-                    primary={exercise.primary}
-                    secondary={exercise.secondary}
-                    facing={facing}
-                  />
-                  <figcaption className="ex-pose-caption">{isAr ? 'البداية' : 'Start'}</figcaption>
-                </figure>
-                <figure className="ex-pose">
-                  <ExerciseIllustration
-                    illustrationKey={exercise.illustrationKey}
-                    isAr={isAr}
-                    name={name}
-                    mode="static"
-                    phaseIndex={phaseCount - 1}
-                    primary={exercise.primary}
-                    secondary={exercise.secondary}
-                    facing={facing}
-                    decorative
-                  />
-                  <figcaption className="ex-pose-caption">{isAr ? 'النهاية' : 'End'}</figcaption>
-                </figure>
-              </div>
-            ) : (
-              <ExerciseIllustration
-                illustrationKey={exercise.illustrationKey}
-                isAr={isAr}
-                name={name}
-                mode="static"
-                primary={exercise.primary}
-                secondary={exercise.secondary}
-                facing={facing}
-              />
-            )}
+            <ExerciseIllustration
+              illustrationKey={exercise.illustrationKey}
+              isAr={isAr}
+              name={name}
+              className="ex-detail-art"
+            />
           </div>
           <MuscleMap primary={exercise.primary} secondary={exercise.secondary} isAr={isAr} />
         </div>
-
-        <section className="ex-anatomy">
-          <h3 className="ex-anatomy-title">{isAr ? 'المرجع التشريحي' : 'Anatomical reference'}</h3>
-          <p className="ex-anatomy-note">
-            {isAr
-              ? 'رسم تشريحي واقعي للجهاز العضلي، مُظلَّل عليه العضلات التي يستهدفها التمرين.'
-              : 'A realistic rendering of the muscular system, with the muscles this exercise targets highlighted.'}
-          </p>
-          <EcorcheFigure primary={exercise.primary} secondary={exercise.secondary} isAr={isAr} facing={facing} />
-        </section>
 
         <div className="ex-detail-blocks">
           <div className="ex-meta">
