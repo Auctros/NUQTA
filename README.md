@@ -50,6 +50,18 @@ NUQTA brings those pieces together. It connects execution to outcomes, gives you
 
 ---
 
+## One life, connected
+
+<div align="center">
+
+<img src="docs/assets/nuqta-life-map.svg" alt="A visual map of the connected areas of life managed in NUQTA" width="100%" />
+
+<sub>One workspace. Different dimensions of life. Progress that connects.</sub>
+
+</div>
+
+NUQTA is designed around the idea that personal progress is not a collection of isolated checkmarks. Planning creates action; repeated action becomes practice; practice compounds toward outcomes. The surrounding areas of life provide context for that journey.
+
 ## What you can do with NUQTA
 
 <table>
@@ -130,6 +142,14 @@ Some activities deserve more than a checkbox. NUQTA includes specialized spaces 
 
 Progress from supported activities can feed into linked goals, helping the system connect practice with outcomes.
 
+<div align="center">
+
+<img src="docs/assets/nuqta-studios.svg" alt="Four dedicated practice studios: Qur'an, reading, workout, and drawing" width="100%" />
+
+<sub>Purpose-built spaces for the practices that matter.</sub>
+
+</div>
+
 ---
 
 ## Your data, your devices
@@ -143,6 +163,14 @@ NUQTA does not require an account, a hosted backend, or an API key to work.
 - The app shell is an installable **Progressive Web App**. After its first successful load, the shell is cached for offline use.
 - Backups use a versioned JSON format. Restore validates the backup before writing, creates a safety copy, and uses an all-or-nothing recovery flow.
 - A first run starts empty. Sample data is optional and must be requested from Settings.
+
+<div align="center">
+
+<img src="docs/assets/nuqta-local-first.svg" alt="NUQTA local-first architecture showing browser storage, optional self-hosted sync, and personal devices" width="100%" />
+
+<sub>Your device remains the home of your data. Sync is an optional bridge — never a dependency.</sub>
+
+</div>
 
 ### Optional private device sync
 
@@ -318,40 +346,6 @@ The goal is to be explicit about what is protected, where data lives, and what s
 | `Esc` | Close the sidebar |
 
 ---
-
-## العربية
-
-**نقطة (NUQTA)** نظام لإدارة الحياة، مش مجرد قائمة مهام. فكرته إنه يجمع التخطيط والتنفيذ والتطور الشخصي في مساحة واحدة، ويربط بين اللي بتعمله يوميًا والنتائج اللي بتحاول توصل لها.
-
-### تقدر تعمل إيه باستخدام NUQTA؟
-
-- **المهام والتخطيط:** أولويات، مهام فرعية، جدولة، التقويم، وأهم ثلاث أولويات لليوم.
-- **العادات:** جداول مرنة، سجل إنجاز، وسلاسل استمرارية مع إمكانية تجميد السلسلة.
-- **الأهداف:** أهداف ونتائج رئيسية يرتبط تقدمها بالمهام والعادات وبعض الأنشطة المتخصصة.
-- **القرآن والقراءة والرياضة والرسم:** مساحات مستقلة لمتابعة الممارسة والتقدم.
-- **التركيز:** جلسات عمل عميق وأهداف يومية.
-- **الصحة والمال واليوميات:** متابعة النوم والطاقة والمزاج والمصروفات والادخار والتأمل اليومي.
-- **التحليل والمراجعة:** رؤى مترابطة، مراجعة أسبوعية، وضع الإنقاذ، وسجل شامل للتغييرات.
-
-### فلسفة البيانات
-
-- التطبيق يعمل محليًا دون حساب أو خدمة سحابية إلزامية.
-- البيانات الأساسية محفوظة في المتصفح، مع نسخة مطابقة في IndexedDB للاستعادة.
-- يمكن تثبيت التطبيق كـ PWA واستخدام واجهته دون اتصال بعد التحميل الأول.
-- النسخ الاحتياطي والاستعادة مصممان للحفاظ على سلامة البيانات.
-- المزامنة بين الأجهزة اختيارية، وتُستضاف على جهازك باستخدام Node.js وTailscale.
-- البيانات المحلية **غير مشفرة حاليًا أثناء التخزين**؛ لذلك احتفظ بنسخ احتياطية واحمِ حساب جهازك.
-
-### التشغيل
-
-```bash
-git clone https://github.com/Auctros/NUQTA.git
-cd NUQTA
-npm ci
-npm run dev
-```
-
-ثم افتح **http://localhost:3000**.
 
 ---
 
