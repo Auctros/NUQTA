@@ -30,7 +30,21 @@ const TEST_ORIGIN = 'https://nuqta-host.tailnet.ts.net';
 const TEST_TOKEN = 'test-sync-secret-token-32bytes';
 const TEST_TAILSCALE_USER = 'alice@example.com';
 
-function createTempWorkspace() {
+/** Any JSON message exchanged over the sync WebSocket. */
+type SyncMessage = Record<string, any>;
+/** Return value of createSyncServer() (untyped .mjs module). */
+type SyncServer = any;
+type TempWorkspace = { dir: string; dbPath: string; cleanup: () => void };
+type RawOutcome = { kind: string; statusCode?: number; code?: number; reason?: string; message?: string; ws?: unknown };
+type ClientOptions = {
+  origin?: string;
+  headers?: Record<string, string>;
+  useAuthFrame?: boolean;
+  /** null = send no Authorization header (Tailscale-identity-only servers). */
+  token?: string | null;
+};
+
+function createTempWorkspace(): TempWorkspace {
   const dir = mkdtempSync(join(tmpdir(), 'nuqta-sync-test-'));
   return {
     dir,
@@ -41,7 +55,14 @@ function createTempWorkspace() {
   };
 }
 
-function makeChange(deviceId, storeName = 'tasks', recordId = 't-1', operation = 'create', payload = { title: 'Test' }, overrides = {}) {
+function makeChange(
+  deviceId: string,
+  storeName = 'tasks',
+  recordId = 't-1',
+  operation = 'create',
+  payload: Record<string, unknown> = { title: 'Test' },
+  overrides: Record<string, unknown> = {}
+) {
   return {
     device_id: deviceId,
     client_change_id: randomUUID(),
@@ -55,14 +76,14 @@ function makeChange(deviceId, storeName = 'tasks', recordId = 't-1', operation =
   };
 }
 
-function createMessageQueue(ws) {
-  const queue = [];
-  const waiters = [];
+function createMessageQueue(ws: WebSocket) {
+  const queue: SyncMessage[] = [];
+  const waiters: Array<(msg: SyncMessage) => void> = [];
 
-  ws.on('message', (data) => {
-    const parsed = JSON.parse(data.toString('utf8'));
+  ws.on('message', (data: unknown) => {
+    const parsed = JSON.parse(String(data));
     if (waiters.length > 0) {
-      const resolve = waiters.shift();
+      const resolve = waiters.shift()!;
       resolve(parsed);
     } else {
       queue.push(parsed);
@@ -70,9 +91,9 @@ function createMessageQueue(ws) {
   });
 
   return {
-    next(timeoutMs = 3000) {
+    next(timeoutMs = 3000): Promise<SyncMessage> {
       if (queue.length > 0) {
-        return Promise.resolve(queue.shift());
+        return Promise.resolve(queue.shift()!);
       }
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
@@ -80,7 +101,7 @@ function createMessageQueue(ws) {
           if (idx >= 0) waiters.splice(idx, 1);
           reject(new Error('timeout waiting for WebSocket message'));
         }, timeoutMs);
-        const onMsg = (msg) => {
+        const onMsg = (msg: SyncMessage) => {
           clearTimeout(timer);
           resolve(msg);
         };
@@ -93,16 +114,16 @@ function createMessageQueue(ws) {
   };
 }
 
-async function openAuthenticatedClient(port, deviceId, {
+async function openAuthenticatedClient(port: number, deviceId: string, {
   origin = TEST_ORIGIN,
   headers = {},
   useAuthFrame = false,
   token = TEST_TOKEN,
-} = {}) {
+}: ClientOptions = {}) {
   const query = useAuthFrame ? '' : `?device_id=${deviceId}`;
   const reqHeaders = {
     origin,
-    ...(useAuthFrame ? {} : { authorization: `Bearer ${token}` }),
+    ...(useAuthFrame || token === null ? {} : { authorization: `Bearer ${token}` }),
     ...headers,
   };
 
@@ -131,12 +152,12 @@ async function openAuthenticatedClient(port, deviceId, {
   return { ws, inbox, welcome };
 }
 
-function attemptRawWsConnection(url, headers = {}) {
+function attemptRawWsConnection(url: string, headers: Record<string, string> = {}): Promise<RawOutcome> {
   return new Promise((resolve) => {
     const ws = new WebSocket(url, { headers });
     let settled = false;
 
-    const finish = (outcome) => {
+    const finish = (outcome: RawOutcome) => {
       if (settled) return;
       settled = true;
       try {
@@ -165,8 +186,8 @@ function attemptRawWsConnection(url, headers = {}) {
 }
 
 describe('NUQTA Sync Server (Stage 1)', () => {
-  let temp;
-  let server;
+  let temp!: TempWorkspace;
+  let server!: SyncServer;
 
   beforeEach(() => {
     temp = createTempWorkspace();
@@ -175,11 +196,11 @@ describe('NUQTA Sync Server (Stage 1)', () => {
   afterEach(async () => {
     if (server) {
       await server.close();
-      server = null;
+      server = null as unknown as SyncServer;
     }
     if (temp) {
       temp.cleanup();
-      temp = null;
+      temp = null as unknown as TempWorkspace;
     }
   });
 
@@ -199,7 +220,7 @@ describe('NUQTA Sync Server (Stage 1)', () => {
       const tables = server.db
         .prepare("SELECT name FROM sqlite_master WHERE type='table'")
         .all()
-        .map((r) => r.name);
+        .map((r: any) => r.name);
 
       expect(tables).toEqual(
         expect.arrayContaining([
@@ -277,6 +298,7 @@ describe('NUQTA Sync Server (Stage 1)', () => {
 
       const deviceId = randomUUID();
       const alice = await openAuthenticatedClient(server.port, deviceId, {
+        token: null,
         headers: { 'tailscale-user-login': 'alice@example.com' },
       });
       alice.ws.close();
@@ -459,7 +481,11 @@ describe('NUQTA Sync Server (Stage 1)', () => {
       // Device 2 pushes a change while still at deviceCursor = 0; its cursor must NOT jump past d1's changes!
       const d2Change = makeChange(d2, 'goals', 'g-1', 'create', { title: 'Goal 1' });
       c2.ws.send(JSON.stringify({ type: 'sync', clientCursor: 0, changes: [d2Change] }));
+      // c2 first receives the broadcast of d1's committed batch, then its own sync_ack.
+      const d2Broadcast = await c2.inbox.next();
+      expect(d2Broadcast.type).toBe('sync_broadcast');
       const d2Ack = await c2.inbox.next();
+      expect(d2Ack.type).toBe('sync_ack');
       expect(d2Ack.deviceCursor).toBe(0);
       expect(d2Ack.serverCursor).toBe(6);
 
@@ -476,7 +502,7 @@ describe('NUQTA Sync Server (Stage 1)', () => {
       );
       expect(page1Res.status).toBe(200);
       const page1 = await page1Res.json();
-      expect(page1.changes.map((c) => c.serverChangeId)).toEqual([1, 2]);
+      expect(page1.changes.map((c: any) => c.serverChangeId)).toEqual([1, 2]);
       expect(page1.nextCursor).toBe(2);
       expect(page1.hasMore).toBe(true);
       expect(page1.serverCursor).toBe(6);
@@ -487,7 +513,7 @@ describe('NUQTA Sync Server (Stage 1)', () => {
         { headers: { authorization: `Bearer ${TEST_TOKEN}` } }
       );
       const page2 = await page2Res.json();
-      expect(page2.changes.map((c) => c.serverChangeId)).toEqual([3, 4, 5, 6]);
+      expect(page2.changes.map((c: any) => c.serverChangeId)).toEqual([3, 4, 5, 6]);
       expect(page2.nextCursor).toBe(6);
       expect(page2.hasMore).toBe(false);
 
@@ -583,6 +609,7 @@ describe('NUQTA Sync Server (Stage 1)', () => {
 
       // Valid Tailscale identity header -> accepted
       const valid = await openAuthenticatedClient(server.port, deviceId, {
+        token: null,
         headers: { 'tailscale-user-login': TEST_TAILSCALE_USER },
       });
       expect(valid.welcome.type).toBe('welcome');
