@@ -683,11 +683,18 @@ body.light-mode {
 /* --- Sync status pill (header) ------------------------------------------- */
 /* Mirrors .offline-pill so it sits in the header row without looking bolted on. */
 .sync-pill {
+  /* Anchors the tooltip below. The pill itself stays in the flex row — no offsets. */
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 9px;
+  /* Height parity with .offline-pill (30px). At 24px this pill was the only control in
+     a 34px row shorter than its neighbours, so it read as a detached chip floating in
+     the middle of the group rather than part of it. Padding moves to the vertical
+     axis via min-height so the two chips share one rhythm. */
+  min-height: 30px;
+  padding: 0 9px;
   border-radius: 20px;
   border: 1px solid #2b3a35;
   background: rgba(255, 255, 255, 0.03);
@@ -696,6 +703,14 @@ body.light-mode {
   color: #9fb0a8;
   white-space: nowrap;
   flex: 0 0 auto;
+}
+
+/* .offline-pill carried a 7px trailing nudge from when it was the only chip in the row.
+   With the sync pill beside it that nudge opened 16px before the pair and 9px after,
+   which is what made the pill read as separate from the group. One gap value for the
+   whole row keeps both chips evenly spaced. */
+.topbar-actions .offline-pill {
+  margin-inline-end: 0;
 }
 
 .sync-pill-dot {
@@ -831,7 +846,12 @@ body.light-mode {
    warning keeps its word because it needs action. */
 @media (max-width: 660px) {
   .sync-pill {
-    padding: 6px;
+    /* Square to match the 32px icon buttons beside it, so the dot lands on the same
+       optical centre as the icons. The old 20px box was both shorter than its
+       neighbours and under the 24px minimum touch target. */
+    min-height: 32px;
+    min-width: 32px;
+    padding: 0;
     gap: 0;
   }
   .sync-pill--ok .sync-pill-label,
