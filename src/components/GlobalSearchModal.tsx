@@ -10,7 +10,7 @@ import { QURAN_SURAHS } from '../lib/quranData';
    No duplicated storage: every result is derived on demand.
    ============================================================ */
 
-export type SearchDomain = 'tasks' | 'habits' | 'goals' | 'quran' | 'reading' | 'workout' | 'drawing';
+export type SearchDomain = 'tasks' | 'habits' | 'goals' | 'quran' | 'reading' | 'workout' | 'drawing' | 'walking';
 
 export interface SearchResult {
   key: string;
@@ -53,7 +53,8 @@ const TYPE_LABELS: Record<SearchDomain, { ar: string; en: string }> = {
   quran: { ar: 'سورة', en: 'Surah' },
   reading: { ar: 'كتاب', en: 'Book' },
   workout: { ar: 'تمرين', en: 'Workout' },
-  drawing: { ar: 'عمل فني', en: 'Artwork' }
+  drawing: { ar: 'عمل فني', en: 'Artwork' },
+  walking: { ar: 'نزهة', en: 'Walk' }
 };
 
 /** Collect every searchable record from the live store state. */
@@ -87,6 +88,11 @@ export function collectRecords(data: SearchData): SearchResult[] {
   const drawing = data.habits.find((h) => h.specializedType === 'drawing');
   (drawing?.drawingData?.projects || []).forEach((p) => push('drawing', p.id, p.title, p.stage));
   (drawing?.drawingData?.pieces || []).forEach((p) => push('drawing', p.id, p.title, p.medium));
+
+  const walking = data.habits.find((h) => h.specializedType === 'walking');
+  (walking?.walkingData?.sessions || []).forEach((s) =>
+    push('walking', s.id, `${Math.round(s.durationSeconds / 60)} min`, [s.date, s.notes].filter(Boolean).join(' · '))
+  );
 
   const quran = data.habits.find((h) => h.specializedType === 'quran');
   (quran?.quranData?.surahs || []).forEach((s) => {

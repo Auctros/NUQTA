@@ -190,7 +190,7 @@ interface NuqtaStoreState {
   isRescueModeOpen: boolean;
   isQuickCaptureOpen: boolean;
   isSundayRitualOpen: boolean;
-  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'archive';
+  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'walking' | 'archive';
   searchQuery: string;
   selectedTagFilter: string | null;
 
@@ -261,6 +261,10 @@ interface NuqtaStoreState {
   addOrUpdateArtProject: (habitId: string, project: import('../types').ArtProject) => void;
   deleteArtProject: (habitId: string, projectId: string) => void;
   updateDrawingTargets: (habitId: string, targets: { weeklyTargetHours?: number }) => void;
+
+  logWalkingSession: (habitId: string, session: Omit<import('../types').WalkingSessionLog, 'id' | 'date'>) => void;
+  deleteWalkingSession: (habitId: string, sessionId: string) => void;
+  updateWalkingTargets: (habitId: string, targets: { weeklyTargetMinutes?: number }) => void;
 
   logQuranSession: (habitId: string, session: Omit<import('../types').QuranSessionLog, 'id' | 'date'>) => void;
   updateSurahStatus: (habitId: string, surahNumber: number, status: import('../types').QuranSurahStatus, masteryRating?: 1 | 2 | 3 | 4 | 5) => void;
@@ -800,6 +804,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     let readingData = habitDraft.readingData;
     let workoutData = habitDraft.workoutData;
     let drawingData = habitDraft.drawingData;
+    let walkingData = habitDraft.walkingData;
     let quranData = habitDraft.quranData;
 
     // New habits start empty: no sample/fabricated studio history is created.
@@ -834,6 +839,14 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
         favoriteMedium: 'sketch',
         projects: [],
         pieces: []
+      };
+    } else if (specializedType === 'walking' && !walkingData) {
+      walkingData = {
+        sessions: [],
+        weeklyTargetMinutes: 150,
+        totalWalkMinutes: 0,
+        totalWalkSeconds: 0,
+        totalWalks: 0
       };
     } else if (specializedType === 'quran' && !quranData) {
       quranData = {
@@ -876,6 +889,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       readingData,
       workoutData,
       drawingData,
+      walkingData,
       quranData,
       createdAt: new Date().toISOString()
     };
@@ -1528,6 +1542,108 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
           ...targets
         }
       };
+    });
+    NuqtaStorageEngine.saveHabits(updated);
+    set({ habits: updated });
+  },
+
+  // Dedicated Walking Studio Actions
+  logWalkingSession: (habitId, sessionDraft) => {
+    const todayStr = localDateKey();
+    const targetHabit = get().habits.find((h) => h.id === habitId);
+    if (!targetHabit) return;
+
+    // A walk with no measured time is not a record; refuse rather than store a zero.
+    const durationSeconds = Math.max(0, Math.round(sessionDraft.durationSeconds));
+    if (durationSeconds < 1) return;
+
+    const newSession = {
+      ...sessionDraft,
+      id: 'wk-' + crypto.randomUUID().slice(0, 8),
+      date: todayStr,
+      durationSeconds,
+      linkedGoalId: sessionDraft.linkedGoalId || targetHabit.linkedGoalId
+    };
+
+    const updated = get().habits.map((h) => {
+      if (h.id !== habitId) return h;
+      const walking = h.walkingData || {
+        sessions: [],
+        weeklyTargetMinutes: 150,
+        totalWalkMinutes: 0,
+        totalWalkSeconds: 0,
+        totalWalks: 0
+      };
+
+      // Totals re-derive from the stored sessions so a deleted walk cannot leave a
+      // phantom distance/step count behind.
+      const sessions = [newSession, ...walking.sessions];
+      const totalWalkSeconds = sessions.reduce((acc, s) => acc + Math.max(0, s.durationSeconds || 0), 0);
+      const distanceEntries = sessions.filter((s) => typeof s.distanceKm === 'number' && s.distanceKm > 0);
+      const stepEntries = sessions.filter((s) => typeof s.steps === 'number' && s.steps > 0);
+
+      const updatedWalking = {
+        ...walking,
+        sessions,
+        totalWalks: sessions.length,
+        totalWalkSeconds,
+        totalWalkMinutes: Math.round(totalWalkSeconds / 60),
+        totalDistanceKm: distanceEntries.length
+          ? distanceEntries.reduce((acc, s) => acc + (s.distanceKm as number), 0)
+          : undefined,
+        totalSteps: stepEntries.length ? stepEntries.reduce((acc, s) => acc + (s.steps as number), 0) : undefined
+      };
+
+      const completedDates = h.completedDates.includes(todayStr)
+        ? h.completedDates
+        : [...h.completedDates, todayStr];
+      const currentStreak = computeCurrentStreak({ ...h, completedDates }, todayStr);
+      const longestStreak = Math.max(h.longestStreak, currentStreak);
+
+      return {
+        ...h,
+        walkingData: updatedWalking,
+        completedDates,
+        currentStreak,
+        longestStreak
+      };
+    });
+
+    NuqtaStorageEngine.saveHabits(updated);
+    set({ habits: updated });
+    get().addXP(30);
+  },
+
+  deleteWalkingSession: (habitId, sessionId) => {
+    const updated = get().habits.map((h) => {
+      if (h.id !== habitId || !h.walkingData) return h;
+      const sessions = h.walkingData.sessions.filter((s) => s.id !== sessionId);
+      const totalWalkSeconds = sessions.reduce((acc, s) => acc + Math.max(0, s.durationSeconds || 0), 0);
+      const distanceEntries = sessions.filter((s) => typeof s.distanceKm === 'number' && s.distanceKm > 0);
+      const stepEntries = sessions.filter((s) => typeof s.steps === 'number' && s.steps > 0);
+      return {
+        ...h,
+        walkingData: {
+          ...h.walkingData,
+          sessions,
+          totalWalks: sessions.length,
+          totalWalkSeconds,
+          totalWalkMinutes: Math.round(totalWalkSeconds / 60),
+          totalDistanceKm: distanceEntries.length
+            ? distanceEntries.reduce((acc, s) => acc + (s.distanceKm as number), 0)
+            : undefined,
+          totalSteps: stepEntries.length ? stepEntries.reduce((acc, s) => acc + (s.steps as number), 0) : undefined
+        }
+      };
+    });
+    NuqtaStorageEngine.saveHabits(updated);
+    set({ habits: updated });
+  },
+
+  updateWalkingTargets: (habitId, targets) => {
+    const updated = get().habits.map((h) => {
+      if (h.id !== habitId || !h.walkingData) return h;
+      return { ...h, walkingData: { ...h.walkingData, ...targets } };
     });
     NuqtaStorageEngine.saveHabits(updated);
     set({ habits: updated });

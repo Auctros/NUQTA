@@ -70,7 +70,8 @@ export type IconName =
   | 'sunrise'
   | 'minus'
   | 'snowflake'
-  | 'save';
+  | 'save'
+  | 'footprints';
 
 const iconPaths: Record<IconName, React.ReactNode> = {
   grid: (
@@ -418,6 +419,12 @@ const iconPaths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M5 4h11l3 3v13H5Z" />
       <path d="M8 4v5h7V4M8 20v-6h8v6" />
+    </>
+  ),
+  footprints: (
+    <>
+      <path d="M7.5 3.5c1.6 0 2.5 1.4 2.5 3.2 0 1.3-.4 2.1-.4 3.2 0 .9.5 1.3.5 2.2 0 1.1-1.1 1.8-2.6 1.8S4.9 13.2 4.9 12.1c0-.9.5-1.3.5-2.2 0-1.1-.4-1.9-.4-3.2C5 4.9 5.9 3.5 7.5 3.5Z" />
+      <path d="M16.5 9.6c1.6 0 2.5 1.4 2.5 3.2 0 1.3-.4 2.1-.4 3.2 0 .9.5 1.3.5 2.2 0 1.1-1.1 1.8-2.6 1.8s-2.6-.7-2.6-1.8c0-.9.5-1.3.5-2.2 0-1.1-.4-1.9-.4-3.2 0-1.8.9-3.2 2.5-3.2Z" />
     </>
   )
 };

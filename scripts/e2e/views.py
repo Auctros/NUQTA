@@ -3,7 +3,7 @@
 Backs the release-readiness claims with a committed, runnable check instead of a one-off
 manual pass. It drives the real sidebar navigation and asserts:
 
-  1. All 15 navigable destinations render real content with zero console/page errors.
+  1. All 16 navigable destinations render real content with zero console/page errors.
   2. No horizontal overflow at 1440 / 1280 / 768 / 390 px.
   3. At 390 px the off-canvas sidebar opens, a destination navigates AND closes it.
   4. Opening a modal from the bottom of a long page does not move the page, the overlay
@@ -22,10 +22,11 @@ import sys
 
 URL = os.environ.get("OFFLINE_URL", "http://localhost:4173/")
 
-# English aria-labels of the 15 destinations reachable from the sidebar.
+# English aria-labels of the 16 destinations reachable from the sidebar.
 VIEWS = [
     "Overview", "Tasks", "Habits", "Goals", "Focus", "Calendar",
     "Quran Studio", "Reading Vault", "Home Workout", "Art Studio",
+    "Walking Studio",
     "Archive & History", "Money", "Health", "Journal", "Insights",
 ]
 WIDTHS = [1440, 1280, 768, 390]

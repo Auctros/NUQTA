@@ -181,6 +181,7 @@ export const ArchiveHistoryView: React.FC = () => {
       reading: { ar: 'القراءة', en: 'Reading', icon: 'book-open' },
       workout: { ar: 'التمارين', en: 'Home Workout', icon: 'activity' },
       drawing: { ar: 'الرسم والإبداع', en: 'Art Studio', icon: 'palette' },
+      walking: { ar: 'المشي', en: 'Walking', icon: 'footprints' },
       goals: { ar: 'الأهداف', en: 'Goals', icon: 'target' },
       focus: { ar: 'التركيز', en: 'Focus', icon: 'timer' },
       health: { ar: 'الصحة', en: 'Health', icon: 'activity' },
@@ -200,6 +201,7 @@ export const ArchiveHistoryView: React.FC = () => {
       reading: 'book',
       workout: 'dumbbell',
       drawing: 'brush',
+      walking: 'footprints',
       goals: 'target',
       focus: 'timer',
       health: 'activity',
@@ -414,7 +416,7 @@ export const ArchiveHistoryView: React.FC = () => {
         {/* Domain Filter Pills */}
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <span className="text-muted pe-1 font-mono text-[11px]">{isAr ? 'المجال:' : 'Domain:'}</span>
-          {(['all', 'tasks', 'habits', 'quran', 'reading', 'workout', 'drawing', 'goals', 'focus', 'journal'] as const).map(
+          {(['all', 'tasks', 'habits', 'quran', 'reading', 'workout', 'drawing', 'walking', 'goals', 'focus', 'journal'] as const).map(
             (dom) => (
               <button
                 key={dom}

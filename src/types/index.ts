@@ -69,7 +69,7 @@ export interface Task {
   occurrenceIndex?: number;
 }
 
-export type SpecializedHabitType = 'standard' | 'reading' | 'workout' | 'drawing' | 'quran';
+export type SpecializedHabitType = 'standard' | 'reading' | 'workout' | 'drawing' | 'quran' | 'walking';
 
 // ==========================================
 // 0. Quran Memorization & Revision Studio Model
@@ -174,6 +174,44 @@ export interface DrawingHabitData {
   totalDrawingMinutes: number;
   totalSketches: number;
   favoriteMedium: string;
+}
+
+// ==========================================
+// 1b. Specialized Walking Studio Model
+// ==========================================
+/**
+ * One completed walk. `durationSeconds` is always measured by the session timer, so it is
+ * the only figure the studio can state without asking. Distance and steps are optional
+ * MANUAL input — NUQTA has no GPS, pedometer or health-sensor access, so an absent value
+ * stays absent (rendered as "—") rather than being estimated from the duration.
+ */
+export interface WalkingSessionLog {
+  id: string;
+  date: string; // YYYY-MM-DD, local
+  durationSeconds: number;
+  startedAt: string; // ISO
+  endedAt: string; // ISO
+  /** Manual entry only. Never derived from duration. */
+  distanceKm?: number;
+  /** Manual entry only. Never derived from duration. */
+  steps?: number;
+  /** Seconds spent paused, measured by the session timer. */
+  pausedSeconds?: number;
+  notes?: string;
+  linkedGoalId?: string;
+}
+
+export interface WalkingHabitData {
+  sessions: WalkingSessionLog[];
+  /** Weekly target in minutes; drives the progress ring. */
+  weeklyTargetMinutes?: number;
+  totalWalkMinutes: number;
+  totalWalkSeconds?: number;
+  totalWalks: number;
+  /** Sum of MANUAL distance entries only. Absent when nothing was ever entered. */
+  totalDistanceKm?: number;
+  /** Sum of MANUAL step entries only. Absent when nothing was ever entered. */
+  totalSteps?: number;
 }
 
 // ==========================================
@@ -471,6 +509,7 @@ export interface Habit {
   workoutData?: WorkoutHabitData;
   drawingData?: DrawingHabitData;
   quranData?: QuranHabitData;
+  walkingData?: WalkingHabitData;
 }
 
 export type KeyResultDataSource =
@@ -633,6 +672,7 @@ export type UniversalHistoryDomain =
   | 'reading'
   | 'workout'
   | 'drawing'
+  | 'walking'
   | 'goals'
   | 'focus'
   | 'health'
@@ -660,7 +700,7 @@ export interface UniversalHistoryItem {
   title: string;
   description?: string;
   entityId: string;
-  entityType: 'task' | 'habit' | 'book' | 'workout_routine' | 'art_project' | 'goal' | 'focus_session' | 'journal' | 'finance' | 'quran_session';
+  entityType: 'task' | 'habit' | 'book' | 'workout_routine' | 'art_project' | 'goal' | 'focus_session' | 'journal' | 'finance' | 'quran_session' | 'walk_session';
   badge?: string;
   metricsSummary?: string;
   iconName?: string;

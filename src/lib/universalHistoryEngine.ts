@@ -394,6 +394,41 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
         }
       });
     }
+    // E. Walking Sessions
+    if (h.walkingData) {
+      (h.walkingData.sessions || []).forEach((session) => {
+        const minutes = Math.max(1, Math.round((session.durationSeconds || 0) / 60));
+        const manual = [
+          typeof session.distanceKm === 'number' && session.distanceKm > 0
+            ? `${session.distanceKm} كم`
+            : null,
+          typeof session.steps === 'number' && session.steps > 0
+            ? `${session.steps} خطوة`
+            : null
+        ].filter(Boolean);
+        events.push({
+          id: `evt-walking-${session.id}`,
+          timestamp: session.endedAt || `${session.date}T18:00:00.000Z`,
+          date: session.date,
+          domain: 'walking',
+          eventType: 'session',
+          title: 'جلسة مشي',
+          description: session.notes,
+          entityId: session.id,
+          entityType: 'walk_session',
+          badge: 'مشي',
+          metricsSummary: manual.length
+            ? `${minutes} دقيقة · ${manual.join(' · ')}`
+            : `${minutes} دقيقة`,
+          iconName: 'footprints',
+          iconColor: '#22c55e',
+          linkedGoalId: session.linkedGoalId || h.linkedGoalId,
+          linkedGoalTitle:
+            session.linkedGoalId || h.linkedGoalId ? goalMap.get(session.linkedGoalId || h.linkedGoalId!) : undefined,
+          rawEntity: session
+        });
+      });
+    }
   });
 
   // 3. GOALS EVENTS & MILESTONES

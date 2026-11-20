@@ -104,7 +104,7 @@ const HABIT_TIME_OF_DAY = ['morning', 'afternoon', 'evening', 'anytime'];
 const HABIT_FREQUENCY = ['daily', 'weekdays', 'custom'];
 const HABIT_CATEGORY = ['health', 'mind', 'productivity', 'learning', 'relationships'];
 const HABIT_STATUS = ['active', 'paused', 'archived'];
-const SPECIALIZED_HABIT_TYPE = ['standard', 'reading', 'workout', 'drawing', 'quran'];
+const SPECIALIZED_HABIT_TYPE = ['standard', 'reading', 'workout', 'drawing', 'quran', 'walking'];
 const GOAL_CATEGORY = ['career', 'health', 'finance', 'personal', 'intellect'];
 const GOAL_PRIORITY = ['urgent', 'high', 'medium', 'low'];
 const GOAL_TIMEFRAME = ['quarterly', 'annual', 'life'];
@@ -654,6 +654,35 @@ function isQuranData(v: unknown): boolean {
   );
 }
 
+function isWalkingSession(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    isString(v.date) &&
+    isNumber(v.durationSeconds) &&
+    isString(v.startedAt) &&
+    isString(v.endedAt) &&
+    optional(isNumber)(v.distanceKm) &&
+    optional(isNumber)(v.steps) &&
+    optional(isNumber)(v.pausedSeconds) &&
+    optional(isString)(v.notes) &&
+    optional(isString)(v.linkedGoalId)
+  );
+}
+
+function isWalkingData(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    optional((x) => Array.isArray(x) && x.every(isWalkingSession))(v.sessions) &&
+    optional(isNumber)(v.weeklyTargetMinutes) &&
+    optional(isNumber)(v.totalWalkMinutes) &&
+    optional(isNumber)(v.totalWalkSeconds) &&
+    optional(isNumber)(v.totalWalks) &&
+    optional(isNumber)(v.totalDistanceKm) &&
+    optional(isNumber)(v.totalSteps)
+  );
+}
+
 function isHabit(v: unknown): boolean {
   if (!isPlainObject(v)) return false;
   if (!isNonEmptyString(v.id)) return false;
@@ -682,6 +711,7 @@ function isHabit(v: unknown): boolean {
   if (!optional(isReadingData)(v.readingData)) return false;
   if (!optional(isWorkoutData)(v.workoutData)) return false;
   if (!optional(isDrawingData)(v.drawingData)) return false;
+  if (!optional(isWalkingData)(v.walkingData)) return false;
   if (!optional(isQuranData)(v.quranData)) return false;
   return true;
 }
@@ -905,6 +935,11 @@ function findDanglingReference(data: BackupData, present: ReadonlySet<string>): 
         }
         for (const piece of habit.drawingData?.pieces ?? []) {
           if (piece.linkedGoalId !== undefined && !isKnownGoal(piece.linkedGoalId, goalIds)) return 'linkedGoalId';
+        }
+      }
+      if (habit.specializedType === 'walking') {
+        for (const session of habit.walkingData?.sessions ?? []) {
+          if (session.linkedGoalId !== undefined && !isKnownGoal(session.linkedGoalId, goalIds)) return 'linkedGoalId';
         }
       }
       if (habit.specializedType === 'quran') {
