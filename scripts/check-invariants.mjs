@@ -75,7 +75,22 @@ const grep = (re, { except = [] } = {}) =>
 // 8. Every runtime dependency is actually used.
 {
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-  const haystack = srcFiles.map((f) => f.text).join('\n') + readFileSync(join(root, 'index.html'), 'utf8') + readFileSync(join(root, 'vite.config.ts'), 'utf8');
+  const serverFiles = [
+    join(root, 'scripts/serve-dist.mjs'),
+    join(root, 'scripts/sync-server.mjs'),
+    ...(existsSync(join(root, 'scripts/sync'))
+      ? readdirSync(join(root, 'scripts/sync'))
+          .filter((name) => name.endsWith('.mjs'))
+          .map((name) => join(root, 'scripts/sync', name))
+      : []),
+  ]
+    .filter((p) => existsSync(p))
+    .map((p) => readFileSync(p, 'utf8'));
+  const haystack =
+    srcFiles.map((f) => f.text).join('\n') +
+    readFileSync(join(root, 'index.html'), 'utf8') +
+    readFileSync(join(root, 'vite.config.ts'), 'utf8') +
+    serverFiles.join('\n');
   const unused = Object.keys(pkg.dependencies || {}).filter((d) => !new RegExp(`['"]${d.replace(/[/@]/g, (c) => '\\' + c)}(['"/])`).test(haystack));
   if (unused.length) fail('Unused runtime dependencies', unused.join(', '));
 }

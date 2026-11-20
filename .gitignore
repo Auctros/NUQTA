@@ -14,3 +14,10 @@ coverage/
 
 # Vitest JSON reporter scratch output
 .vitest/
+
+# Sync server SQLite database and WAL sidecar files
+/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
