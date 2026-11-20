@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="460" viewBox="0 0 1440 460" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1440" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1112"/>
+      <stop offset=".55" stop-color="#111D1B"/>
+      <stop offset="1" stop-color="#172521"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#A7F3D0"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#263A34" stop-opacity=".94"/>
+      <stop offset="1" stop-color="#15221F" stop-opacity=".74"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="matrix(0 300 -360 0 1110 120)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#34D399" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#B8D8CA" fill-opacity=".13"/>
+    </pattern>
+    <filter id="shadow" x="850" y="35" width="520" height="390" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+  </defs>
+  <rect width="1440" height="460" rx="28" fill="url(#bg)"/>
+  <rect width="1440" height="460" rx="28" fill="url(#dots)"/>
+  <rect width="1440" height="460" rx="28" fill="url(#glow)"/>
+  <path d="M0 365C240 310 390 460 650 398C900 338 1050 270 1440 340V460H0V365Z" fill="#0A1210" fill-opacity=".38"/>
+  <path d="M0 365C240 310 390 460 650 398C900 338 1050 270 1440 340" stroke="#8BE7BD" stroke-opacity=".13" stroke-width="1.5"/>
+  <g opacity=".35" stroke="#8BE7BD">
+    <circle cx="1112" cy="220" r="154"/>
+    <circle cx="1112" cy="220" r="116"/>
+    <circle cx="1112" cy="220" r="78"/>
+  </g>
+  <circle cx="1112" cy="220" r="174" fill="#34D399" fill-opacity=".09" filter="url(#shadow)"/>
+  <g transform="translate(940 72)">
+    <rect x="0" y="0" width="340" height="270" rx="22" fill="url(#glass)" stroke="#A7F3D0" stroke-opacity=".22"/>
+    <rect x="22" y="22" width="296" height="42" rx="12" fill="#0D1714" fill-opacity=".7"/>
+    <circle cx="43" cy="43" r="5" fill="#34D399"/>
+    <rect x="58" y="39" width="78" height="8" rx="4" fill="#C9EBDD" fill-opacity=".78"/>
+    <rect x="22" y="84" width="142" height="78" rx="14" fill="#172722" stroke="#B8EBD2" stroke-opacity=".12"/>
+    <rect x="178" y="84" width="140" height="78" rx="14" fill="#172722" stroke="#B8EBD2" stroke-opacity=".12"/>
+    <rect x="38" y="101" width="42" height="5" rx="2.5" fill="#8CA79A" fill-opacity=".65"/>
+    <rect x="38" y="118" width="74" height="10" rx="5" fill="#D9F5E8"/>
+    <path d="M38 146L54 137L68 141L84 126L99 131L119 112" stroke="#34D399" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="194" y="101" width="48" height="5" rx="2.5" fill="#8CA79A" fill-opacity=".65"/>
+    <rect x="194" y="118" width="83" height="10" rx="5" fill="#D9F5E8"/>
+    <circle cx="210" cy="146" r="7" stroke="#34D399" stroke-width="3"/>
+    <path d="M224 146H285" stroke="#7D9B8D" stroke-width="5" stroke-linecap="round"/>
+    <rect x="22" y="180" width="296" height="66" rx="14" fill="#172722" stroke="#B8EBD2" stroke-opacity=".12"/>
+    <rect x="39" y="198" width="75" height="6" rx="3" fill="#8CA79A" fill-opacity=".65"/>
+    <rect x="39" y="215" width="150" height="7" rx="3.5" fill="#D9F5E8" fill-opacity=".86"/>
+    <rect x="220" y="205" width="78" height="8" rx="4" fill="#0B1712"/>
+    <rect x="220" y="205" width="57" height="8" rx="4" fill="url(#mint)"/>
+  </g>
+  <g transform="translate(80 78)">
+    <rect width="44" height="44" rx="14" fill="#34D399" fill-opacity=".14" stroke="#A7F3D0" stroke-opacity=".42"/>
+    <path d="M13 29V15L22 24L31 15V29" stroke="#A7F3D0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="62" y="17" fill="#A7F3D0" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="3.2">PERSONAL LIFE OPERATING SYSTEM</text>
+    <text x="0" y="112" fill="#F1F7F3" font-family="Inter,Arial,sans-serif" font-size="66" font-weight="750" letter-spacing="-2.8">NUQTA <tspan fill="#A7F3D0">·</tspan> نقطة</text>
+    <text x="2" y="160" fill="#A7F3D0" font-family="Inter,Arial,sans-serif" font-size="25" font-weight="600">One life. Live it wisely.</text>
+    <text x="2" y="212" fill="#C3D5CB" font-family="Inter,Arial,sans-serif" font-size="18">Your plans, habits, goals, and wellbeing —</text>
+    <text x="2" y="240" fill="#C3D5CB" font-family="Inter,Arial,sans-serif" font-size="18">connected in one calm, private workspace.</text>
+    <g transform="translate(0 292)">
+      <rect width="116" height="34" rx="17" fill="#34D399" fill-opacity=".13" stroke="#7FE4B5" stroke-opacity=".28"/>
+      <circle cx="17" cy="17" r="4" fill="#34D399"/>
+      <text x="30" y="21" fill="#C9F5E0" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="600">LOCAL-FIRST</text>
+      <rect x="128" width="94" height="34" rx="17" fill="#34D399" fill-opacity=".08" stroke="#7FE4B5" stroke-opacity=".2"/>
+      <text x="145" y="21" fill="#C9F5E0" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="600">BILINGUAL</text>
+      <rect x="234" width="90" height="34" rx="17" fill="#34D399" fill-opacity=".08" stroke="#7FE4B5" stroke-opacity=".2"/>
+      <text x="251" y="21" fill="#C9F5E0" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="600">OFFLINE</text>
+    </g>
+  </g>
+</svg>

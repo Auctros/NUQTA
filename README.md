@@ -1,228 +1,368 @@
 <div align="center">
 
-<br />
-
-# NUQTA · نقطة
-
-### One life. Live it wisely.
-
-**A local-first life operating system** — tasks, habits, OKR goals, deep work, health, finances, and reflection, unified in one calm, private workspace.
+<img src="docs/assets/nuqta-readme-hero.svg" alt="NUQTA — One life. Live it wisely." width="100%" />
 
 <br />
 
-![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-typed-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white)
-![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
-![Local-first](https://img.shields.io/badge/Local--first-offline_capable-2ea44f?style=flat-square)
-![Tests](https://img.shields.io/badge/quality_gate-npm_run_verify-0a7ea4?style=flat-square)
-![Bilingual](https://img.shields.io/badge/EN_%7C_AR-RTL_ready-8957e5?style=flat-square)
+**A local-first life operating system**
 
-[Overview](#overview) · [Features](#features) · [Quick Start](#quick-start) · [Architecture](#architecture) · [Privacy](#privacy--data-ownership) · [Shortcuts](#keyboard-shortcuts) · [العربية](#بالعربي)
+Bring your plans, habits, goals, focus, wellbeing, and personal growth into one thoughtful workspace.
 
 <br />
+
+[![CI](https://img.shields.io/github/actions/workflow/status/Auctros/NUQTA/verify.yml?branch=master&style=for-the-badge&label=quality%20gate)](https://github.com/Auctros/NUQTA/actions/workflows/verify.yml)
+[![React](https://img.shields.io/badge/React-19-149ECA?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
+[![PWA](https://img.shields.io/badge/Installable-PWA-5A45FF?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/learn/pwa/)
+
+<br />
+
+[Explore the code](https://github.com/Auctros/NUQTA) · [Report an issue](https://github.com/Auctros/NUQTA/issues) · [Sync operations guide](docs/sync-operations.md)
+
+<br />
+
+*One life. Live it wisely.*
 
 </div>
 
 ---
 
-## Overview
+## The idea
 
-Most productivity tools split your life across a dozen apps and ask you to trust a server with the most personal data you own. **NUQTA** takes the opposite approach: one workspace for the whole person, and everything stays on your device.
+Most productivity apps help you manage tasks. NUQTA is built around a bigger question:
 
-It connects what you *do* (tasks, habits, focus sessions) to what you *want* (goals and key results) and to how you *feel* (sleep, energy, mood), then turns that into insight instead of just another checklist.
+**How do the things you do every day connect to the life you're trying to build?**
 
-| Principle | What it means |
-|---|---|
-| **Local-first** | No account, no backend, no API key. Your data lives in your browser. |
-| **Holistic** | Work, health, money, faith, learning, and creativity in a single model. |
-| **Calm by design** | Built-in Rescue Mode and weekly ritual to reduce overwhelm rather than add pressure. |
-| **Yours to keep** | One-click backup and restore. No lock-in. |
+A task is an action. A habit is a pattern. A goal is a direction. Your energy, health, finances, learning, faith, and creative work are all parts of the same life — yet most tools scatter them across disconnected products.
 
----
+NUQTA brings those pieces together. It connects execution to outcomes, gives you a clearer picture of your time and energy, and keeps your personal data under your control.
 
-## Features
+### What guides the product
 
-### Plan & Execute
-- **Smart tasks** — priorities, subtasks, scheduling, a focused *Top Three* for the day, and smart batch rescheduling.
-- **Natural-language capture** — type a task the way you'd say it; NUQTA parses it into a structured task.
-- **Calendar view** — see scheduled work and commitments across days.
-- **Deep Work focus mode** — timed sessions measured against a daily deep-work target.
-
-### Build Habits
-- **Atomic habits** with streak tracking and **streak freezes** for the days life gets in the way.
-- **Dedicated habit apps** with their own tracking and history:
-  - **Quran** — progress across surahs and ayah ranges.
-  - **Reading** — books, sessions, pages, and quotes with daily, weekly, and annual targets.
-  - **Workout** — sessions and reps.
-  - **Drawing** — a creative practice space.
-
-### Steer with Goals
-- **OKR goals** with key results, milestones, and target dates.
-- **Live-linked key results** — progress can be driven automatically by tasks completed, habit consistency, pages read, books finished, reading hours, workout sessions, and more, or tracked manually.
-
-### Understand Yourself
-- **Health** — sleep, hydration, workouts, mood, weight, and a computed daily **energy score**.
-- **Finance** — expenses and savings goals.
-- **Journal** — private daily reflection.
-- **Insights** — life-intelligence charts that connect behaviour, energy, and outcomes.
-- **What-If Simulator** — explore how changing your habits could change your results.
-- **Archive & History** — a full audit trail of what changed and when.
-
-### Stay Balanced
-- **Sunday Ritual** — a guided weekly review to close the week and set the next one.
-- **Rescue Mode** — when everything piles up, reset the day around a single anchor task and defer the rest, without guilt.
-- **Reminders** — scheduled notifications for tasks and habits.
-
-### Built for Everyone
-- **English and Arabic**, with full **RTL** support.
-- **Light and dark** themes.
-- **Installable PWA** — after the first visit the app shell is cached and works offline.
-- **Optional sample data** — a first run is genuinely empty; sample data loads only when you ask for it in Settings.
-- **Command palette** and **global search** for keyboard-first navigation.
+| Principle | In practice |
+| --- | --- |
+| **Local-first** | The app works on your device without an account or a required backend. |
+| **Whole-life thinking** | Planning, habits, goals, health, money, learning, faith, and creativity belong in one system. |
+| **Meaningful progress** | Goals can reflect real activity instead of relying only on manually edited percentages. |
+| **Calm, intentional UX** | The product should help you regain direction, not manufacture urgency or engagement. |
+| **Data ownership** | Your data is portable, recoverable, and stored locally by default. Optional private sync is self-hosted. |
 
 ---
 
-## Quick Start
+## What you can do with NUQTA
 
-**Requirements:** Node.js 20.19 or later.
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### ◈ Plan your day
+- Smart tasks, priorities, subtasks, and scheduling
+- A focused **Top Three** for daily priorities
+- Natural-language task capture
+- Calendar and agenda views
+- Command palette and global search
+
+</td>
+<td width="50%" valign="top">
+
+### ◈ Build consistent habits
+- Flexible schedules and completion history
+- Streak tracking and streak freezes
+- Habit-specific progress views
+- Reminders and due-day awareness
+- Dedicated spaces for meaningful routines
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### ◈ Make goals measurable
+- OKR-style goals and key results
+- Milestones and target dates
+- Progress linked to tasks and habits
+- Activity-driven progress for reading and workouts
+- Manual progress when a result needs it
+
+</td>
+<td width="50%" valign="top">
+
+### ◈ Understand your life
+- Health, sleep, hydration, mood, and weight logs
+- Daily energy scoring
+- Personal finance and savings goals
+- Journaling and weekly reflection
+- Insights connecting behaviour, energy, and outcomes
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### ◈ Make room for deep work
+- Dedicated focus sessions
+- Daily deep-work targets
+- Session history
+- A calmer place to work on one thing at a time
+
+</td>
+<td width="50%" valign="top">
+
+### ◈ Recover your direction
+- **Sunday Ritual** for a guided weekly review
+- **Rescue Mode** to rebuild an overloaded day around one anchor task
+- Universal archive and change history
+- What-If Simulator for exploring possible changes
+
+</td>
+</tr>
+</table>
+
+### Dedicated practice studios
+
+Some activities deserve more than a checkbox. NUQTA includes specialized spaces for:
+
+- **Qur'an** — surah-based progress and ayah ranges.
+- **Reading** — books, sessions, pages, quotes, and reading targets.
+- **Workout** — exercise library, routines, sessions, and reps.
+- **Drawing** — a dedicated space for a consistent creative practice.
+
+Progress from supported activities can feed into linked goals, helping the system connect practice with outcomes.
+
+---
+
+## Your data, your devices
+
+### Local-first by default
+
+NUQTA does not require an account, a hosted backend, or an API key to work.
+
+- **localStorage** is the authoritative local data source and supports synchronous startup.
+- **IndexedDB** mirrors the saved data and provides a recovery path if the primary browser storage is lost.
+- The app shell is an installable **Progressive Web App**. After its first successful load, the shell is cached for offline use.
+- Backups use a versioned JSON format. Restore validates the backup before writing, creates a safety copy, and uses an all-or-nothing recovery flow.
+- A first run starts empty. Sample data is optional and must be requested from Settings.
+
+### Optional private device sync
+
+If you want the same NUQTA data on more than one device, an optional self-hosted sync layer is available.
+
+- A small Node.js server serves the built app and sync endpoints.
+- Changes are exchanged over WebSocket, with a durable outbox and server acknowledgements.
+- SQLite stores the server-side change log.
+- Tailscale Serve provides HTTPS and the authenticated Tailscale identity.
+- Without `VITE_NUQTA_SYNC_URL`, sync stays inactive and the app remains local-first.
+
+This is designed for a personal host and your own Tailnet — **not a required cloud service**.
+
+> **Security boundary:** the sync server binds to `127.0.0.1` and trusts the identity header supplied by Tailscale Serve. Never expose its port directly to a LAN or the public internet, and never put it behind an untrusted reverse proxy. Read the [Sync Operations Guide](docs/sync-operations.md) before enabling it.
+
+**Current sync limitation:** simultaneous edits to the same record are not automatically semantically merged. Treat sync as a way to move changes between your devices, not as a collaborative multi-user editing system.
+
+---
+
+## Quick start
+
+### Requirements
+
+- **Node.js 22** (the version used by the repository's CI workflow)
+- npm
+
+### Run locally
 
 ```bash
-# 1. Clone
 git clone https://github.com/Auctros/NUQTA.git
 cd NUQTA
 
-# 2. Install
-npm install
-
-# 3. Run
+npm ci
 npm run dev
 ```
 
-Open **http://localhost:3000**. No environment variables or API keys are required.
+Open **http://localhost:3000**.
 
-### Scripts
+No account, API key, or environment file is needed for local-only use.
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start the development server on port 3000 |
-| `npm run build` | Create a production build in `dist/` |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Type-check the project with TypeScript |
-| `npm test` | Run the unit and integration tests (in a UTC+2 time zone, on purpose) |
-| `npm run verify` | **Full quality gate**: type-check, tests, production build, project invariants |
-| `npm run clean` | Remove build output |
+### Available commands
 
----
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Build the production app into `dist/` |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Run the TypeScript check |
+| `npm test` | Run unit and integration tests |
+| `npm run verify` | Run type-check, tests, build, and project invariants |
+| `npm run test:e2e` | Run browser-level acceptance checks |
+| `npm run verify:full` | Run the full verification gate, including browser checks |
+| `npm run clean` | Remove generated build output |
 
-## Architecture
-
-```
-NUQTA/
-├── src/
-│   ├── App.tsx                  # Shell, navigation, global hotkeys
-│   ├── store/nuqtaStore.ts      # Zustand store: state and domain actions
-│   ├── lib/
-│   │   ├── storage.ts           # Persistence engine (source of truth + mirror + recovery)
-│   │   ├── indexedDB.ts         # IndexedDB mirror
-│   │   ├── backupSchema.ts      # Versioned backup format and strict validation
-│   │   ├── backupActions.ts     # Download / confirm / safe-restore flow
-│   │   ├── dateKey.ts           # Local calendar-day helpers (never UTC)
-│   │   ├── habitSchedule.ts     # Which days a habit is actually due
-│   │   ├── reminderTiming.ts    # Catch-up window for reminders
-│   │   ├── healthDefaults.ts    # "Nothing logged" health record
-│   │   ├── demoData.ts          # Optional sample data (opt-in only)
-│   │   ├── nlpParser.ts · energyAlgorithm.ts · goalProgressEngine.ts
-│   │   ├── lifeIntelligenceEngine.ts · universalHistoryEngine.ts
-│   │   └── crypto.ts            # AES-GCM / PBKDF2 primitives (not yet applied to storage)
-│   ├── components/              # Views, modals, charts, shared UI kit
-│   └── types/                   # Domain models
-├── tests/                       # Vitest suites
-├── scripts/check-invariants.mjs # Project-wide acceptance rules
-└── public/                      # PWA manifest, service worker, icons
-```
-
-**Stack:** React 19 · TypeScript · Vite · Tailwind CSS 4 · Zustand · Vitest.
-
-**Persistence model.**
-- `localStorage` is the single **source of truth**, read synchronously for the first render. Reads never write and never invent data.
-- `IndexedDB` is an exact **mirror**: every save replaces the mirror's store, so deletions propagate. If `localStorage` is lost but the mirror survives, NUQTA restores from it at startup. A deliberate wipe clears both, so it is never undone.
-- Unreadable data is **quarantined** (`*__corrupt_<time>`) instead of being overwritten, and a banner tells you when a save fails (for example, storage is full).
-
-**Backups.** Files are versioned (`{ app, version, data }`) and validated completely before anything is written. Restore asks for confirmation, downloads a safety copy of your current data first, and writes all-or-nothing with rollback. Older flat backups are still accepted.
-
-**Calendar days vs instants.** Calendar days (`2026-11-11`) are always the user's **local** day; timestamps are UTC ISO strings. This keeps habits, reminders, and the calendar correct around local midnight in any time zone.
-
-**Goals.** A task or habit belongs to **at most one goal**, and its own `linkedGoalId` is the single source of truth. Habit consistency counts only the days a habit was actually due (daily, weekdays, or custom days), and regular habit completions count as goal activity.
-
----
-
-## Privacy & Data Ownership
-
-- **No server, no accounts, no analytics.** NUQTA has no backend and calls no external APIs.
-- **No third-party requests.** Fonts are self-hosted, so loading the app does not contact Google or any CDN.
-- **Full portability.** Export a versioned JSON backup from **Settings** and restore it at any time.
-- **Honest about encryption.** Data is stored **unencrypted** in your browser profile, protected by your device and browser account. Client-side AES-GCM-256 / PBKDF2 primitives exist in `src/lib/crypto.ts` but are not applied yet, so NUQTA does not claim encrypted storage.
-- **Complete wipe.** "Delete all data" clears NUQTA's keys in both `localStorage` and `IndexedDB`, and leaves other sites' data alone.
-
-> Your browser profile is your database. Export a backup regularly, especially before clearing site data or switching devices.
-
----
-
-## Quality Gate
-
-Every change must pass one command:
+Before submitting a change, run:
 
 ```bash
 npm run verify
 ```
 
-It runs, in order: **type-check → tests → production build → project invariants.** The invariants (`scripts/check-invariants.mjs`) fail the build if the code reintroduces UTC date keys, `localStorage.clear()`, automatic demo data, invented personal defaults, weak ids, third-party network resources, encryption claims without encryption, unused dependencies, multiple lockfiles, or a build without the offline shell. The tests run in the `Africa/Cairo` time zone so local-midnight bugs cannot hide.
+For the full browser-level gate:
 
-Optional real-browser checks (Playwright for Python) live in `scripts/e2e/`: they verify on the production build that no third-party request is made, the offline shell works, and backup restore / full wipe behave correctly.
+```bash
+npm run verify:full
+```
 
 ---
 
-## Keyboard Shortcuts
+## Enabling private sync
+
+Sync is optional. Keep it disabled if you only need one device.
+
+For a self-hosted setup:
+
+1. Configure Tailscale on the host and the devices that should sync.
+2. Copy `.env.example` to `.env`.
+3. Set `VITE_NUQTA_SYNC_URL` to the same HTTPS origin that will serve the app.
+4. Set `NUQTA_SYNC_ALLOWED_USERS` to the exact Tailscale login identities allowed to sync.
+5. Set `NUQTA_SYNC_ALLOWED_ORIGINS` to the matching HTTPS origin.
+6. Build the app, then start the loopback-only server.
+7. Expose that local server through **Tailscale Serve**, not through a public tunnel or port forwarding.
+
+Example host commands:
+
+```bash
+npm ci
+npm run build
+node --env-file=.env scripts/serve-dist.mjs
+```
+
+In a second terminal:
+
+```bash
+tailscale serve --bg 3000
+tailscale serve status
+```
+
+The `VITE_*` value is compiled into the frontend at build time. If you change it, rebuild the app.
+
+The complete setup, health checks, failure modes, and recovery notes are documented in **[docs/sync-operations.md](docs/sync-operations.md)**. The message and cursor model is described in **[docs/sync-protocol.md](docs/sync-protocol.md)**.
+
+---
+
+## Under the hood
+
+### Technology
+
+| Layer | Technology |
+| --- | --- |
+| UI | React 19 |
+| Language | TypeScript |
+| Build tooling | Vite 8 |
+| Styling | Tailwind CSS 4 |
+| State | Zustand 5 |
+| Local persistence | localStorage + IndexedDB |
+| Sync transport | WebSocket + HTTP delta recovery |
+| Sync server | Node.js + SQLite |
+| Testing | Vitest, Testing Library, Playwright |
+
+### Project map
+
+```text
+NUQTA/
+├── .github/workflows/       # CI verification and demo deployment
+├── docs/
+│   ├── sync-operations.md   # Self-hosted sync setup and operations
+│   └── sync-protocol.md     # Implemented sync protocol
+├── public/                  # PWA manifest, service worker, icons, assets
+├── scripts/
+│   ├── sync/                # Sync server, auth, database, validation
+│   ├── serve-dist.mjs       # Production app + sync server entry point
+│   └── check-invariants.mjs # Architectural guardrails
+├── src/
+│   ├── components/          # Screens, studios, shared UI, charts
+│   ├── lib/                 # Domain engines, persistence, PWA, sync
+│   ├── store/               # Application state and actions
+│   └── types/               # Domain models
+└── tests/                   # Unit and integration coverage
+```
+
+### A few important implementation choices
+
+- **Local calendar dates stay local.** Calendar-day keys are not derived from UTC timestamps, avoiding off-by-one errors around midnight.
+- **Persistence is deliberate.** Reads do not invent data; unreadable records are quarantined rather than silently overwritten.
+- **Backups are validated before restore.** A malformed or incompatible backup should not partially replace the current dataset.
+- **Sync is acknowledgement-driven.** Outbox entries are retained until the server explicitly acknowledges them; reconnect recovery pulls missed changes.
+- **The local app remains useful without sync.** Sync configuration is opt-in, not a prerequisite for the core experience.
+
+---
+
+## Privacy & honest security notes
+
+NUQTA is designed to minimize unnecessary data exposure, but local-first does not automatically mean encrypted.
+
+- By default, personal data stays in the browser profile on the device.
+- The app does not require accounts, analytics, or third-party API keys.
+- Fonts are self-hosted with the app rather than fetched from a font CDN.
+- **Local browser data is not currently encrypted at rest.** AES-GCM/PBKDF2 primitives exist in the codebase, but they are not applied to the stored dataset.
+- Optional sync sends selected changes to the personal sync server you configure. Its access control depends on the Tailscale Serve deployment and the server allow-list.
+- Export a backup before clearing browser data, changing devices, or performing maintenance.
+
+The goal is to be explicit about what is protected, where data lives, and what still needs care.
+
+---
+
+## Keyboard shortcuts
 
 | Shortcut | Action |
-|---|---|
-| `Q` | Jump to quick capture and add a task |
-| `Ctrl / ⌘` + `K` | Open the command palette |
-| `Ctrl / ⌘` + `Shift` + `F` | Open global search |
+| --- | --- |
+| `Q` | Open Quick Capture |
+| `Ctrl` / `⌘` + `K` | Open the command palette |
+| `Ctrl` / `⌘` + `Shift` + `F` | Open global search |
 | `Esc` | Close the sidebar |
 
 ---
 
-## بالعربي
+## العربية
 
-**نقطة (NUQTA)** نظام تشغيل شخصي لحياتك، يعمل بالكامل على جهازك بدون حساب أو سيرفر أو مفتاح API.
+**نقطة (NUQTA)** نظام لإدارة الحياة، مش مجرد قائمة مهام. فكرته إنه يجمع التخطيط والتنفيذ والتطور الشخصي في مساحة واحدة، ويربط بين اللي بتعمله يوميًا والنتائج اللي بتحاول توصل لها.
 
-مهامك وعاداتك وأهدافك (OKR) وتركيزك وصحتك وماليتك ويومياتك في مساحة واحدة هادئة، مع واجهة عربية كاملة تدعم الاتجاه من اليمين لليسار.
+### تقدر تعمل إيه باستخدام NUQTA؟
 
-**أهم المميزات**
-- مهام ذكية مع إدخال بلغة طبيعية، وأهم ثلاث مهام لليوم.
-- عادات مع تجميد السلسلة (Streak Freeze)، وتطبيقات مخصصة للقرآن والقراءة والتمارين والرسم.
-- أهداف OKR تتحدث نتائجها الرئيسية تلقائياً من مهامك وعاداتك.
-- وضع التركيز العميق، ومتابعة الصحة والطاقة والمالية واليوميات.
-- **طقس الأحد** لمراجعة الأسبوع، و**وضع الإنقاذ** لإعادة ضبط اليوم عند الإرهاق.
-- نسخ احتياطي واستعادة بضغطة زر، وبياناتك ملكك بالكامل.
+- **المهام والتخطيط:** أولويات، مهام فرعية، جدولة، التقويم، وأهم ثلاث أولويات لليوم.
+- **العادات:** جداول مرنة، سجل إنجاز، وسلاسل استمرارية مع إمكانية تجميد السلسلة.
+- **الأهداف:** أهداف ونتائج رئيسية يرتبط تقدمها بالمهام والعادات وبعض الأنشطة المتخصصة.
+- **القرآن والقراءة والرياضة والرسم:** مساحات مستقلة لمتابعة الممارسة والتقدم.
+- **التركيز:** جلسات عمل عميق وأهداف يومية.
+- **الصحة والمال واليوميات:** متابعة النوم والطاقة والمزاج والمصروفات والادخار والتأمل اليومي.
+- **التحليل والمراجعة:** رؤى مترابطة، مراجعة أسبوعية، وضع الإنقاذ، وسجل شامل للتغييرات.
 
-**التشغيل السريع**
+### فلسفة البيانات
+
+- التطبيق يعمل محليًا دون حساب أو خدمة سحابية إلزامية.
+- البيانات الأساسية محفوظة في المتصفح، مع نسخة مطابقة في IndexedDB للاستعادة.
+- يمكن تثبيت التطبيق كـ PWA واستخدام واجهته دون اتصال بعد التحميل الأول.
+- النسخ الاحتياطي والاستعادة مصممان للحفاظ على سلامة البيانات.
+- المزامنة بين الأجهزة اختيارية، وتُستضاف على جهازك باستخدام Node.js وTailscale.
+- البيانات المحلية **غير مشفرة حاليًا أثناء التخزين**؛ لذلك احتفظ بنسخ احتياطية واحمِ حساب جهازك.
+
+### التشغيل
 
 ```bash
 git clone https://github.com/Auctros/NUQTA.git
 cd NUQTA
-npm install
+npm ci
 npm run dev
 ```
 
-ثم افتح `http://localhost:3000`.
+ثم افتح **http://localhost:3000**.
 
 ---
 
 <div align="center">
 
-**NUQTA** — one life, live it wisely.
+### NUQTA · نقطة
+
+**One life. Live it wisely.**
+
+*Build a life you don't need to escape from.*
+
+[GitHub Repository](https://github.com/Auctros/NUQTA)
 
 </div>
