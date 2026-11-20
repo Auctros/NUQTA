@@ -147,4 +147,64 @@ describe('Walking Studio — scene wiring', () => {
     const fill = container.querySelector<HTMLElement>('.walk-stage-progress span')!;
     expect(fill.style.width).toBe('50%');
   });
+
+  it('keeps every animated element free of a transform attribute', () => {
+    S().createHabit({
+      name: 'Daily Walk',
+      anchor: '',
+      category: 'health',
+      timeOfDay: 'afternoon',
+      specializedType: 'walking'
+    } as any);
+
+    const { container } = render(<WalkingView />);
+    const scene = container.querySelector('.walk-scene')!;
+
+    // A CSS `transform` silently overrides a `transform` attribute, so any animated
+    // element that also carries one loses its placement — this is what collapsed the
+    // flowers to the SVG origin.
+    const animated = [
+      '.walk-flower',
+      '.walk-tree',
+      '.walk-bird',
+      '.walk-head',
+      '.walk-thigh-bone',
+      '.walk-shin-bone',
+      '.walk-foot-bone',
+      '.walk-arm-swing',
+      '.walk-forearm-group'
+    ];
+    for (const sel of animated) {
+      const els = scene.querySelectorAll(sel);
+      expect(els.length, `${sel} should exist`).toBeGreaterThan(0);
+      els.forEach((el) => expect(el.getAttribute('transform')).toBeNull());
+    }
+  });
+
+  it('grounds the figure on the scene floor rather than floating above it', () => {
+    S().createHabit({
+      name: 'Daily Walk',
+      anchor: '',
+      category: 'health',
+      timeOfDay: 'afternoon',
+      specializedType: 'walking'
+    } as any);
+
+    const { container } = render(<WalkingView />);
+    const scene = container.querySelector('.walk-scene')!;
+
+    // The character group is anchored at the ground line, so its local origin must sit
+    // inside the viewBox. The old scene authored the feet at y=0 and left the figure
+    // 130 units above the frame.
+    const character = scene.querySelector('.walk-character')!;
+    const m = /translate\(([-\d.]+)\s+([-\d.]+)\)/.exec(character.getAttribute('transform') || '');
+    expect(m).not.toBeNull();
+    const [, , y] = m!;
+    expect(Number(y)).toBeGreaterThan(300);
+    expect(Number(y)).toBeLessThan(420);
+
+    // The shadow is drawn at the same origin, so the two cannot drift apart.
+    const shadow = scene.querySelector('.walk-shadow')!;
+    expect(shadow.getAttribute('cy')).toBe('0');
+  });
 });
