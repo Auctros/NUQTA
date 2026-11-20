@@ -19,9 +19,18 @@ export function validateOrigin(originHeader, allowedOrigins) {
   }
 }
 
+/**
+ * Read the Tailscale identity from a request.
+ *
+ * ONLY the official headers are honoured. `Tailscale Serve` strips any inbound copy of
+ * these before proxying, so a client cannot forge them through the proxy. Custom
+ * aliases such as `x-tailscale-user` are deliberately NOT accepted: Serve does not
+ * know about them, does not strip them, and trusting them would let any caller that
+ * can reach the port assert an arbitrary identity.
+ */
 export function extractTailscaleIdentity(headers = {}) {
-  const rawLogin = headers['tailscale-user-login'] ?? headers['x-tailscale-user'];
-  const rawName = headers['tailscale-user-name'] ?? headers['x-tailscale-profile'];
+  const rawLogin = headers['tailscale-user-login'];
+  const rawName = headers['tailscale-user-name'];
   const login = typeof rawLogin === 'string' && rawLogin.trim().length > 0 ? rawLogin.trim().toLowerCase() : null;
   const name = typeof rawName === 'string' && rawName.trim().length > 0 ? rawName.trim() : null;
   return { login, name };

@@ -163,22 +163,58 @@ const grep = (re, { except = [] } = {}) =>
     fail('ErrorBoundary component is missing', 'expected src/components/ErrorBoundary.tsx');
   }
 }
-// 14. No obvious network/telemetry primitives in the application source.
-//     This is a *textual* scan of non-comment lines in every .ts/.tsx file under src/.
-//     It flags six literal patterns: fetch(, XMLHttpRequest, navigator.sendBeacon,
-//     new WebSocket, new EventSource, navigator.geolocation.
-//     What it guarantees: none of those six primitives appear in the scanned source.
+// 14. Network/telemetry primitives are confined to ONE reviewed module.
+//     Nuqta is local-first: the only component allowed to touch the network is the
+//     sync client, and only to talk to the user's own sync endpoint.
+//
+//     This scan matches direct AND indirect spellings, because a scan that only looked
+//     for `fetch(` would pass `globalThis.fetch(...)` and `globalThis['WebSocket']`
+//     while the app still made requests. That false assurance is the bug this rule
+//     previously had: the sync client reached both primitives through `globalThis`,
+//     so the rule reported "clean" for code that opens sockets.
+//
+//     What it guarantees: outside `NETWORK_MODULE`, no fetch/WebSocket/XHR/beacon/
+//     EventSource/geolocation primitive appears in first-party `.ts`/`.tsx` source,
+//     whether written directly or reached through `globalThis`/`window`/`self`, and
+//     whether called as a method or indexed as a string.
 //     What it CANNOT guarantee: it does not scan index.html, public/, scripts/, tests/,
-//     CSS url() references, bundled/minified output, or third-party dependencies; and it
-//     cannot see network activity reached indirectly — dynamic import(), a URL assigned
-//     to an <img>/<a>/<script> src, navigator.serviceWorker.register, a same-origin
-//     relative path, or a request made from a dependency. It proves the absence of the
-//     listed primitives in first-party source, not the absence of all network access.
+//     CSS url() references, bundled output, or third-party dependencies; and it cannot
+//     see a URL handed to an <img>/<a>/<script> src or a request made inside a
+//     dependency. The allow-listed module is reviewed by hand instead.
 {
-  const hits = grep(/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon|new\s+WebSocket|new\s+EventSource|navigator\.geolocation/);
+  const NETWORK_MODULE = 'src/lib/sync/client.ts';
+
+  // `fetch(` / `.fetch(` / `globalThis.fetch` / `globalThis["fetch"]` all match, as do
+  // bare references passed around (e.g. `const f = globalThis.fetch`).
+  const patterns = [
+    /(?<![.\w$])fetch\s*\(/,
+    /\.fetch\s*\(/,
+    /(?<![.\w$])fetch\s*[,)]/,
+    /['"`]fetch['"`]/,
+    /XMLHttpRequest/,
+    /navigator\.sendBeacon/,
+    // Whole word, so `globalThis.WebSocket`, `(x as any).WebSocket` and
+    // `['WebSocket']` all match — a preceding `.` must not hide the primitive.
+    /\bWebSocket\b/,
+    /EventSource/,
+    /navigator\.geolocation/
+  ];
+
+  const hits = [];
+  for (const file of srcFiles) {
+    if (file.path === NETWORK_MODULE) continue;
+    const lines = file.text.split('\n');
+    lines.forEach((line, i) => {
+      if (isComment(line)) return;
+      if (patterns.some((re) => re.test(line))) {
+        hits.push(`${file.path}:${i + 1}: ${line.trim()}`);
+      }
+    });
+  }
+
   if (hits.length) {
     fail(
-      'Network/telemetry primitive found in scanned source (fetch/XHR/sendBeacon/WebSocket/EventSource/geolocation)',
+      `Network/telemetry primitive outside ${NETWORK_MODULE} (the only reviewed network module)`,
       hits.slice(0, 5).join('\n    ')
     );
   }

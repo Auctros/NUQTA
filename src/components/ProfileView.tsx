@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
 import { NuqtaStorageEngine } from '../lib/storage';
+import { resetSyncState } from '../lib/sync/lifecycle';
 import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 import { NuqtaSelect } from './ui';
 
@@ -99,6 +100,9 @@ export const ProfileView: React.FC = () => {
       );
       return;
     }
+    // Drop queued/pulled sync state too. Otherwise a reconnect would either replay
+    // changes for deleted records or pull the whole history back into a wiped device.
+    resetSyncState();
     window.location.reload();
   };
 

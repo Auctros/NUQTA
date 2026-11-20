@@ -1,6 +1,8 @@
 import { NuqtaStorageEngine } from './lib/storage';
+import { useSyncStatus } from './lib/sync/useSyncStatus';
 import { StorageIssueBanner } from './components/StorageIssueBanner';
 import { UpdateBanner } from './components/UpdateBanner';
+import { SyncStatusBadge } from './components/SyncStatusBadge';
 import { localDateKey } from './lib/dateKey';
 import { isTaskPending } from './lib/taskStatus';
 import React, { useEffect, useState } from 'react';
@@ -84,6 +86,11 @@ export default function App() {
       cancelled = true;
     };
   }, [initializeStore]);
+
+  // Starts only when VITE_NUQTA_SYNC_URL is configured; otherwise this hook is inert
+  // and the app stays purely local-first. The returned status is rendered in the
+  // header so "paused", "offline" and "rejected" are visible rather than silent.
+  const syncStatus = useSyncStatus();
 
   // Sync html and body theme classes reliably on load and theme changes
   useEffect(() => {
@@ -336,6 +343,9 @@ export default function App() {
       <AmbientBackdrop />
       <StorageIssueBanner isAr={isAr} />
       <UpdateBanner isAr={isAr} />
+      <div style={{ position: 'fixed', top: 8, insetInlineEnd: 12, zIndex: 90 }}>
+        <SyncStatusBadge status={syncStatus} isAr={isAr} />
+      </div>
       {/* Global Modals */}
       <RescueModal />
       <SundayRitualModal />

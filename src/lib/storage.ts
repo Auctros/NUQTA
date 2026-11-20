@@ -47,6 +47,38 @@ const STORAGE_KEYS = {
 export const SCHEMA_VERSION = 1;
 const MAX_QUARANTINE_COPIES = 3;
 
+/**
+ * Sections that participate in synchronization, mapped to their localStorage keys.
+ * `META` is deliberately absent: local metadata is never synchronized.
+ * Names match the server's ALLOWED_STORES exactly.
+ */
+export type SyncSectionName =
+  | 'tasks'
+  | 'habits'
+  | 'goals'
+  | 'focus_sessions'
+  | 'health_metrics'
+  | 'expenses'
+  | 'savings_goals'
+  | 'journal_entries'
+  | 'profile'
+  | 'sunday_reviews'
+  | 'history_audit';
+
+export const SYNC_SECTION_KEYS: Record<SyncSectionName, string> = {
+  tasks: STORAGE_KEYS.TASKS,
+  habits: STORAGE_KEYS.HABITS,
+  goals: STORAGE_KEYS.GOALS,
+  focus_sessions: STORAGE_KEYS.FOCUS,
+  health_metrics: STORAGE_KEYS.HEALTH,
+  expenses: STORAGE_KEYS.EXPENSES,
+  savings_goals: STORAGE_KEYS.SAVINGS,
+  journal_entries: STORAGE_KEYS.JOURNAL,
+  profile: STORAGE_KEYS.PROFILE,
+  sunday_reviews: STORAGE_KEYS.SUNDAY_REVIEWS,
+  history_audit: STORAGE_KEYS.HISTORY_AUDIT
+};
+
 /** Something went wrong with persistence that the user should be told about. */
 export interface StorageIssue {
   kind: 'write_failed' | 'corrupt';
@@ -241,22 +273,28 @@ function readMeta(): StorageMeta | null {
 }
 
 /**
- * True when localStorage still holds any live NUQTA *dataset* key (tasks, habits,
- * goals, profile...), excluding the metadata record itself and quarantined copies.
+ * True only when localStorage still holds a live NUQTA *dataset* key.
  *
- * The metadata record is deliberately excluded: a corrupt metadata record is exactly
- * the case under investigation, and its mere presence must not be mistaken for
- * "localStorage still has data". Quarantined copies (`*__corrupt_*`) are evidence of a
- * preserved unreadable value, not the live dataset, so they must not block recovery.
+ * Two exclusions, both load-bearing:
+ *  - The metadata record is excluded. A corrupt metadata record is exactly the case
+ *    under investigation, and its presence must not be mistaken for "data is present".
+ *  - Quarantined copies (`*__corrupt_*`) are excluded. They are evidence of a preserved
+ *    unreadable value, not the live dataset, so they must not block recovery.
+ *
+ * The known dataset keys are matched explicitly rather than by the `nuqta_` prefix.
+ * Sync bookkeeping (`nuqta_sync_device_id_v1`, cursor, outbox, baseline, …) shares that
+ * prefix, so a prefix test reported "data present" on a device that had only ever minted
+ * a device id — and `recoverFromMirrorIfNeeded()` would then refuse to restore the
+ * user's real data from the mirror.
+ *
  * Returns true on any read failure, so an unknown state is treated conservatively.
  */
 function hasAnyNuqtaData(): boolean {
   try {
+    // Every dataset key, excluding META by construction (see the note above).
+    const datasetKeys = new Set<string>(Object.values(SYNC_SECTION_KEYS));
     return Object.keys(localStorage).some(
-      (k) =>
-        k.startsWith(KEY_PREFIX) &&
-        k !== STORAGE_KEYS.META &&
-        !k.includes('__corrupt_')
+      (k) => datasetKeys.has(k) && !k.includes('__corrupt_')
     );
   } catch {
     return true;
@@ -274,6 +312,44 @@ function ensureMeta(): void {
   writeMeta({ schemaVersion: SCHEMA_VERSION, createdAt: new Date().toISOString() });
 }
 
+/**
+ * Observe successful writes so a sync layer can capture changes.
+ *
+ * The listener runs strictly AFTER the value is durably in localStorage, and it is
+ * never allowed to influence the result of `persist()`: a throw here must not turn a
+ * successful local write into a failure, because local persistence must never depend
+ * on synchronization. `restoreData`/`wipeAll`/`ensureMeta` bypass this on purpose —
+ * a backup import is not a user edit and must not enqueue thousands of changes.
+ */
+export type LocalWriteListener = (section: SyncSectionName, value: unknown) => void;
+
+const writeListeners = new Set<LocalWriteListener>();
+
+export function onLocalWrite(fn: LocalWriteListener): () => void {
+  writeListeners.add(fn);
+  return () => {
+    writeListeners.delete(fn);
+  };
+}
+
+function notifyWrite(section: SyncSectionName, value: unknown): void {
+  if (writeListeners.size === 0) return;
+  for (const fn of writeListeners) {
+    try {
+      fn(section, value);
+    } catch {
+      /* sync must never break local persistence */
+    }
+  }
+}
+
+const KEY_TO_SECTION = new Map<string, SyncSectionName>(
+  (Object.keys(SYNC_SECTION_KEYS) as SyncSectionName[]).map((name) => [
+    SYNC_SECTION_KEYS[name],
+    name
+  ])
+);
+
 /** Persist one section to localStorage (source of truth); mirror to IndexedDB on success. */
 function persist(key: string, value: unknown, mirror: () => Promise<unknown>): boolean {
   let serialized: string;
@@ -285,6 +361,8 @@ function persist(key: string, value: unknown, mirror: () => Promise<unknown>): b
   }
   if (!writeRaw(key, serialized)) return false;
   ensureMeta();
+  const section = KEY_TO_SECTION.get(key);
+  if (section) notifyWrite(section, value);
   void mirror();
   return true;
 }

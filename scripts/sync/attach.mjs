@@ -5,6 +5,7 @@ import {
   validateOrigin,
 } from './auth.mjs';
 import { isSyncAuthConfigured, resolveSyncConfig } from './config.mjs';
+import { createAuthFailureLimiter, rateLimitKey } from './rateLimit.mjs';
 import {
   BatchValidationError,
   DeviceIdentityConflictError,
@@ -52,6 +53,9 @@ export function attachSyncToServer(httpServer, options = {}) {
 
   /** Active authenticated client sockets keyed by normalized deviceId */
   const clients = new Map();
+
+  // Bounds repeated failed authentication from one caller. Only failures are counted.
+  const authLimiter = createAuthFailureLimiter();
 
   function sendJson(ws, payload) {
     if (ws.readyState === WebSocket.OPEN) {
@@ -279,12 +283,14 @@ export function attachSyncToServer(httpServer, options = {}) {
         });
 
         if (!handshakeAuth.authenticated) {
+          authLimiter.recordFailure(rateLimitKey(req));
           sendJson(ws, { type: 'error', error: handshakeAuth.code || 'authentication_failed' });
           ws.close(1008, handshakeAuth.error || 'authentication failed');
           return;
         }
 
         clearAuthTimer();
+        authLimiter.recordSuccess(rateLimitKey(req));
         completeAuthentication(ws, {
           deviceId: candidateDeviceId,
           authResult: handshakeAuth,
@@ -360,17 +366,30 @@ export function attachSyncToServer(httpServer, options = {}) {
       return;
     }
 
+    const callerKey = rateLimitKey(req);
+
     if (!validateOrigin(req.headers.origin, config.allowedOrigins)) {
+      authLimiter.recordFailure(callerKey);
       rejectUpgrade(socket, 403, 'Forbidden', 'origin_not_allowed');
       return;
     }
 
     const upgradeAuth = authenticateRequest(req, config, { mode: 'ws-upgrade' });
     if (!upgradeAuth.authenticated && !upgradeAuth.pendingHandshake) {
+      authLimiter.recordFailure(callerKey);
+      // A caller that has already exhausted its failure budget gets 429 instead of a
+      // fresh 401. Only failures are ever throttled, so a request that authenticates
+      // is never rejected no matter how much noise arrives from the same address.
+      if (authLimiter.isLimited(callerKey)) {
+        rejectUpgrade(socket, 429, 'Too Many Requests', 'too_many_attempts');
+        return;
+      }
       const statusText = upgradeAuth.status === 403 ? 'Forbidden' : 'Unauthorized';
       rejectUpgrade(socket, upgradeAuth.status || 401, statusText, upgradeAuth.code || 'unauthorized');
       return;
     }
+
+    authLimiter.recordSuccess(callerKey);
 
     wss.handleUpgrade(req, socket, head, (ws) => {
       wss.emit('connection', ws, req, upgradeAuth);
@@ -422,16 +441,32 @@ export function attachSyncToServer(httpServer, options = {}) {
         return true;
       }
 
+      // Authentication is evaluated FIRST and independently of Origin. A browser does
+      // not send `Origin` on a same-origin GET, so requiring it would break the very
+      // path this endpoint serves; but that must never mean "no Origin, no auth check".
+      const callerKey = rateLimitKey(req);
+
+      const authResult = authenticateRequest(req, config, { mode: 'http' });
+      if (!authResult.authenticated) {
+        authLimiter.recordFailure(callerKey);
+        // Throttle only failures: an authenticated request is never refused because of
+        // unrelated noise from the same address (behind Serve, everyone shares one).
+        if (authLimiter.isLimited(callerKey)) {
+          writeJson(res, 429, { error: 'too_many_attempts' });
+          return true;
+        }
+        writeJson(res, authResult.status || 401, { error: authResult.code || 'unauthorized' });
+        return true;
+      }
+
+      // Origin remains an additional browser-side guard (CSRF / cross-site reads), not
+      // an authentication mechanism. Validated only when the browser actually sent it.
       if (req.headers.origin !== undefined && !validateOrigin(req.headers.origin, config.allowedOrigins)) {
         writeJson(res, 403, { error: 'origin_not_allowed' });
         return true;
       }
 
-      const authResult = authenticateRequest(req, config, { mode: 'http' });
-      if (!authResult.authenticated) {
-        writeJson(res, authResult.status || 401, { error: authResult.code || 'unauthorized' });
-        return true;
-      }
+      authLimiter.recordSuccess(callerKey);
 
       const rawDeviceId = url.searchParams.get('device_id');
       if (!isValidUuid(rawDeviceId)) {

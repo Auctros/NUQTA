@@ -645,6 +645,125 @@ describe('NUQTA Sync Server (Stage 1)', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 7b. Identity spoofing matrix (regression tests for the authentication audit)
+  // -------------------------------------------------------------------------
+  describe('Tailscale identity is the only accepted proof', () => {
+    it('never trusts x-tailscale-user / x-tailscale-profile aliases', async () => {
+      server = await createSyncServer({
+        port: 0,
+        dbPath: temp.dbPath,
+        allowedOrigins: [TEST_ORIGIN],
+        allowedTailscaleUsers: [TEST_TAILSCALE_USER],
+      });
+
+      const deviceId = randomUUID();
+      // The spoofing vector from the audit: Serve does not strip these aliases, so
+      // trusting them would let any local caller assert an identity with no token.
+      const spoofed = await attemptRawWsConnection(
+        `ws://127.0.0.1:${server.port}/sync?device_id=${deviceId}`,
+        { origin: TEST_ORIGIN, 'x-tailscale-user': TEST_TAILSCALE_USER }
+      );
+      expect(spoofed.kind).toBe('http_rejected');
+      expect(spoofed.statusCode).toBe(401);
+
+      const spoofedDelta = await fetch(
+        `http://127.0.0.1:${server.port}/sync/delta?device_id=${deviceId}&cursor=0&limit=1`,
+        { headers: { 'x-tailscale-user': TEST_TAILSCALE_USER } }
+      );
+      expect(spoofedDelta.status).toBe(401);
+    });
+
+    it('requires identity on /sync/delta even when the request sends no Origin', async () => {
+      server = await createSyncServer({
+        port: 0,
+        dbPath: temp.dbPath,
+        allowedOrigins: [TEST_ORIGIN],
+        allowedTailscaleUsers: [TEST_TAILSCALE_USER],
+      });
+
+      const deviceId = randomUUID();
+      // curl with no Origin: absence of Origin must never mean "skip authentication".
+      const anonymous = await fetch(
+        `http://127.0.0.1:${server.port}/sync/delta?device_id=${deviceId}&cursor=0&limit=1`
+      );
+      expect(anonymous.status).toBe(401);
+
+      // Register the device with a valid identity, then read the delta with no Origin.
+      const authed = await openAuthenticatedClient(server.port, deviceId, {
+        token: null,
+        headers: { 'tailscale-user-login': TEST_TAILSCALE_USER },
+      });
+      authed.ws.close();
+
+      const allowed = await fetch(
+        `http://127.0.0.1:${server.port}/sync/delta?device_id=${deviceId}&cursor=0&limit=1`,
+        { headers: { 'tailscale-user-login': TEST_TAILSCALE_USER } }
+      );
+      expect(allowed.status).toBe(200);
+    });
+
+    it('authenticates from the request identity, never from the handshake frame', async () => {
+      server = await createSyncServer({
+        port: 0,
+        dbPath: temp.dbPath,
+        allowedOrigins: [TEST_ORIGIN],
+        allowedTailscaleUsers: [TEST_TAILSCALE_USER],
+      });
+
+      const deviceId = randomUUID();
+
+      // No identity on the upgrade: rejected there, before any frame is read. A frame
+      // cannot promote a request that was never authenticated.
+      const rejected = await attemptRawWsConnection(
+        `ws://127.0.0.1:${server.port}/sync?device_id=${deviceId}`,
+        { origin: TEST_ORIGIN }
+      );
+      expect(rejected.kind).toBe('http_rejected');
+      expect(rejected.statusCode).toBe(401);
+
+      // Identity present on the upgrade: accepted even though the frame sends no
+      // credential of its own, which is what proves the request is the only source.
+      const valid = await openAuthenticatedClient(server.port, deviceId, {
+        token: null,
+        headers: { 'tailscale-user-login': TEST_TAILSCALE_USER },
+      });
+      expect(valid.welcome.type).toBe('welcome');
+      valid.ws.close();
+    });
+
+    it('rate-limits repeated failed authentications without blocking a valid caller', async () => {
+      server = await createSyncServer({
+        port: 0,
+        dbPath: temp.dbPath,
+        allowedOrigins: [TEST_ORIGIN],
+        allowedTailscaleUsers: [TEST_TAILSCALE_USER],
+      });
+
+      const deviceId = randomUUID();
+      let lastStatus = 0;
+      for (let i = 0; i < 25; i += 1) {
+        const attempt = await attemptRawWsConnection(
+          `ws://127.0.0.1:${server.port}/sync?device_id=${deviceId}`,
+          { origin: TEST_ORIGIN, 'tailscale-user-login': 'intruder@example.com' }
+        );
+        if (attempt.kind === 'http_rejected' && attempt.statusCode !== undefined) {
+          lastStatus = attempt.statusCode;
+        }
+      }
+      expect(lastStatus).toBe(429);
+
+      // Only failures are throttled: a legitimate caller sharing the address (all
+      // traffic arrives from the Serve proxy) is still served.
+      const valid = await openAuthenticatedClient(server.port, deviceId, {
+        token: null,
+        headers: { 'tailscale-user-login': TEST_TAILSCALE_USER },
+      });
+      expect(valid.welcome.type).toBe('welcome');
+      valid.ws.close();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // 8. Multiple connected clients and change broadcasting
   // -------------------------------------------------------------------------
 

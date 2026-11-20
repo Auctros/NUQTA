@@ -80,6 +80,19 @@ describe('recovery is safe around unreadable metadata', () => {
     expect(await NuqtaStorageEngine.recoverFromMirrorIfNeeded()).toBe(false);
     expect(NuqtaStorageEngine.getTasks()).toEqual([]);
   });
+
+  it('still recovers when only sync bookkeeping keys remain', async () => {
+    // Regression: sync keys share the `nuqta_` prefix, so a prefix-based "does data
+    // exist" check saw a minted device id and refused to restore the real dataset.
+    NuqtaStorageEngine.saveTasks([task('a'), task('b')]);
+    await tick();
+    localStorage.clear();
+    localStorage.setItem('nuqta_sync_device_id_v1', '11111111-1111-4111-8111-111111111111');
+    localStorage.setItem('nuqta_sync_cursor_v1', '{"appliedCursor":0,"deviceCursor":0}');
+
+    expect(await NuqtaStorageEngine.recoverFromMirrorIfNeeded()).toBe(true);
+    expect(NuqtaStorageEngine.getTasks().map((t) => t.id).sort()).toEqual(['a', 'b']);
+  });
 });
 
 describe('wipeAll reliability (mirror)', () => {
