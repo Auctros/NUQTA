@@ -2,7 +2,7 @@ import React from 'react';
 import { NuqtaIcon, IconName } from '../NuqtaIcon';
 import { LiquidTabs } from '../ui/LiquidTabs';
 
-export type StudioId = 'quran' | 'workout' | 'reading' | 'drawing';
+export type StudioId = 'quran' | 'workout' | 'reading' | 'drawing' | 'walking';
 export type StudioNavVariant = 'structured' | 'segmented' | 'shelf' | 'workspace';
 
 export interface StudioTab {

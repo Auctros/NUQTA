@@ -332,6 +332,8 @@ export const DashboardView: React.FC = () => {
       setActiveNavTab('quran');
     } else if (habit.specializedType === 'drawing') {
       setActiveNavTab('drawing');
+    } else if (habit.specializedType === 'walking') {
+      setActiveNavTab('walking');
     } else {
       toggleHabitToday(habit.id);
     }
@@ -664,7 +666,8 @@ export const DashboardView: React.FC = () => {
                       habit.specializedType === 'reading' ||
                       habit.specializedType === 'workout' ||
                       habit.specializedType === 'quran' ||
-                      habit.specializedType === 'drawing';
+                      habit.specializedType === 'drawing' ||
+                      habit.specializedType === 'walking';
                     return (
                       <div key={habit.id} className="py-2 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">

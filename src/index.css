@@ -263,6 +263,45 @@
   --d-drawing-accent: #c084fc;
   --d-drawing-accent-strong: #d8b4fe;
   --d-drawing-accent-bright: #e9d5ff;
+
+  /* Walking Studio — dawn meadow, moss & sage */
+  --d-walking-surface: #0f1a14;
+  --d-walking-raised: #14241b;
+  --d-walking-chip: #12201a;
+  --d-walking-border: #1f3327;
+  --d-walking-border-soft: #1a2c21;
+  --d-walking-border-strong: #22382a;
+  --d-walking-border-accent: #2b4433;
+  --d-walking-accent: #86efc0;
+  --d-walking-accent-strong: #a7f3d0;
+  --d-walking-accent-bright: #c9f8e2;
+
+  /* Walking scene palette (dark) — dusk meadow */
+  --walk-sky-top: #16302a;
+  --walk-sky-bottom: #2a4a3c;
+  --walk-sun: #f4e6b8;
+  --walk-ridge-far: #1d3a2e;
+  --walk-ridge-near: #214434;
+  --walk-canopy: #2f5a41;
+  --walk-canopy-deep: #24472f;
+  --walk-trunk: #3a2f22;
+  --walk-meadow: #2b4a36;
+  --walk-meadow-deep: #1e3626;
+  --walk-path: #4a4030;
+  --walk-path-edge: #6b5c44;
+  --walk-petal: #f2b8c6;
+  --walk-petal-alt: #f6e3a8;
+  --walk-stem: #35663f;
+  --walk-cloud: #b9d6c6;
+  --walk-bird: #8fb3a1;
+  --walk-skin: #e8bfa0;
+  --walk-hair: #33251c;
+  --walk-shirt: #7fc9a4;
+  --walk-shirt-shade: #5da884;
+  --walk-trousers: #33405a;
+  --walk-shoe: #2a2330;
+  --walk-scarf: #f2b8c6;
+  --walk-shadow: #0a140e;
 }
 
 /* ============================================================
@@ -544,6 +583,45 @@ body.light-mode {
   --d-drawing-accent: #6b3fbf;
   --d-drawing-accent-strong: #5a32a3;
   --d-drawing-accent-bright: #4a2787;
+
+  /* Walking Studio — daylight meadow */
+  --d-walking-surface: #ffffff;
+  --d-walking-raised: #f2f8f3;
+  --d-walking-chip: #e7f2ea;
+  --d-walking-border: #d7e5da;
+  --d-walking-border-soft: #e4efe7;
+  --d-walking-border-strong: #c1d5c6;
+  --d-walking-border-accent: #a9c4b0;
+  --d-walking-accent: #0f6b45;
+  --d-walking-accent-strong: #0b5637;
+  --d-walking-accent-bright: #08442b;
+
+  /* Walking scene palette (light) — bright morning */
+  --walk-sky-top: #d9eefb;
+  --walk-sky-bottom: #eef7ea;
+  --walk-sun: #f7d98a;
+  --walk-ridge-far: #bcd9c6;
+  --walk-ridge-near: #a5cbb2;
+  --walk-canopy: #8cc4a0;
+  --walk-canopy-deep: #6faf88;
+  --walk-trunk: #8a6a4a;
+  --walk-meadow: #cfe7cf;
+  --walk-meadow-deep: #b6d9bd;
+  --walk-path: #e6dcc2;
+  --walk-path-edge: #cdbf9c;
+  --walk-petal: #ef9fb6;
+  --walk-petal-alt: #f2cf7a;
+  --walk-stem: #6aa87a;
+  --walk-cloud: #ffffff;
+  --walk-bird: #7f9d8c;
+  --walk-skin: #ecc3a4;
+  --walk-hair: #3b2a1f;
+  --walk-shirt: #4fb98c;
+  --walk-shirt-shade: #3d9c74;
+  --walk-trousers: #3d4a68;
+  --walk-shoe: #33303c;
+  --walk-scarf: #ef9fb6;
+  --walk-shadow: #2f4a38;
 
   /* Accent tone roles — darker, saturated so they read on white.
      Wash/line variants re-derive from these automatically because
@@ -2847,6 +2925,7 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 [data-studio='workout'] { --studio-accent: var(--d-workout-accent); --studio-accent-line: color-mix(in srgb, var(--d-workout-accent) 42%, transparent); --studio-accent-soft: color-mix(in srgb, var(--d-workout-accent) 16%, transparent); --studio-accent-ink: var(--d-workout-accent-strong); --studio-panel: var(--d-workout-surface); --studio-line: var(--d-workout-border); --studio-line-strong: var(--d-workout-border-accent); --studio-rail-bg: var(--d-workout-raised); }
 [data-studio='reading'] { --studio-accent: var(--d-reading-accent); --studio-accent-line: var(--d-reading-border-accent); --studio-accent-soft: color-mix(in srgb, var(--d-reading-accent) 14%, transparent); --studio-accent-ink: var(--d-reading-accent-strong); --studio-panel: var(--d-reading-surface); --studio-line: var(--d-reading-border); --studio-line-strong: var(--d-reading-border-accent); --studio-rail-bg: var(--d-reading-raised); }
 [data-studio='drawing'] { --studio-accent: var(--d-drawing-accent); --studio-accent-line: var(--d-drawing-border-accent); --studio-accent-soft: color-mix(in srgb, var(--d-drawing-accent) 15%, transparent); --studio-accent-ink: var(--d-drawing-accent-strong); --studio-panel: var(--d-drawing-surface); --studio-line: var(--d-drawing-border); --studio-line-strong: var(--d-drawing-border-accent); --studio-rail-bg: var(--d-drawing-raised); --studio-tile-bg: var(--d-drawing-raised); }
+[data-studio='walking'] { --studio-accent: var(--d-walking-accent); --studio-accent-line: var(--d-walking-border-accent); --studio-accent-soft: color-mix(in srgb, var(--d-walking-accent) 15%, transparent); --studio-accent-ink: var(--d-walking-accent-strong); --studio-panel: var(--d-walking-surface); --studio-line: var(--d-walking-border); --studio-line-strong: var(--d-walking-border-accent); --studio-rail-bg: var(--d-walking-raised); --studio-tile-bg: var(--d-walking-raised); }
 
 /* ============================================================
    NUQTA — Exercise Library
@@ -2959,4 +3038,354 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 
 @media (prefers-reduced-motion: reduce) {
   .ex-card:hover { transform: none; }
+}
+/* ============================================================
+   NUQTA — Walking Studio
+   The scene is a single inline SVG. Every animation is CSS, so it can be
+   switched off wholesale under prefers-reduced-motion and paused by dropping
+   `.is-walking` from the <svg>.
+   ============================================================ */
+
+.walk-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-lg, 18px);
+  border: 1px solid var(--studio-line, var(--border-default));
+  background: var(--studio-panel, var(--surface-raised));
+  isolation: isolate;
+}
+
+/* Cycle length is emitted by scripts/walk-cycle.mjs, never hand-typed: the keyframes and
+   the timing have to be retuned together or the planted foot starts skating. */
+.walk-scene { display: block; width: 100%; height: 100%; --walk-cycle: 1.1s; }
+
+/* --- parallax --------------------------------------------------------
+   Each depth band is a tile repeated side by side in the SVG, and every band
+   slides exactly one tile width per loop. That makes the frame at 100%
+   pixel-identical to 0%, so the loop has no seam — a band that drifts a few
+   pixels and snaps back is what makes a landscape look frozen.
+
+   Speeds and durations are generated from the stride length by
+   scripts/walk-cycle.mjs, so the ground plane moves at exactly the speed the
+   planted foot implies. The ground bands (path, flowers) must share the
+   walker's reference speed or the feet skate against the path.
+   -------------------------------------------------------------------- */
+.walk-band { will-change: transform; }
+
+/* --- walk cycle -------------------------------------------------------
+   Keyframes are generated by scripts/walk-cycle.mjs from an inverse-kinematics
+   solve: the ankle is pinned to the ground while the foot is planted, so the
+   sole neither skates nor floats. Each bone rotates about its own joint
+   because the joint sits at that group's local origin.
+   -------------------------------------------------------------------- */
+
+/* Base pose: with nothing animating (idle, or reduced motion) the limbs rest with
+   the sole flat on the ground line. Same solver, so the walker never stands
+   straight-legged with its feet below the grass. */
+.walk-scene .walk-thigh-bone { transform: rotate(-12.479deg); }
+.walk-scene .walk-shin-bone { transform: rotate(26.917deg); }
+.walk-scene .walk-foot-bone { transform: rotate(-14.438deg); }
+
+/* The far leg is half a cycle behind the near one. Offset by animation-delay
+   rather than reversing the curve: the curve is not symmetric, so `reverse`
+   would run the stride backwards instead of offsetting it. */
+.walk-scene.is-walking .walk-leg--near .walk-thigh-bone { animation: walk-thigh var(--walk-cycle) linear infinite; }
+.walk-scene.is-walking .walk-leg--far .walk-thigh-bone { animation: walk-thigh var(--walk-cycle) linear infinite; animation-delay: calc(var(--walk-cycle) / -2); }
+.walk-scene.is-walking .walk-leg--near .walk-shin-bone { animation: walk-shin var(--walk-cycle) linear infinite; }
+.walk-scene.is-walking .walk-leg--far .walk-shin-bone { animation: walk-shin var(--walk-cycle) linear infinite; animation-delay: calc(var(--walk-cycle) / -2); }
+.walk-scene.is-walking .walk-leg--near .walk-foot-bone { animation: walk-foot var(--walk-cycle) linear infinite; }
+.walk-scene.is-walking .walk-leg--far .walk-foot-bone { animation: walk-foot var(--walk-cycle) linear infinite; animation-delay: calc(var(--walk-cycle) / -2); }
+
+/* Arms counter-swing against the same-side leg. */
+.walk-scene.is-walking .walk-arm--near .walk-arm-swing { animation: walk-arm var(--walk-cycle) linear infinite; }
+.walk-scene.is-walking .walk-arm--far .walk-arm-swing { animation: walk-arm var(--walk-cycle) linear infinite; animation-delay: calc(var(--walk-cycle) / -2); }
+.walk-scene.is-walking .walk-arm--near .walk-forearm-group { animation: walk-forearm var(--walk-cycle) linear infinite; }
+.walk-scene.is-walking .walk-arm--far .walk-forearm-group { animation: walk-forearm var(--walk-cycle) linear infinite; animation-delay: calc(var(--walk-cycle) / -2); }
+
+/* The head nods a little; the shadow tightens as the body rises. */
+.walk-scene.is-walking .walk-head { animation: walk-head var(--walk-cycle) ease-in-out infinite; }
+.walk-scene.is-walking .walk-shadow { animation: walk-shadow 0.55s ease-in-out infinite; }
+
+@keyframes walk-head {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
+}
+@keyframes walk-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.26; }
+  50% { transform: scaleX(0.92); opacity: 0.21; }
+}
+
+/* Idle: the figure breathes, the world holds still. */
+.walk-scene.is-idle .walk-figure { animation: walk-breathe 5.5s ease-in-out infinite; }
+@keyframes walk-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.6px); }
+}
+
+/* Ambient life — deliberately slow so it reads as weather, not motion. */
+.walk-bird { animation: walk-flap 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.walk-bird--b { animation-delay: -0.5s; }
+.walk-bird--c { animation-delay: -1s; }
+@keyframes walk-flap {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.55); }
+}
+
+/* Trees sway about the base of the trunk, which sits at their group origin. */
+.walk-tree { animation: walk-sway 8s ease-in-out infinite; }
+@keyframes walk-sway {
+  0%, 100% { transform: rotate(-0.45deg); }
+  50% { transform: rotate(0.45deg); }
+}
+
+/* Flowers pivot where the stem meets the ground. */
+.walk-flower { animation: walk-flower-sway 4.2s ease-in-out infinite; animation-delay: var(--flower-delay, 0s); }
+@keyframes walk-flower-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+.walk-sun { animation: walk-pulse 9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes walk-pulse {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes walk-thigh {
+  0% { transform: rotate(-13.742deg); }
+  5% { transform: rotate(-18.109deg); }
+  10% { transform: rotate(-18.309deg); }
+  15% { transform: rotate(-17.591deg); }
+  20% { transform: rotate(-16.304deg); }
+  25% { transform: rotate(-14.580deg); }
+  30% { transform: rotate(-12.479deg); }
+  35% { transform: rotate(-10.024deg); }
+  40% { transform: rotate(-7.206deg); }
+  45% { transform: rotate(-3.981deg); }
+  50% { transform: rotate(-0.228deg); }
+  55% { transform: rotate(4.388deg); }
+  60% { transform: rotate(13.104deg); }
+  65% { transform: rotate(-4.162deg); }
+  70% { transform: rotate(-13.865deg); }
+  75% { transform: rotate(-22.511deg); }
+  80% { transform: rotate(-29.563deg); }
+  85% { transform: rotate(-33.869deg); }
+  90% { transform: rotate(-34.326deg); }
+  95% { transform: rotate(-30.006deg); }
+  100% { transform: rotate(-13.742deg); }
+}
+
+@keyframes walk-shin {
+  0% { transform: rotate(0.687deg); }
+  5% { transform: rotate(14.783deg); }
+  10% { transform: rotate(19.980deg); }
+  15% { transform: rotate(23.256deg); }
+  20% { transform: rotate(25.351deg); }
+  25% { transform: rotate(26.533deg); }
+  30% { transform: rotate(26.917deg); }
+  35% { transform: rotate(26.533deg); }
+  40% { transform: rotate(25.351deg); }
+  45% { transform: rotate(23.256deg); }
+  50% { transform: rotate(19.980deg); }
+  55% { transform: rotate(14.783deg); }
+  60% { transform: rotate(0.687deg); }
+  65% { transform: rotate(36.897deg); }
+  70% { transform: rotate(52.199deg); }
+  75% { transform: rotate(61.219deg); }
+  80% { transform: rotate(64.263deg); }
+  85% { transform: rotate(61.219deg); }
+  90% { transform: rotate(52.199deg); }
+  95% { transform: rotate(36.897deg); }
+  100% { transform: rotate(0.687deg); }
+}
+
+@keyframes walk-foot {
+  0% { transform: rotate(13.055deg); }
+  5% { transform: rotate(3.326deg); }
+  10% { transform: rotate(-1.670deg); }
+  15% { transform: rotate(-5.665deg); }
+  20% { transform: rotate(-9.047deg); }
+  25% { transform: rotate(-11.954deg); }
+  30% { transform: rotate(-14.438deg); }
+  35% { transform: rotate(-16.509deg); }
+  40% { transform: rotate(-18.144deg); }
+  45% { transform: rotate(-19.275deg); }
+  50% { transform: rotate(-19.751deg); }
+  55% { transform: rotate(-19.171deg); }
+  60% { transform: rotate(-13.791deg); }
+  65% { transform: rotate(-32.736deg); }
+  70% { transform: rotate(-38.334deg); }
+  75% { transform: rotate(-38.708deg); }
+  80% { transform: rotate(-34.700deg); }
+  85% { transform: rotate(-27.351deg); }
+  90% { transform: rotate(-17.873deg); }
+  95% { transform: rotate(-6.892deg); }
+  100% { transform: rotate(13.055deg); }
+}
+
+@keyframes walk-arm {
+  0% { transform: rotate(8.245deg); }
+  5% { transform: rotate(10.866deg); }
+  10% { transform: rotate(10.986deg); }
+  15% { transform: rotate(10.555deg); }
+  20% { transform: rotate(9.782deg); }
+  25% { transform: rotate(8.748deg); }
+  30% { transform: rotate(7.487deg); }
+  35% { transform: rotate(6.014deg); }
+  40% { transform: rotate(4.324deg); }
+  45% { transform: rotate(2.389deg); }
+  50% { transform: rotate(0.137deg); }
+  55% { transform: rotate(-2.633deg); }
+  60% { transform: rotate(-7.863deg); }
+  65% { transform: rotate(2.497deg); }
+  70% { transform: rotate(8.319deg); }
+  75% { transform: rotate(13.507deg); }
+  80% { transform: rotate(17.738deg); }
+  85% { transform: rotate(20.321deg); }
+  90% { transform: rotate(20.596deg); }
+  95% { transform: rotate(18.003deg); }
+  100% { transform: rotate(8.245deg); }
+}
+
+@keyframes walk-forearm {
+  0% { transform: rotate(-11.436deg); }
+  5% { transform: rotate(-12.527deg); }
+  10% { transform: rotate(-12.577deg); }
+  15% { transform: rotate(-12.398deg); }
+  20% { transform: rotate(-12.076deg); }
+  25% { transform: rotate(-11.645deg); }
+  30% { transform: rotate(-11.120deg); }
+  35% { transform: rotate(-10.506deg); }
+  40% { transform: rotate(-9.802deg); }
+  45% { transform: rotate(-8.995deg); }
+  50% { transform: rotate(-8.057deg); }
+  55% { transform: rotate(-6.903deg); }
+  60% { transform: rotate(-4.724deg); }
+  65% { transform: rotate(-9.040deg); }
+  70% { transform: rotate(-11.466deg); }
+  75% { transform: rotate(-13.628deg); }
+  80% { transform: rotate(-15.391deg); }
+  85% { transform: rotate(-16.467deg); }
+  90% { transform: rotate(-16.582deg); }
+  95% { transform: rotate(-15.501deg); }
+  100% { transform: rotate(-11.436deg); }
+}
+
+@keyframes walk-scroll--clouds {
+  from { transform: translateX(0); }
+  to { transform: translateX(-400px); }
+}
+
+@keyframes walk-scroll--ridge-far {
+  from { transform: translateX(0); }
+  to { transform: translateX(-800px); }
+}
+
+@keyframes walk-scroll--ridge-near {
+  from { transform: translateX(0); }
+  to { transform: translateX(-800px); }
+}
+
+@keyframes walk-scroll--trees-far {
+  from { transform: translateX(0); }
+  to { transform: translateX(-400px); }
+}
+
+@keyframes walk-scroll--trees {
+  from { transform: translateX(0); }
+  to { transform: translateX(-800px); }
+}
+
+@keyframes walk-scroll--path {
+  from { transform: translateX(0); }
+  to { transform: translateX(-400px); }
+}
+
+@keyframes walk-scroll--flowers {
+  from { transform: translateX(0); }
+  to { transform: translateX(-400px); }
+}
+
+@keyframes walk-scroll--foreground {
+  from { transform: translateX(0); }
+  to { transform: translateX(-200px); }
+}
+
+
+
+.walk-scene.is-walking .walk-band--clouds { animation: walk-scroll--clouds 67.69s linear infinite; }
+
+.walk-scene.is-walking .walk-band--ridge-far { animation: walk-scroll--ridge-far 101.54s linear infinite; }
+
+.walk-scene.is-walking .walk-band--ridge-near { animation: walk-scroll--ridge-near 63.46s linear infinite; }
+
+.walk-scene.is-walking .walk-band--trees-far { animation: walk-scroll--trees-far 22.56s linear infinite; }
+
+.walk-scene.is-walking .walk-band--trees { animation: walk-scroll--trees 31.24s linear infinite; }
+
+.walk-scene.is-walking .walk-band--path { animation: walk-scroll--path 10.15s linear infinite; }
+
+.walk-scene.is-walking .walk-band--flowers { animation: walk-scroll--flowers 10.15s linear infinite; }
+
+.walk-scene.is-walking .walk-band--foreground { animation: walk-scroll--foreground 3.38s linear infinite; }
+
+/* --- timer readout --------------------------------------------------- */
+.walk-timer {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.walk-stage-progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 3px;
+  background: color-mix(in srgb, var(--studio-accent, var(--brand)) 22%, transparent);
+  z-index: 2;
+}
+.walk-stage-progress span {
+  display: block;
+  height: 100%;
+  background: var(--studio-accent, var(--brand));
+  transition: width 700ms linear;
+}
+
+/* --- pace ring ------------------------------------------------------- */
+.walk-ring-track { stroke: color-mix(in srgb, var(--studio-accent, var(--brand)) 18%, transparent); }
+.walk-ring-fill { stroke: var(--studio-accent, var(--brand)); transition: stroke-dashoffset 600ms linear; }
+
+/* --- optional metric inputs ------------------------------------------ */
+.walk-manual-row {
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+@media (max-width: 640px) {
+  .walk-stage { border-radius: var(--r-md, 14px); }
+  .walk-timer { font-size: clamp(2.4rem, 13vw, 3.4rem); }
+}
+
+/* Nothing in the scene moves when the user asks for stillness; the walker
+   simply stands in the meadow, limbs in the resting pose set above. */
+@media (prefers-reduced-motion: reduce) {
+  .walk-scene .walk-band,
+  .walk-scene .walk-figure,
+  .walk-scene .walk-head,
+  .walk-scene .walk-shadow,
+  .walk-scene .walk-thigh-bone,
+  .walk-scene .walk-shin-bone,
+  .walk-scene .walk-foot-bone,
+  .walk-scene .walk-arm-swing,
+  .walk-scene .walk-forearm-group,
+  .walk-scene .walk-bird,
+  .walk-scene .walk-tree,
+  .walk-scene .walk-flower,
+  .walk-scene .walk-sun {
+    animation: none !important;
+  }
+  .walk-stage-progress span,
+  .walk-ring-fill { transition: none; }
 }

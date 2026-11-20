@@ -21,3 +21,31 @@ export function writeSidebarCollapsed(collapsed: boolean): void {
     /* storage unavailable: the rail simply falls back to its default each load */
   }
 }
+
+/**
+ * The in-progress walk timer. Kept out of the `nuqta_` dataset for the same reason as
+ * the sidebar flag: it is transient UI state, not a record. Losing it costs an
+ * unfinished timer, never a logged walk.
+ */
+const ACTIVE_WALK_KEY = 'nuqta.ui.activeWalk';
+
+export function readActiveWalk<T>(): T | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_WALK_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.startedAt !== 'number') return null;
+    return parsed as T;
+  } catch {
+    return null;
+  }
+}
+
+export function writeActiveWalk(walk: unknown | null): void {
+  try {
+    if (walk === null) localStorage.removeItem(ACTIVE_WALK_KEY);
+    else localStorage.setItem(ACTIVE_WALK_KEY, JSON.stringify(walk));
+  } catch {
+    /* storage unavailable: the timer still runs for this page session */
+  }
+}

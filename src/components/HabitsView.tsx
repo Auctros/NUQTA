@@ -171,7 +171,7 @@ export const HabitsView: React.FC = () => {
         actions={
           <>
           {(() => {
-            const openOrCreateStudio = (type: 'quran' | 'reading' | 'workout' | 'drawing') => {
+            const openOrCreateStudio = (type: 'quran' | 'reading' | 'workout' | 'drawing' | 'walking') => {
               const existing = habits.find((h) => h.specializedType === type);
               if (existing) {
                 useNuqtaStore.getState().setActiveNavTab(type);
@@ -210,6 +210,14 @@ export const HabitsView: React.FC = () => {
                   category: 'mind',
                   timeOfDay: 'evening',
                   specializedType: 'drawing'
+                });
+              } else if (type === 'walking') {
+                createHabit({
+                  name: isAr ? 'مشي يومي' : 'Daily Walk',
+                  anchor: isAr ? 'بعد الغداء -> أمشي 20 دقيقة' : 'After lunch -> walk 20 minutes',
+                  category: 'health',
+                  timeOfDay: 'afternoon',
+                  specializedType: 'walking'
                 });
               }
 
@@ -252,6 +260,15 @@ export const HabitsView: React.FC = () => {
                 >
                   <NuqtaIcon name="brush" className="w-4 h-4" />
                   <span>{isAr ? 'مرسم الفن' : 'Art Studio'}</span>
+                </button>
+
+                <button
+                  className="btn subtle text-[var(--tone-success)] border-[var(--tone-success-line)] hover:bg-[var(--tone-success-wash)]"
+                  onClick={() => openOrCreateStudio('walking')}
+                  title={isAr ? 'استوديو المشي ومؤقت النزهات' : 'Walking Studio & Walk Timer'}
+                >
+                  <NuqtaIcon name="footprints" className="w-4 h-4" />
+                  <span>{isAr ? 'استوديو المشي' : 'Walking Studio'}</span>
                 </button>
 
                 <button
