@@ -341,3 +341,31 @@ Network failures are inconclusive and always retry.
 `SyncStatusBadge` renders nothing when sync is unconfigured. Otherwise it shows
 one of: paused-after-wipe (with a "Resume sync" action), identity rejected,
 offline, reconnecting, synchronizing, connected (with pending count), idle.
+
+It lives in the main header (`topbar-actions`), not as a floating overlay. The
+header is tight, so the visible label is a single word (`Synced`, `3 pending`,
+`Offline`, `Paused`); the full sentence is exposed through the tooltip and as the
+single visually hidden accessible name. Both the abbreviation and the tooltip are
+`aria-hidden` so a screen reader announces the state exactly once. Below 660px the
+word is dropped and the dot remains, except for warning states which keep their
+label because they need action.
+
+### 10.6 Delivery is immediate, not refresh-driven
+
+`persist → capture → outbox → socket` is the pipeline, and the outbox is the last
+local step before the wire. `outbox.ts` therefore exposes `onOutboxChange`, fired
+on append, acknowledge and clear; `SyncClient.start()` subscribes and calls
+`flush()` on every notification. A local edit is sent as soon as it is durable, with
+no polling and no dependency on `pageshow`.
+
+Consequences worth knowing:
+
+- An edit made while the socket is still opening is sent by the `welcome` flush, so
+  subscribing at `start()` rather than at connect loses nothing.
+- If the socket dies between `send` and `sync_ack`, `onclose` clears the `flushing`
+  latch. Without that the client would stay latched forever and the outbox would
+  never drain — a failure mode that immediate sending makes far easier to reach.
+- Entries are still removed only on `sync_ack`, so an interrupted batch is re-sent
+  and deduplicated by the server on `client_change_id` (§3.1).
+- Tabs share one `localStorage` and therefore one outbox; whichever tab holds a
+  live socket delivers a change queued by another.

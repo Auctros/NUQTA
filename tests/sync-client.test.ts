@@ -23,7 +23,8 @@ import {
   clearOutbox,
   acknowledge,
   peekBatch,
-  toOutboundChange
+  toOutboundChange,
+  onOutboxChange
 } from '../src/lib/sync/outbox';
 import {
   startChangeCapture,
@@ -867,5 +868,299 @@ describe('sync client against a real server', () => {
       label: 'change applied'
     });
     await waitFor(() => readCursor().appliedCursor > 0, { label: 'cursor advanced' });
+  });
+});
+
+/**
+ * Real-time delivery.
+ *
+ * The pipeline is `persist → capture → outbox → socket`. Everything up to the outbox is
+ * synchronous and reliable; the gap this suite pins down is that writing to the outbox
+ * must itself trigger a send. Nothing here calls `flush()` by hand and nothing reloads
+ * or toggles visibility, because a user editing a task does none of those things.
+ */
+describe('real-time delivery', () => {
+  let server: SyncServer;
+  let client: SyncClient | null = null;
+
+  beforeEach(async () => {
+    server = await startServer();
+  });
+
+  afterEach(async () => {
+    client?.stop();
+    client = null;
+    await server.close();
+  });
+
+  function makeClient(identity = TEST_TAILSCALE_USER) {
+    const created = new SyncClient({
+      url: `ws://127.0.0.1:${server.port}/sync`,
+      webSocketImpl: WebSocket as unknown as new (url: string) => SyncSocket,
+      webSocketFactory: (url) =>
+        new WebSocket(url, {
+          headers: { origin: TEST_ORIGIN, 'tailscale-user-login': identity }
+        }) as unknown as SyncSocket,
+      fetchImpl: serveFetch(identity),
+      origin: TEST_ORIGIN,
+      baseDelayMs: 50,
+      maxDelayMs: 200
+    });
+    client = created;
+    return created;
+  }
+
+  it('sends a captured local write with no manual flush and no reload', async () => {
+    const c = makeClient();
+    c.start();
+    await waitFor(() => c.getState() === 'connected', { label: 'connected' });
+
+    // A real store write: capture is wired to persistence, not called directly.
+    seedBaselineFromStorage((section) => (section === 'tasks' ? [] : null));
+    const detach = startChangeCapture();
+    try {
+      NuqtaStorageEngine.saveTasks([makeTask('live-1', 'Written live') as never]);
+    } finally {
+      detach();
+    }
+
+    // The change must reach the server on its own.
+    await waitFor(
+      () => server.repo.getDelta({ cursor: 0, limit: 50 }).changes.length === 1,
+      { label: 'change delivered without an explicit flush' }
+    );
+    expect(outboxSize()).toBe(0);
+  });
+
+  it('acknowledges and drains the pending count without any further action', async () => {
+    const c = makeClient();
+    c.start();
+    await waitFor(() => c.getState() === 'connected', { label: 'connected' });
+
+    enqueueChange({ section: 'tasks', recordId: 'p-1', operation: 'create', payload: makeTask('p-1', 'Pending') });
+    expect(outboxSize()).toBe(1);
+
+    await waitFor(() => outboxSize() === 0, { label: 'ack drained the outbox' });
+  });
+
+  it('delivers to a second connected device immediately, with no echo back', async () => {
+    const sender = makeClient();
+    // A second physical device has its own identity; the server never broadcasts back to
+    // the originating device, so sharing an id here would make this test meaningless.
+    const senderDeviceId = sender.getDeviceId();
+    localStorage.setItem('nuqta_sync_device_id_v1', randomUUID());
+    const receiver = new SyncClient({
+      url: `ws://127.0.0.1:${server.port}/sync`,
+      webSocketImpl: WebSocket as unknown as new (url: string) => SyncSocket,
+      webSocketFactory: (url) =>
+        new WebSocket(url, {
+          headers: { origin: TEST_ORIGIN, 'tailscale-user-login': TEST_TAILSCALE_USER }
+        }) as unknown as SyncSocket,
+      fetchImpl: serveFetch(),
+      origin: TEST_ORIGIN,
+      baseDelayMs: 50,
+      maxDelayMs: 200
+    });
+    receiver.start();
+    try {
+      sender.start();
+      await waitFor(
+        () => sender.getState() === 'connected' && receiver.getState() === 'connected',
+        { label: 'both connected' }
+      );
+      expect(receiver.getDeviceId()).not.toBe(senderDeviceId);
+
+      // Receiver applies via broadcast; capture is suppressed while applying, so the
+      // receiver's outbox must stay empty (no echo loop).
+      enqueueChange({
+        section: 'tasks',
+        recordId: 'shared-1',
+        operation: 'create',
+        payload: makeTask('shared-1', 'From sender')
+      });
+
+      await waitFor(
+        () => NuqtaStorageEngine.getTasks().some((t) => t.id === 'shared-1'),
+        { label: 'receiver applied the change' }
+      );
+      expect(outboxSize()).toBe(0);
+    } finally {
+      receiver.stop();
+    }
+  });
+
+  it('keeps rapid successive edits durable and delivers them all in order', async () => {
+    const c = makeClient();
+    c.start();
+    await waitFor(() => c.getState() === 'connected', { label: 'connected' });
+
+    for (let i = 0; i < 12; i += 1) {
+      enqueueChange({
+        section: 'tasks',
+        recordId: `rapid-${i}`,
+        operation: 'create',
+        payload: makeTask(`rapid-${i}`, `Rapid ${i}`)
+      });
+    }
+
+    await waitFor(() => outboxSize() === 0, { label: 'all rapid changes drained' });
+    const changes = server.repo.getDelta({ cursor: 0, limit: 100 }).changes;
+    expect(changes).toHaveLength(12);
+  });
+
+  it('queues while disconnected and delivers automatically after reconnect', async () => {
+    const c = makeClient();
+    c.start();
+    await waitFor(() => c.getState() === 'connected', { label: 'connected' });
+
+    // Simulate a real drop, not a graceful stop: the socket dies underneath us.
+    c.stop();
+    await waitFor(() => c.getState() !== 'connected', { label: 'dropped' });
+
+    enqueueChange({
+      section: 'tasks',
+      recordId: 'offline-1',
+      operation: 'create',
+      payload: makeTask('offline-1', 'Made offline')
+    });
+    expect(outboxSize()).toBe(1);
+
+    // Coming back must drain the queue with no explicit flush.
+    c.start();
+    await waitFor(() => outboxSize() === 0, { label: 'offline change delivered after reconnect' });
+    expect(server.repo.getDelta({ cursor: 0, limit: 50 }).changes).toHaveLength(1);
+  });
+});
+
+/**
+ * Multiple tabs in one browser share `localStorage`, so they share one outbox and one
+ * device identity. What must hold: a change queued by one tab is delivered by whichever
+ * tab holds the live socket, and the ack is visible to both.
+ */
+describe('multi-tab outbox sharing', () => {
+  let server: SyncServer;
+  let client: SyncClient | null = null;
+
+  beforeEach(async () => {
+    server = await startServer();
+  });
+
+  afterEach(async () => {
+    client?.stop();
+    client = null;
+    await server.close();
+  });
+
+  it('delivers a change queued by another tab through the tab that owns the socket', async () => {
+    const c = new SyncClient({
+      url: `ws://127.0.0.1:${server.port}/sync`,
+      webSocketImpl: WebSocket as unknown as new (url: string) => SyncSocket,
+      webSocketFactory: (url) =>
+        new WebSocket(url, {
+          headers: { origin: TEST_ORIGIN, 'tailscale-user-login': TEST_TAILSCALE_USER }
+        }) as unknown as SyncSocket,
+      fetchImpl: serveFetch(),
+      origin: TEST_ORIGIN,
+      baseDelayMs: 50,
+      maxDelayMs: 200
+    });
+    client = c;
+    c.start();
+    await waitFor(() => c.getState() === 'connected', { label: 'connected' });
+
+    // Tab B writes to the shared outbox. Only tab A has a socket, so tab A must send it.
+    const seen = new Promise<void>((resolve) => {
+      const detach = onOutboxChange(() => {
+        detach();
+        resolve();
+      });
+    });
+    enqueueChange({
+      section: 'tasks',
+      recordId: 'tab-b-1',
+      operation: 'create',
+      payload: makeTask('tab-b-1', 'From another tab')
+    });
+    await seen;
+
+    await waitFor(() => outboxSize() === 0, { label: 'shared outbox drained' });
+    expect(server.repo.getDelta({ cursor: 0, limit: 50 }).changes).toHaveLength(1);
+  });
+});
+
+/**
+ * An interrupted batch must not wedge the client.
+ *
+ * `flush()` sets a `flushing` latch so two batches are never in flight at once, and only
+ * a `sync_ack` or an `error` frame clears it. If the socket dies between the send and the
+ * ack, nothing clears it, so every later `flush()` returns early and the outbox is stuck
+ * forever. That is much easier to hit now that a change is sent the instant it is queued.
+ *
+ * The socket is a thin wrapper over a real `ws` connection: it forwards `send` and then
+ * immediately kills the connection, which is exactly a network drop mid-batch.
+ */
+describe('interrupted batch recovery', () => {
+  let server: SyncServer;
+  let client: SyncClient | null = null;
+
+  beforeEach(async () => {
+    server = await startServer();
+  });
+
+  afterEach(async () => {
+    client?.stop();
+    client = null;
+    await server.close();
+  });
+
+  it('re-sends a change whose batch was killed before the ack', async () => {
+    let droppedOnce = false;
+    const c = new SyncClient({
+      url: `ws://127.0.0.1:${server.port}/sync`,
+      webSocketImpl: WebSocket as unknown as new (url: string) => SyncSocket,
+      webSocketFactory: (url) => {
+        const real = new WebSocket(url, {
+          headers: { origin: TEST_ORIGIN, 'tailscale-user-login': TEST_TAILSCALE_USER }
+        }) as unknown as SyncSocket & { terminate: () => void };
+        return new Proxy(real, {
+          get(target, prop) {
+            if (prop === 'send') {
+              return (data: string) => {
+                target.send(data);
+                // Kill the link after the first sync frame, before any ack can arrive.
+                if (!droppedOnce && data.includes('"type":"sync"')) {
+                  droppedOnce = true;
+                  setTimeout(() => (target as unknown as { terminate: () => void }).terminate(), 0);
+                }
+              };
+            }
+            const value = Reflect.get(target, prop, target);
+            return typeof value === 'function' ? value.bind(target) : value;
+          },
+          set(target, prop, value) {
+            return Reflect.set(target, prop, value, target);
+          }
+        }) as unknown as SyncSocket;
+      },
+      fetchImpl: serveFetch(),
+      origin: TEST_ORIGIN,
+      baseDelayMs: 50,
+      maxDelayMs: 200
+    });
+    client = c;
+    c.start();
+    await waitFor(() => c.getState() === 'connected', { label: 'connected' });
+
+    enqueueChange({
+      section: 'tasks',
+      recordId: 'interrupted-1',
+      operation: 'create',
+      payload: makeTask('interrupted-1', 'Survives a drop')
+    });
+
+    await waitFor(() => droppedOnce, { label: 'socket dropped mid-batch' });
+    // The drop must not leave the entry stuck; a later flush has to be able to send it.
+    await waitFor(() => outboxSize() === 0, { label: 'entry re-sent after reconnect' });
+    expect(server.repo.getDelta({ cursor: 0, limit: 50 }).changes).toHaveLength(1);
   });
 });

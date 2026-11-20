@@ -680,6 +680,172 @@ body.light-mode {
   color: #1e6344 !important;
 }
 
+/* --- Sync status pill (header) ------------------------------------------- */
+/* Mirrors .offline-pill so it sits in the header row without looking bolted on. */
+.sync-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 20px;
+  border: 1px solid #2b3a35;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 10px;
+  line-height: 1;
+  color: #9fb0a8;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.sync-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+.sync-pill-label {
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.sync-pill--ok {
+  color: #8fd6ae;
+  border-color: #2f4a3b;
+  background: rgba(143, 214, 174, 0.08);
+}
+
+.sync-pill--busy {
+  color: #9ac5f4;
+  border-color: #2f4152;
+  background: rgba(154, 197, 244, 0.08);
+}
+
+.sync-pill--busy .sync-pill-dot {
+  animation: sync-pill-pulse 1.4s ease-in-out infinite;
+}
+
+.sync-pill--warn {
+  color: #ffc99a;
+  border-color: #4d3d2c;
+  background: rgba(255, 201, 154, 0.08);
+}
+
+.sync-pill--danger {
+  color: #ff9999;
+  border-color: #563638;
+  background: rgba(255, 153, 153, 0.09);
+}
+
+.sync-pill--muted {
+  color: #7d8b93;
+}
+
+@keyframes sync-pill-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* Tooltip: the pill is abbreviated, so the full sentence is available on hover. */
+.sync-pill-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-end: 0;
+  z-index: 60;
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease, visibility 0.14s ease;
+  pointer-events: none;
+}
+
+.sync-pill:hover .sync-pill-tip,
+.sync-pill:focus-within .sync-pill-tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sync-pill-action {
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  background: transparent;
+  color: inherit;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sync-pill-action:hover {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.light-mode .sync-pill {
+  background: #eef4f0 !important;
+  border-color: #d3e0d8 !important;
+  color: #4c6a5b !important;
+}
+
+.light-mode .sync-pill--ok {
+  background: #e4efe7 !important;
+  border-color: #c7ded0 !important;
+  color: #1e6344 !important;
+}
+
+.light-mode .sync-pill--busy {
+  background: #e8f0f8 !important;
+  border-color: #cfdde9 !important;
+  color: #2c5b85 !important;
+}
+
+.light-mode .sync-pill--warn {
+  background: #fdf3e7 !important;
+  border-color: #ecd9bf !important;
+  color: #8a5a1f !important;
+}
+
+.light-mode .sync-pill--danger {
+  background: #fdeeee !important;
+  border-color: #eccdcd !important;
+  color: #9c2f2f !important;
+}
+
+.light-mode .sync-pill-tip {
+  background: #ffffff !important;
+  border-color: #d3e0d8 !important;
+  color: #17231d !important;
+}
+
+/* Narrow screens: drop the word, keep the dot.
+   Hiding the pill outright would hide the state entirely, and "Synced" is information
+   the user asked for. The dot plus the aria/tooltip text still convey it, while a
+   warning keeps its word because it needs action. */
+@media (max-width: 660px) {
+  .sync-pill {
+    padding: 6px;
+    gap: 0;
+  }
+  .sync-pill--ok .sync-pill-label,
+  .sync-pill--busy .sync-pill-label,
+  .sync-pill--muted .sync-pill-label {
+    display: none;
+  }
+  .sync-pill-tip {
+    white-space: normal;
+    width: max-content;
+    max-width: 60vw;
+  }
+}
+
 .light-mode .brand-mark {
   background: #1e6344 !important;
 }

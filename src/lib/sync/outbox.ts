@@ -16,6 +16,33 @@ import { generateUuid } from './deviceIdentity';
 const OUTBOX_KEY = 'nuqta_sync_outbox_v1';
 
 /**
+ * Notified whenever the queued set changes (append, acknowledge, clear).
+ *
+ * This is what makes sync real-time: writing to the outbox is the last local step
+ * before the wire, so the client subscribes here and sends immediately. Without it a
+ * change sat durable but unsent until some unrelated event (reconnect, reload) happened
+ * to call `flush()` — which is exactly the "only syncs after refresh" bug.
+ */
+const changeListeners = new Set<() => void>();
+
+export function onOutboxChange(fn: () => void): () => void {
+  changeListeners.add(fn);
+  return () => {
+    changeListeners.delete(fn);
+  };
+}
+
+function notifyOutboxChange(): void {
+  for (const fn of changeListeners) {
+    try {
+      fn();
+    } catch {
+      /* an observer must never break a queue write that already succeeded */
+    }
+  }
+}
+
+/**
  * One queued change. `client_change_id` is the idempotency key: re-sending the same
  * entry after an interrupted batch is safe because the server deduplicates on it.
  */
@@ -124,6 +151,7 @@ export function enqueueChange(input: {
   };
 
   if (!writeOutbox(next)) return null;
+  notifyOutboxChange();
   return entry;
 }
 
@@ -141,6 +169,7 @@ export function acknowledge(clientChangeIds: string[]): number {
     nextSeq: state.nextSeq,
     lastAckedSeq: state.lastAckedSeq
   });
+  notifyOutboxChange();
   return removed;
 }
 
@@ -160,6 +189,7 @@ export function clearOutbox(): void {
   } catch {
     /* nothing else we can do */
   }
+  notifyOutboxChange();
 }
 
 /** Convert an entry into the wire shape the server expects (`snake_case`). */

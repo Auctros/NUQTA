@@ -20,7 +20,8 @@ import {
   acknowledge,
   peekBatch,
   toOutboundChange,
-  outboxSize
+  outboxSize,
+  onOutboxChange
 } from './outbox';
 import { advanceCursor, readCursor, setDeviceCursor } from './cursor';
 import { applyRemoteChanges } from './applyRemote';
@@ -101,6 +102,8 @@ export class SyncClient {
   private flushing = false;
   /** Set once a session authenticated; a later drop is a network problem, not auth. */
   private everConnected = false;
+  /** Detaches the outbox subscription; set while the client is running. */
+  private detachOutbox: (() => void) | null = null;
   private readonly deviceId: string;
 
   constructor(options: SyncClientOptions) {
@@ -138,12 +141,20 @@ export class SyncClient {
     if (!this.stopped) return;
     this.stopped = false;
     this.attempt = 0;
+    // Any change captured from now on must be sent as soon as it is durable. Subscribing
+    // here (not on connect) means an edit made while the socket is still opening is
+    // pushed by the `welcome` flush instead of waiting for an unrelated event.
+    this.detachOutbox = onOutboxChange(() => {
+      void this.flush();
+    });
     this.connect();
   }
 
   /** Close and stop reconnecting. */
   stop(): void {
     this.stopped = true;
+    this.detachOutbox?.();
+    this.detachOutbox = null;
     this.clearReconnectTimer();
     if (this.socket) {
       const socket = this.socket;
@@ -226,6 +237,10 @@ export class SyncClient {
 
     socket.onclose = () => {
       if (this.socket === socket) this.socket = null;
+      // A batch sent on this socket can never be acknowledged now. Clearing the latch
+      // here is what lets the entry be re-sent after reconnect; without it the client
+      // stays "flushing" forever and the outbox never drains.
+      this.flushing = false;
       if (this.stopped) return;
       // A rejected upgrade looks identical to a dropped connection from inside the
       // browser: both only surface as `close`. Ask the HTTP endpoint why, so a

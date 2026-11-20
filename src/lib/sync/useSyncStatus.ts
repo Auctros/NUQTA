@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../../store/nuqtaStore';
 import { onRemoteApplied } from './applyRemote';
 import { readSyncConfigFromEnv, startSync, stopSync } from './lifecycle';
-import { outboxSize } from './outbox';
+import { onOutboxChange, outboxSize } from './outbox';
 import { isSyncPaused } from './syncGate';
 import type { SyncConnectionState } from './protocol';
 
@@ -49,8 +49,17 @@ export function useSyncStatus(): SyncStatus {
       setPendingChanges(outboxSize());
     });
 
+    // The pending count changes on every enqueue and every ack. Watching the outbox
+    // keeps the badge accurate between connection-state transitions, which would
+    // otherwise be the only moments it refreshed.
+    const detachOutbox = onOutboxChange(() => {
+      setPendingChanges(outboxSize());
+    });
+    setPendingChanges(outboxSize());
+
     return () => {
       detachApplied();
+      detachOutbox();
       stopSync();
     };
   }, [enabled, paused, config.url, initializeStore]);

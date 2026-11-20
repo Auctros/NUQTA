@@ -343,9 +343,6 @@ export default function App() {
       <AmbientBackdrop />
       <StorageIssueBanner isAr={isAr} />
       <UpdateBanner isAr={isAr} />
-      <div style={{ position: 'fixed', top: 8, insetInlineEnd: 12, zIndex: 90 }}>
-        <SyncStatusBadge status={syncStatus} isAr={isAr} />
-      </div>
       {/* Global Modals */}
       <RescueModal />
       <SundayRitualModal />
@@ -644,6 +641,9 @@ export default function App() {
               <span className="status-dot"></span>
               <span>{isAr ? 'محلي وآمن' : 'Local & private'}</span>
             </div>
+
+            {/* Sync status: compact pill beside the other header actions */}
+            <SyncStatusBadge status={syncStatus} isAr={isAr} />
 
             {/* Global Search */}
             <button
