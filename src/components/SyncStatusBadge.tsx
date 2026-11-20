@@ -105,6 +105,10 @@ export const SyncStatusBadge: React.FC<{ status: SyncStatus; isAr: boolean }> = 
   if (!status.enabled) return null;
 
   const view = present(status, isAr);
+  // A preview status is synthetic, so its Resume button must not touch the real wipe
+  // latch or reload the page. The control still renders, because hiding it would make
+  // the preview misrepresent the header it exists to show.
+  const isPreview = status.preview === true;
 
   return (
     <div className={`sync-pill sync-pill--${view.tone}`} role="status" aria-live="polite">
@@ -125,6 +129,7 @@ export const SyncStatusBadge: React.FC<{ status: SyncStatus; isAr: boolean }> = 
           type="button"
           className="sync-pill-action"
           onClick={() => {
+            if (isPreview) return;
             // Clearing the latch is an explicit, user-initiated decision to sync again.
             resumeSyncAfterWipe();
             window.location.reload();

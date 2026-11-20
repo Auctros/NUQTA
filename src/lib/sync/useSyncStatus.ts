@@ -11,6 +11,7 @@ import { useNuqtaStore } from '../../store/nuqtaStore';
 import { onRemoteApplied } from './applyRemote';
 import { readSyncConfigFromEnv, startSync, stopSync } from './lifecycle';
 import { onOutboxChange, outboxSize } from './outbox';
+import { readSyncPreview } from './previewStatus';
 import { isSyncPaused } from './syncGate';
 import type { SyncConnectionState } from './protocol';
 
@@ -21,6 +22,11 @@ export interface SyncStatus {
   paused: boolean;
   state: SyncConnectionState;
   pendingChanges: number;
+  /**
+   * Set only by a preview build, where the status is synthetic. Controls that would
+   * change real state (Resume) use this to stay inert.
+   */
+  preview?: boolean;
 }
 
 export function useSyncStatus(): SyncStatus {
@@ -28,11 +34,18 @@ export function useSyncStatus(): SyncStatus {
   const [state, setState] = useState<SyncConnectionState>('idle');
   const [pendingChanges, setPendingChanges] = useState(0);
   const config = readSyncConfigFromEnv();
+  // Preview builds draw a fixed status so the header can be reviewed on a static host
+  // that has no sync server. Read per render: switching ?syncPreview= needs no reload
+  // logic of its own, and a normal build returns null here and behaves exactly as before.
+  const preview = readSyncPreview(
+    typeof window === 'undefined' ? '' : window.location.search
+  );
+  const previewActive = preview !== null;
   const enabled = Boolean(config.url);
   const paused = isSyncPaused();
 
   useEffect(() => {
-    if (!enabled || paused) return;
+    if (previewActive || !enabled || paused) return;
 
     const client = startSync({
       ...config,
@@ -62,7 +75,9 @@ export function useSyncStatus(): SyncStatus {
       detachOutbox();
       stopSync();
     };
-  }, [enabled, paused, config.url, initializeStore]);
+  }, [enabled, paused, config.url, initializeStore, previewActive]);
+
+  if (preview) return preview;
 
   return { enabled, paused, state, pendingChanges };
 }

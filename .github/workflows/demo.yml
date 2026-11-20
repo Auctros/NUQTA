@@ -43,6 +43,11 @@ jobs:
         run: npm run build
         env:
           GITHUB_PAGES: 'true'
+          # Pages is static, so it cannot host the sync WebSocket server. Without an
+          # endpoint the status pill renders nothing at all, which leaves the header
+          # unrepresentative for design review. This draws the pill from a fixed status
+          # instead; pick the state with ?syncPreview=ok|busy|warn|danger|muted|paused.
+          VITE_NUQTA_SYNC_PREVIEW: '1'
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
