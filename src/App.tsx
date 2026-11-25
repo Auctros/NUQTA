@@ -37,6 +37,7 @@ import { ReadingView } from './components/ReadingView';
 import { WorkoutView } from './components/WorkoutView';
 import { DrawingView } from './components/DrawingView';
 import { WalkingView } from './components/WalkingView';
+import { CoursesView } from './components/CoursesView';
 import { ArchiveHistoryView } from './components/ArchiveHistoryView';
 import { useNuqtaReminders } from './lib/useNuqtaReminders';
 import { CommandPalette, CommandItem } from './components/CommandPalette';
@@ -289,7 +290,8 @@ export default function App() {
     { id: 'reading', label: isAr ? 'استوديو القراءة' : 'Reading Vault', shortLabel: isAr ? 'القراءة' : 'Reading', icon: 'book-open' },
     { id: 'workout', label: isAr ? 'اللياقة البدنية' : 'Home Workout', shortLabel: isAr ? 'اللياقة' : 'Workout', icon: 'dumbbell' },
     { id: 'drawing', label: isAr ? 'مرسم الإبداع' : 'Art Studio', shortLabel: isAr ? 'المرسم' : 'Studio', icon: 'brush' },
-    { id: 'walking', label: isAr ? 'استوديو المشي' : 'Walking Studio', shortLabel: isAr ? 'المشي' : 'Walking', icon: 'footprints' }
+    { id: 'walking', label: isAr ? 'استوديو المشي' : 'Walking Studio', shortLabel: isAr ? 'المشي' : 'Walking', icon: 'footprints' },
+    { id: 'courses', label: isAr ? 'استوديو الدورات' : 'Courses Studio', shortLabel: isAr ? 'الدورات' : 'Courses', icon: 'play' }
   ];
 
   const lifeNav: NavDef[] = [
@@ -345,6 +347,7 @@ export default function App() {
       case 'workout': return isAr ? 'استوديو اللياقة المنزلية' : 'Home Workout';
       case 'drawing': return isAr ? 'مرسم الإبداع والفن' : 'Creative Art Studio';
       case 'walking': return isAr ? 'استوديو المشي' : 'Walking Studio';
+      case 'courses': return isAr ? 'استوديو الدورات' : 'Courses Studio';
       case 'goals': return isAr ? 'الأهداف' : 'Goals';
       case 'focus': return isAr ? 'التركيز' : 'Focus';
       case 'calendar': return isAr ? 'التقويم' : 'Calendar';
@@ -745,6 +748,7 @@ export default function App() {
           {activeNavTab === 'workout' && <WorkoutView />}
           {activeNavTab === 'drawing' && <DrawingView />}
           {activeNavTab === 'walking' && <WalkingView />}
+          {activeNavTab === 'courses' && <CoursesView isAr={isAr} />}
           {activeNavTab === 'goals' && <GoalsView />}
           {activeNavTab === 'focus' && <FocusView />}
           {activeNavTab === 'calendar' && <CalendarView />}

@@ -449,6 +449,7 @@ export const DashboardView: React.FC = () => {
       <SecondaryAnalyticsSection
         data={secondaryData}
         breakdown={consistencyBreakdown}
+        mapSources={{ tasks, habits, focusSessions, journalEntries, healthMetrics }}
         isAr={isAr}
         onOpenInsights={() => setActiveNavTab('insights')}
       />

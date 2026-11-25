@@ -242,6 +242,20 @@
   --d-reading-accent-strong: #fcd34d;
   --d-reading-accent-bright: #fde68a;
 
+  /* Courses: a cool teal, deliberately away from Reading's amber so an imported
+     course never reads as a book. */
+  --d-courses-surface: #0b1210;
+  --d-courses-raised: #0e1614;
+  --d-courses-chip: #132220;
+  --d-courses-deep: #0a100f;
+  --d-courses-border: #16262b;
+  --d-courses-border-soft: #122024;
+  --d-courses-border-strong: #1a2f35;
+  --d-courses-border-accent: #23434b;
+  --d-courses-accent: #38bdf8;
+  --d-courses-accent-strong: #7dd3fc;
+  --d-courses-accent-bright: #bae6fd;
+
   /* Home Workout — disciplined emerald/teal */
   --d-workout-surface: #0f1712;
   --d-workout-raised: #142217;
@@ -563,6 +577,18 @@ body.light-mode {
   --d-reading-accent: #8a5a12;
   --d-reading-accent-strong: #744a0c;
   --d-reading-accent-bright: #5f3c07;
+
+  --d-courses-surface: #ffffff;
+  --d-courses-raised: #f2f8fa;
+  --d-courses-chip: #e6f3f7;
+  --d-courses-deep: #f6fbfc;
+  --d-courses-border: #d5e6ec;
+  --d-courses-border-soft: #e3eff3;
+  --d-courses-border-strong: #c0d8e1;
+  --d-courses-border-accent: #a5c8d5;
+  --d-courses-accent: #0e7490;
+  --d-courses-accent-strong: #155e75;
+  --d-courses-accent-bright: #164e63;
 
   --d-workout-surface: #ffffff;
   --d-workout-raised: #f2f8f5;
@@ -2930,6 +2956,7 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 [data-studio='reading'] { --studio-accent: var(--d-reading-accent); --studio-accent-line: var(--d-reading-border-accent); --studio-accent-soft: color-mix(in srgb, var(--d-reading-accent) 14%, transparent); --studio-accent-ink: var(--d-reading-accent-strong); --studio-panel: var(--d-reading-surface); --studio-line: var(--d-reading-border); --studio-line-strong: var(--d-reading-border-accent); --studio-rail-bg: var(--d-reading-raised); }
 [data-studio='drawing'] { --studio-accent: var(--d-drawing-accent); --studio-accent-line: var(--d-drawing-border-accent); --studio-accent-soft: color-mix(in srgb, var(--d-drawing-accent) 15%, transparent); --studio-accent-ink: var(--d-drawing-accent-strong); --studio-panel: var(--d-drawing-surface); --studio-line: var(--d-drawing-border); --studio-line-strong: var(--d-drawing-border-accent); --studio-rail-bg: var(--d-drawing-raised); --studio-tile-bg: var(--d-drawing-raised); }
 [data-studio='walking'] { --studio-accent: var(--d-walking-accent); --studio-accent-line: var(--d-walking-border-accent); --studio-accent-soft: color-mix(in srgb, var(--d-walking-accent) 15%, transparent); --studio-accent-ink: var(--d-walking-accent-strong); --studio-panel: var(--d-walking-surface); --studio-line: var(--d-walking-border); --studio-line-strong: var(--d-walking-border-accent); --studio-rail-bg: var(--d-walking-raised); --studio-tile-bg: var(--d-walking-raised); }
+[data-studio='courses'] { --studio-accent: var(--d-courses-accent); --studio-accent-line: var(--d-courses-border-accent); --studio-accent-soft: color-mix(in srgb, var(--d-courses-accent) 14%, transparent); --studio-accent-ink: var(--d-courses-accent-strong); --studio-panel: var(--d-courses-surface); --studio-line: var(--d-courses-border); --studio-line-strong: var(--d-courses-border-accent); --studio-rail-bg: var(--d-courses-raised); --studio-tile-bg: var(--d-courses-raised); }
 
 /* ============================================================
    NUQTA — Exercise Library

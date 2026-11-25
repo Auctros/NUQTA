@@ -6,10 +6,11 @@
 
 const DB_NAME = 'nuqta_local_db';
 /**
- * v3 adds `notifications`. Bumping the version is what runs `onupgradeneeded` so an
- * existing install gains the new store instead of silently mirroring nothing.
+ * v3 adds `notifications`; v4 adds `courses`. Bumping the version is what runs
+ * `onupgradeneeded` so an existing install gains the new store instead of silently
+ * mirroring nothing.
  */
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export const STORES = {
   TASKS: 'tasks',
@@ -24,6 +25,7 @@ export const STORES = {
   SUNDAY_REVIEWS: 'sunday_reviews',
   HISTORY_AUDIT: 'history_audit',
   NOTIFICATIONS: 'notifications',
+  COURSES: 'courses',
   META: 'meta'
 } as const;
 
@@ -106,6 +108,13 @@ export function openNuqtaDB(): Promise<IDBDatabase> {
         const store = db.createObjectStore(STORES.NOTIFICATIONS, { keyPath: 'id' });
         store.createIndex('createdAt', 'createdAt', { unique: false });
         store.createIndex('dedupeKey', 'dedupeKey', { unique: false });
+      }
+
+      // v4: imported YouTube courses (local-only; see STORAGE_KEYS.COURSES).
+      if (!db.objectStoreNames.contains(STORES.COURSES)) {
+        const store = db.createObjectStore(STORES.COURSES, { keyPath: 'id' });
+        store.createIndex('playlistId', 'playlistId', { unique: false });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
       }
 
       if (!db.objectStoreNames.contains(STORES.META)) {

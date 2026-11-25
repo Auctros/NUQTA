@@ -815,3 +815,54 @@ export interface NotificationPreferences {
   /** Suppress browser delivery outside these hours ("HH:mm"), local time. */
   quietHours?: { enabled: boolean; start: string; end: string };
 }
+
+// ==========================================
+// 6. YouTube Courses (imported playlists)
+// ==========================================
+/**
+ * One video inside an imported playlist, in the playlist's own order.
+ *
+ * `position` is the index YouTube reports, and it is the only ordering the course
+ * view uses — the list must read exactly as it does on YouTube. A video that has
+ * since been deleted or made private keeps its slot with `unavailable: true`
+ * rather than disappearing, so the rest of the course never shifts under the user.
+ */
+export interface CourseVideo {
+  videoId: string;
+  title: string;
+  position: number;
+  durationSeconds?: number;
+  thumbnailUrl?: string;
+  channelTitle?: string;
+  /** True when YouTube no longer returns data for this item. */
+  unavailable?: boolean;
+  publishedAt?: string;
+}
+
+/**
+ * An imported YouTube playlist.
+ *
+ * This is a local cache of what YouTube returned, not a second source of truth:
+ * NUQTA owns nothing here except the user's choice to keep it. `fetchedAt` records
+ * when the snapshot was taken so a stale course can say so instead of pretending
+ * to be live.
+ */
+export interface YoutubeCourse {
+  id: string;
+  playlistId: string;
+  title: string;
+  description?: string;
+  channelTitle?: string;
+  /** The cover the course page shows. Never invented when YouTube gives none. */
+  thumbnailUrl?: string;
+  videos: CourseVideo[];
+  /** How many items YouTube reported, which can exceed `videos.length` if truncated. */
+  itemCount: number;
+  canonicalUrl: string;
+  fetchedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  /** True when the import hit the per-playlist cap and the list is partial. */
+  truncated?: boolean;
+  linkedGoalId?: string;
+}

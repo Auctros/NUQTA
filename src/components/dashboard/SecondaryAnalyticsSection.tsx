@@ -4,55 +4,30 @@ import {
   ConsistencyBreakdownData,
   DailyCorrelationPoint,
   FocusScatterPoint,
-  HeatmapDayCell,
   SecondaryAnalyticsResult
 } from '../../lib/dashboardAnalytics';
+import { CommitmentMap } from '../CommitmentMap';
+import { CommitmentSources } from '../../lib/commitmentMap';
 
 interface SecondaryAnalyticsSectionProps {
   data: SecondaryAnalyticsResult;
   breakdown: ConsistencyBreakdownData;
+  /**
+   * Raw records for the commitment map. The map reads the same stores the rest of the
+   * dashboard reads, so it never becomes a second, drifting source of truth.
+   */
+  mapSources: CommitmentSources;
   isAr: boolean;
   onOpenInsights: () => void;
-}
-
-const LEVEL_STYLES: Record<0 | 1 | 2 | 3 | 4, string> = {
-  0: 'bg-[var(--surface-track)] border-[var(--border-subtle)]',
-  1: 'bg-[color-mix(in_srgb,var(--brand-strong)_24%,transparent)] border-[color-mix(in_srgb,var(--brand-strong)_34%,transparent)]',
-  2: 'bg-[color-mix(in_srgb,var(--brand-strong)_44%,transparent)] border-[color-mix(in_srgb,var(--brand-strong)_55%,transparent)]',
-  3: 'bg-[color-mix(in_srgb,var(--brand-strong)_70%,transparent)] border-[color-mix(in_srgb,var(--brand-strong)_80%,transparent)]',
-  4: 'bg-[var(--brand)] border-[var(--brand-strong)]'
-};
-
-const MISSED_STYLE =
-  'bg-[color-mix(in_srgb,var(--state-danger)_20%,transparent)] border-[color-mix(in_srgb,var(--state-danger)_45%,transparent)]';
-const TODAY_PENDING_STYLE =
-  'bg-[color-mix(in_srgb,var(--state-warning)_16%,transparent)] border-[color-mix(in_srgb,var(--state-warning)_55%,transparent)]';
-const REST_STYLE = 'bg-[var(--surface-sunken)] border-[var(--border-default)]';
-const MISSING_STYLE = 'bg-transparent border-dashed border-[var(--border-subtle)] opacity-55';
-const FUTURE_STYLE = 'opacity-25 bg-transparent border-dashed border-[var(--border-subtle)] cursor-default';
-
-function cellClassFor(cell: HeatmapDayCell): string {
-  switch (cell.state) {
-    case 'future':
-      return FUTURE_STYLE;
-    case 'missing':
-      return MISSING_STYLE;
-    case 'rest':
-      return REST_STYLE;
-    case 'missed':
-      return cell.isToday ? TODAY_PENDING_STYLE : MISSED_STYLE;
-    case 'completed':
-      return LEVEL_STYLES[cell.level];
-  }
 }
 
 export const SecondaryAnalyticsSection: React.FC<SecondaryAnalyticsSectionProps> = ({
   data,
   breakdown,
+  mapSources,
   isAr,
   onOpenInsights
 }) => {
-  const [hoveredCell, setHoveredCell] = useState<HeatmapDayCell | null>(null);
   const [scatterMode, setScatterMode] = useState<'daily' | 'focus'>('daily');
   const [hoveredDailyPt, setHoveredDailyPt] = useState<DailyCorrelationPoint | null>(null);
   const [hoveredFocusPt, setHoveredFocusPt] = useState<FocusScatterPoint | null>(null);
@@ -133,122 +108,38 @@ export const SecondaryAnalyticsSection: React.FC<SecondaryAnalyticsSectionProps>
               </h3>
             </div>
 
-            <div className="flex items-center gap-3 text-[11px] text-[var(--text-secondary)]">
-              {hoveredCell ? (
-                <span className="font-mono text-[var(--text-primary)] bg-[var(--surface-inset)] border border-[var(--border-default)] rounded-md px-2.5 py-1">
-                  {hoveredCell.dateKey} · {isAr ? hoveredCell.summaryAr : hoveredCell.summaryEn}
+            <div className="flex items-center gap-3 font-mono tabular-nums text-[11px] text-[var(--text-secondary)]">
+              <span>
+                {isAr ? 'نشط 30ي:' : '30D:'}{' '}
+                <span className="text-[var(--text-primary)] font-semibold">
+                  {data.hasData ? `${data.activeDaysLast30}/30` : '—'}
                 </span>
-              ) : (
-                <div className="flex items-center gap-3 font-mono tabular-nums text-[11px]">
-                  <span>
-                    {isAr ? 'نشط 30ي:' : '30D:'}{' '}
-                    <span className="text-[var(--text-primary)] font-semibold">
-                      {data.hasData ? `${data.activeDaysLast30}/30` : '—'}
-                    </span>
-                  </span>
+              </span>
+              <span className="text-[var(--text-tertiary)]">·</span>
+              <span>
+                {isAr ? 'السلسلة:' : 'Streak:'}{' '}
+                <span className="text-[var(--brand-strong)] font-semibold">
+                  {data.hasData ? `${data.currentActiveStreak}d` : '—'}
+                </span>
+              </span>
+              {completionsDeltaPct !== null && (
+                <>
                   <span className="text-[var(--text-tertiary)]">·</span>
-                  <span>
-                    {isAr ? 'السلسلة:' : 'Streak:'}{' '}
-                    <span className="text-[var(--brand-strong)] font-semibold">
-                      {data.hasData ? `${data.currentActiveStreak}d` : '—'}
-                    </span>
+                  <span
+                    className={
+                      completionsDeltaPct >= 0
+                        ? 'text-[var(--state-success-strong)]'
+                        : 'text-[var(--state-warning)]'
+                    }
+                  >
+                    {completionsDeltaPct >= 0 ? `+${completionsDeltaPct}%` : `${completionsDeltaPct}%`}
                   </span>
-                  {completionsDeltaPct !== null && (
-                    <>
-                      <span className="text-[var(--text-tertiary)]">·</span>
-                      <span
-                        className={
-                          completionsDeltaPct >= 0
-                            ? 'text-[var(--state-success-strong)]'
-                            : 'text-[var(--state-warning)]'
-                        }
-                      >
-                        {completionsDeltaPct >= 0 ? `+${completionsDeltaPct}%` : `${completionsDeltaPct}%`}
-                      </span>
-                    </>
-                  )}
-                </div>
+                </>
               )}
             </div>
           </div>
 
-          {!data.hasData && !data.hasScheduleOrHistory ? (
-            <div className="dash-glass-inset p-6 text-center text-xs text-[var(--text-secondary)]">
-              {isAr
-                ? 'ستظهر مربعات النشاط تدريجياً مع إنشاء العادات أو إتمام المهام وجلسات الاستوديوهات.'
-                : 'Daily cells populate automatically as you schedule habits or complete tasks and studio sessions.'}
-            </div>
-          ) : (
-            <div className="overflow-x-auto pb-1">
-              <div className="inline-flex items-start gap-2 min-w-full" dir="ltr">
-                <div className="grid grid-rows-7 gap-1.5 pt-0.5 pr-1 text-[10px] font-mono text-[var(--text-tertiary)] shrink-0">
-                  {dayNames.map((d, i) => (
-                    <span key={i} className="h-3.5 sm:h-4 leading-[14px] text-right">
-                      {i % 2 === 1 ? d : ''}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-14 gap-1.5 flex-1">
-                  {data.weeks.map((week, wIdx) => (
-                    <div key={wIdx} className="grid grid-rows-7 gap-1.5">
-                      {week.map((cell) => {
-                        const summary = isAr ? cell.summaryAr : cell.summaryEn;
-                        return (
-                          <button
-                            key={cell.dateKey}
-                            type="button"
-                            title={`${cell.dateKey} · ${summary}`}
-                            onMouseEnter={() => setHoveredCell(cell)}
-                            onFocus={() => setHoveredCell(cell)}
-                            onMouseLeave={() => setHoveredCell(null)}
-                            aria-label={`${cell.dateKey}: ${summary}`}
-                            className={`h-3.5 sm:h-4 w-full min-w-[14px] rounded-[4px] border transition-transform hover:scale-110 ${cellClassFor(
-                              cell
-                            )} ${cell.isToday ? 'ring-1 ring-[var(--brand)] ring-offset-1 ring-offset-transparent' : ''}`}
-                          />
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Legend */}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10.5px] text-[var(--text-secondary)]">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1" dir="ltr">
-                <span className="text-[var(--text-tertiary)]">{isAr ? 'أقل' : 'Less'}</span>
-                {([1, 2, 3, 4] as const).map((lvl) => (
-                  <span
-                    key={lvl}
-                    className={`w-2.5 h-2.5 rounded-[2px] border inline-block ${LEVEL_STYLES[lvl]}`}
-                  />
-                ))}
-                <span className="text-[var(--text-tertiary)]">{isAr ? 'أكثر' : 'More'}</span>
-              </div>
-              <span className="inline-flex items-center gap-1 text-[var(--text-tertiary)]">
-                <span className={`w-2.5 h-2.5 rounded-[2px] border inline-block ${MISSED_STYLE}`} />
-                <span>{isAr ? 'فائت' : 'Missed'}</span>
-              </span>
-              <span className="inline-flex items-center gap-1 text-[var(--text-tertiary)]">
-                <span className={`w-2.5 h-2.5 rounded-[2px] border inline-block ${REST_STYLE}`} />
-                <span>{isAr ? 'راحة' : 'Rest'}</span>
-              </span>
-              <span className="inline-flex items-center gap-1 text-[var(--text-tertiary)]">
-                <span className={`w-2.5 h-2.5 rounded-[2px] border inline-block ${MISSING_STYLE}`} />
-                <span>{isAr ? 'بلا سجلات' : 'No data'}</span>
-              </span>
-            </div>
-
-            {data.peakDay && (
-              <span className="font-mono tabular-nums text-[var(--text-tertiary)]">
-                {isAr ? 'الذروة:' : 'Peak:'} {data.peakDay.dateKey} ({data.peakDay.count})
-              </span>
-            )}
-          </div>
+          <CommitmentMap sources={mapSources} isAr={isAr} variant="compact" />
         </div>
 
         {/* Hairline-Separated Weekday Rhythm Column Bars */}

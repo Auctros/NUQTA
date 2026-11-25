@@ -42,6 +42,7 @@ export type NavTab =
   | 'workout'
   | 'drawing'
   | 'walking'
+  | 'courses'
   | 'archive';
 
 export const NAV_TABS: readonly NavTab[] = [
@@ -62,6 +63,7 @@ export const NAV_TABS: readonly NavTab[] = [
   'workout',
   'drawing',
   'walking',
+  'courses',
   'archive'
 ];
 

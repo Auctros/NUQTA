@@ -11,7 +11,8 @@ import {
   SundayRitualReview,
   HistoryAuditLogEntry,
   AppNotification,
-  NotificationPreferences
+  NotificationPreferences,
+  YoutubeCourse
 } from '../types';
 import { DEMO_TASKS, DEMO_HABITS, DEMO_GOALS, DEMO_EXPENSES, DEMO_SAVINGS_GOALS } from './demoData';
 import { NuqtaIndexedDB, STORES } from './indexedDB';
@@ -51,6 +52,13 @@ const STORAGE_KEYS = {
    * allow-list. Keeping it out of the sync map is what makes that true by construction.
    */
   NOTIFICATIONS: 'nuqta_notifications_v1',
+  /**
+   * Imported YouTube courses are LOCAL-ONLY for the same reason notifications are:
+   * the sync server accepts only its fixed allow-list of stores, and a course is a
+   * cache of what YouTube returned rather than user-authored data — it can always be
+   * re-imported, so it must never be a reason a sync or a restore fails.
+   */
+  COURSES: 'nuqta_courses_v1',
   META: 'nuqta_meta_v1'
 } as const;
 
@@ -524,6 +532,14 @@ export class NuqtaStorageEngine {
     return persist(STORAGE_KEYS.NOTIFICATIONS, notifications, () =>
       NuqtaIndexedDB.replaceAll(STORES.NOTIFICATIONS, notifications)
     );
+  }
+
+  // Imported YouTube courses — local-only (never synchronized; see STORAGE_KEYS.COURSES).
+  static getCourses(): YoutubeCourse[] {
+    return readValue(STORAGE_KEYS.COURSES, asList<YoutubeCourse>, isRecordList);
+  }
+  static saveCourses(courses: YoutubeCourse[]): boolean {
+    return persist(STORAGE_KEYS.COURSES, courses, () => NuqtaIndexedDB.replaceAll(STORES.COURSES, courses));
   }
 
   // Notification preferences — a singleton in its own key, mirrored with `put` so it

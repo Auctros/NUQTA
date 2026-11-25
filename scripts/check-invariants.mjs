@@ -173,7 +173,12 @@ const grep = (re, { except = [] } = {}) =>
 //     previously had: the sync client reached both primitives through `globalThis`,
 //     so the rule reported "clean" for code that opens sockets.
 //
-//     What it guarantees: outside `NETWORK_MODULE`, no fetch/WebSocket/XHR/beacon/
+//     The YouTube course client is the second and only other such module: it talks to
+//     this app's OWN origin (`/api/youtube/*`), which proxies to YouTube server-side so
+//     no API key ever reaches the browser. It is listed explicitly, reviewed by hand,
+//     and must never be widened to an arbitrary third-party URL.
+//
+//     What it guarantees: outside `NETWORK_MODULES`, no fetch/WebSocket/XHR/beacon/
 //     EventSource/geolocation primitive appears in first-party `.ts`/`.tsx` source,
 //     whether written directly or reached through `globalThis`/`window`/`self`, and
 //     whether called as a method or indexed as a string.
@@ -182,7 +187,7 @@ const grep = (re, { except = [] } = {}) =>
 //     see a URL handed to an <img>/<a>/<script> src or a request made inside a
 //     dependency. The allow-listed module is reviewed by hand instead.
 {
-  const NETWORK_MODULE = 'src/lib/sync/client.ts';
+  const NETWORK_MODULES = new Set(['src/lib/sync/client.ts', 'src/lib/youtubeClient.ts']);
 
   // `fetch(` / `.fetch(` / `globalThis.fetch` / `globalThis["fetch"]` all match, as do
   // bare references passed around (e.g. `const f = globalThis.fetch`).
@@ -202,7 +207,7 @@ const grep = (re, { except = [] } = {}) =>
 
   const hits = [];
   for (const file of srcFiles) {
-    if (file.path === NETWORK_MODULE) continue;
+    if (NETWORK_MODULES.has(file.path)) continue;
     const lines = file.text.split('\n');
     lines.forEach((line, i) => {
       if (isComment(line)) return;
@@ -214,7 +219,7 @@ const grep = (re, { except = [] } = {}) =>
 
   if (hits.length) {
     fail(
-      `Network/telemetry primitive outside ${NETWORK_MODULE} (the only reviewed network module)`,
+      `Network/telemetry primitive outside the reviewed network modules (${[...NETWORK_MODULES].join(', ')})`,
       hits.slice(0, 5).join('\n    ')
     );
   }

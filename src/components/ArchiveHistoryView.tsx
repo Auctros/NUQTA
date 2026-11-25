@@ -15,9 +15,12 @@ import {
   ArchivedItemSummary
 } from '../types';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
-import { NuqtaDatePicker, NuqtaSelect } from './ui';
+import { NuqtaDatePicker } from './ui';
 import { feedback } from './ui/dialogController';
 import { useEscapeKey } from '../lib/useEscapeKey';
+import { LifeTimeline } from './LifeTimeline';
+import { CommitmentMap } from './CommitmentMap';
+import { isNavTab } from '../lib/navigation';
 
 export const ArchiveHistoryView: React.FC = () => {
   const {
@@ -39,22 +42,26 @@ export const ArchiveHistoryView: React.FC = () => {
     archiveTask,
     archiveHabit,
     archiveGoal,
-    setActiveNavTab
+    setActiveNavTab,
+    requestFocus,
+    healthMetrics
   } = useNuqtaStore();
 
   const isAr = profile.language === 'ar';
 
   // Workspace sub-tabs
-  const [activeTab, setActiveTab] = usePersistedViewTab<'archive' | 'timeline' | 'studios_logs'>(
+  const [activeTab, setActiveTab] = usePersistedViewTab<'archive' | 'timeline' | 'map' | 'studios_logs'>(
     'archive',
-    ['archive', 'timeline', 'studios_logs'],
+    ['archive', 'timeline', 'map', 'studios_logs'],
     'archive'
   );
 
+  // Handing a specific day between the timeline and the map is a cross-tab gesture, not
+  // persisted state: it describes what the person is looking at right now.
+  const [focusDate, setFocusDate] = useState<string | null>(null);
+
   // Filter criteria
   const [domainFilter, setDomainFilter] = useState<UniversalHistoryDomain | 'all'>('all');
-  const [eventTypeFilter, setEventTypeFilter] = useState<UniversalHistoryEventType | 'all'>('all');
-  const [timeframeFilter, setTimeframeFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateQuery, setDateQuery] = useState('');
 
@@ -84,49 +91,6 @@ export const ArchiveHistoryView: React.FC = () => {
   const stats = useMemo(() => getHistoricalStatsSummary(sources), [sources]);
 
   // Filtered History
-  const filteredHistory = useMemo(() => {
-    const now = new Date();
-    const todayStr = localDateKey(now);
-
-    const weekAgo = new Date();
-    weekAgo.setDate(now.getDate() - 7);
-    const weekAgoStr = localDateKey(weekAgo);
-
-    const monthAgo = new Date();
-    monthAgo.setMonth(now.getMonth() - 1);
-    const monthAgoStr = localDateKey(monthAgo);
-
-    const yearAgo = new Date();
-    yearAgo.setFullYear(now.getFullYear() - 1);
-    const yearAgoStr = localDateKey(yearAgo);
-
-    return allHistory.filter((item) => {
-      // Domain filter
-      if (domainFilter !== 'all' && item.domain !== domainFilter) return false;
-
-      // Event Type filter
-      if (eventTypeFilter !== 'all' && item.eventType !== eventTypeFilter) return false;
-
-      // Date Query filter
-      if (dateQuery && item.date !== dateQuery) return false;
-
-      // Timeframe filter
-      if (timeframeFilter === 'today' && item.date !== todayStr) return false;
-      if (timeframeFilter === 'week' && item.date < weekAgoStr) return false;
-      if (timeframeFilter === 'month' && item.date < monthAgoStr) return false;
-      if (timeframeFilter === 'year' && item.date < yearAgoStr) return false;
-
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const textToSearch = `${item.title} ${item.description || ''} ${item.metricsSummary || ''} ${item.linkedGoalTitle || ''}`.toLowerCase();
-        if (!textToSearch.includes(q)) return false;
-      }
-
-      return true;
-    });
-  }, [allHistory, domainFilter, eventTypeFilter, timeframeFilter, searchQuery, dateQuery]);
-
   // Filtered Archived Items
   const filteredArchived = useMemo(() => {
     return allArchived.filter((item) => {
@@ -213,55 +177,6 @@ export const ArchiveHistoryView: React.FC = () => {
     };
     return icons[domain] || 'layers';
   }
-
-  // Event Type labels helper
-  function getEventTypeLabel(type: UniversalHistoryEventType, arabic: boolean) {
-    const labels: Record<UniversalHistoryEventType, { ar: string; en: string; color: string }> = {
-      created: { ar: 'إنشاء وتأسيس', en: 'Created', color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]' },
-      completed: { ar: 'إنجاز واكتمال', en: 'Completed', color: 'text-[var(--tone-success)] bg-[var(--tone-success-wash)] border-[var(--tone-success-line)]' },
-      archived: { ar: 'أرشفة وحفظ', en: 'Archived', color: 'text-zinc-400 bg-zinc-900 border-zinc-700/50' },
-      restored: { ar: 'استعادة نشطة', en: 'Restored', color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]' },
-      milestone: { ar: 'محطة فارقة', en: 'Milestone', color: 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)] border-[var(--tone-warning-line)]' },
-      session: { ar: 'جلسة متخصصة', en: 'Session Log', color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]' },
-      streak_freeze: { ar: 'تجميد سلسلة', en: 'Freeze Used', color: 'text-[var(--tone-info)] bg-[var(--tone-info-wash)] border-[var(--tone-info-line)]' },
-      note: { ar: 'تأمل وتدوين', en: 'Note / Reflection', color: 'text-[var(--tone-purple)] bg-[var(--tone-purple-wash)] border-[var(--tone-purple-line)]' },
-      status_change: { ar: 'تعديل حالة', en: 'Status Change', color: 'text-[var(--tone-warning)] bg-[var(--tone-warning-wash)] border-[var(--tone-warning-line)]' }
-    };
-    return arabic ? labels[type]?.ar || type : labels[type]?.en || type;
-  }
-
-  // Group history items by relative date
-  const groupedHistory = useMemo(() => {
-    const groups: { label: string; date: string; items: UniversalHistoryItem[] }[] = [];
-    const map = new Map<string, UniversalHistoryItem[]>();
-
-    const todayStr = localDateKey();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = localDateKey(yesterday);
-
-    filteredHistory.forEach((item) => {
-      const dateKey = item.date;
-      if (!map.has(dateKey)) {
-        map.set(dateKey, []);
-      }
-      map.get(dateKey)!.push(item);
-    });
-
-    Array.from(map.entries())
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .forEach(([date, items]) => {
-        let label = date;
-        if (date === todayStr) {
-          label = isAr ? 'اليوم (Today)' : 'Today';
-        } else if (date === yesterdayStr) {
-          label = isAr ? 'أمس (Yesterday)' : 'Yesterday';
-        }
-        groups.push({ label, date, items });
-      });
-
-    return groups;
-  }, [filteredHistory, isAr]);
 
   return (
     <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
@@ -367,6 +282,18 @@ export const ArchiveHistoryView: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveTab('map')}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+              activeTab === 'map'
+                ? 'bg-accent text-[var(--accent-ink)] font-bold shadow-md shadow-accent/20'
+                : 'bg-[var(--surface-inset)] text-muted hover:text-[var(--text-primary)] border border-[var(--border-default)]'
+            }`}
+          >
+            <NuqtaIcon name="grid" className="w-4 h-4" />
+            <span>{isAr ? 'خريطة الالتزام' : 'Commitment Map'}</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('studios_logs')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'studios_logs'
@@ -405,60 +332,36 @@ export const ArchiveHistoryView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Row */}
-      <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-[var(--surface-raised)] border border-[var(--border-subtle)]">
-        {/* Domain Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-muted pe-1 font-mono text-[11px]">{isAr ? 'المجال:' : 'Domain:'}</span>
-          {(['all', 'tasks', 'habits', 'quran', 'reading', 'workout', 'drawing', 'walking', 'goals', 'focus', 'journal'] as const).map(
-            (dom) => (
-              <button
-                key={dom}
-                onClick={() => setDomainFilter(dom)}
-                className={`px-2.5 py-1 rounded-lg transition-colors font-medium ${
-                  domainFilter === dom
-                    ? 'bg-[var(--surface-active)] text-accent font-bold border border-accent/40'
-                    : 'text-muted hover:text-[var(--text-primary)] bg-[var(--surface-inset)] border border-transparent'
-                }`}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  {dom === 'all' ? (
-                    <NuqtaIcon name="layers" className="w-3.5 h-3.5" />
-                  ) : (
-                    <NuqtaIcon name={domainIcon(dom)} className="w-3.5 h-3.5" />
-                  )}
-                  {dom === 'all' ? (isAr ? 'الكل' : 'All') : getDomainLabel(dom, isAr)}
-                </span>
-              </button>
-            )
-          )}
-        </div>
-
-        {/* Secondary Filters for Timeline */}
-        {activeTab === 'timeline' && (
-          <div className="flex flex-wrap items-center gap-2 ms-auto pt-2 sm:pt-0">
-            {/* Event Type */}
-            <NuqtaSelect value={eventTypeFilter} onChange={(e) => setEventTypeFilter(e.target.value as any)} className="text-xs">
-              <option value="all">{isAr ? 'كل أنواع الأحداث' : 'All Event Types'}</option>
-              <option value="completed">{isAr ? 'إنجاز واكتمال' : 'Completed'}</option>
-              <option value="session">{isAr ? 'جلسات متخصصة' : 'Sessions'}</option>
-              <option value="milestone">{isAr ? 'محطات فارقة' : 'Milestones'}</option>
-              <option value="created">{isAr ? 'تأسيس وإنشاء' : 'Created'}</option>
-              <option value="archived">{isAr ? 'أرشفة' : 'Archived'}</option>
-              <option value="restored">{isAr ? 'استعادة' : 'Restored'}</option>
-            </NuqtaSelect>
-
-            {/* Timeframe */}
-            <NuqtaSelect value={timeframeFilter} onChange={(e) => setTimeframeFilter(e.target.value as any)} className="text-xs">
-              <option value="all">{isAr ? 'كل الفترات الزمنية' : 'All Time'}</option>
-              <option value="today">{isAr ? 'اليوم' : 'Today'}</option>
-              <option value="week">{isAr ? 'آخر 7 أيام' : 'Past 7 Days'}</option>
-              <option value="month">{isAr ? 'آخر شهر' : 'Past Month'}</option>
-              <option value="year">{isAr ? 'آخر سنة' : 'Past Year'}</option>
-            </NuqtaSelect>
+      {/* Filters apply to the archived list; the timeline and map own their own. */}
+      {activeTab === 'archive' && (
+        <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-[var(--surface-raised)] border border-[var(--border-subtle)]">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-muted pe-1 font-mono text-[11px]">{isAr ? 'المجال:' : 'Domain:'}</span>
+            {(['all', 'tasks', 'habits', 'quran', 'reading', 'workout', 'drawing', 'walking', 'goals', 'focus', 'journal'] as const).map(
+              (dom) => (
+                <button
+                  key={dom}
+                  onClick={() => setDomainFilter(dom)}
+                  aria-pressed={domainFilter === dom}
+                  className={`px-2.5 py-1 rounded-lg transition-colors font-medium ${
+                    domainFilter === dom
+                      ? 'bg-[var(--surface-active)] text-accent font-bold border border-accent/40'
+                      : 'text-muted hover:text-[var(--text-primary)] bg-[var(--surface-inset)] border border-transparent'
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <NuqtaIcon
+                      name={dom === 'all' ? 'layers' : domainIcon(dom)}
+                      className="w-3.5 h-3.5"
+                    />
+                    {dom === 'all' ? (isAr ? 'الكل' : 'All') : getDomainLabel(dom, isAr)}
+                  </span>
+                </button>
+              )
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* TAB 1: UNIVERSAL ARCHIVE                                                   */}
@@ -564,104 +467,48 @@ export const ArchiveHistoryView: React.FC = () => {
       {/* TAB 2: UNIFIED LIFE TIMELINE & HISTORY                                      */}
       {/* ========================================================================= */}
       {activeTab === 'timeline' && (
-        <section className="space-y-6">
-          <div className="flex items-center justify-between text-xs text-muted font-mono">
-            <span>
-              {isAr ? `الأحداث المطابقة: ${filteredHistory.length}` : `Matched timeline events: ${filteredHistory.length}`}
-            </span>
-          </div>
+        <section>
+          <LifeTimeline
+            items={allHistory}
+            isAr={isAr}
+            onOpenSource={(domain, entityId) => {
+              if (isNavTab(domain)) {
+                requestFocus(domain, entityId);
+                setActiveNavTab(domain);
+              }
+            }}
+            onOpenDay={(dateKey) => {
+              setFocusDate(dateKey);
+              setActiveTab('map');
+            }}
+            focusDate={focusDate}
+            onClearFocusDate={() => setFocusDate(null)}
+          />
+        </section>
+      )}
 
-          {groupedHistory.length === 0 ? (
-            <div className="empty-state py-16">
-              <div className="empty-icon"><NuqtaIcon name="history" className="w-7 h-7" /></div>
-              <strong>{isAr ? 'لا توجد أحداث مطابقة في السجل' : 'No history events found'}</strong>
-              <p>
-                {isAr
-                  ? 'جرّب تعديل الفلاتر أو البحث للاطلاع على السجل الزمني لحياتك في NUQTA.'
-                  : 'Try adjusting filters or search query to browse your life timeline.'}
-              </p>
-            </div>
-          ) : (
-            <div className="relative ps-6 border-s-2 border-[var(--border-subtle)] space-y-8">
-              {groupedHistory.map((group) => (
-                <div key={group.date} className="space-y-3 relative">
-                  {/* Date Badge Node */}
-                  <div className="flex items-center gap-2">
-                    <span className="absolute -start-[31px] w-3 h-3 rounded-full bg-accent border-4 border-[var(--border-subtle)]"></span>
-                    <span className="text-xs font-mono font-bold text-accent bg-[var(--surface-inset)] px-2.5 py-0.5 rounded-md border border-[var(--border-default)]">
-                      {group.label}
-                    </span>
-                    <span className="text-[11px] font-mono text-muted">
-                      ({group.items.length} {isAr ? 'أحداث' : 'events'})
-                    </span>
-                  </div>
-
-                  {/* Items in Date Group */}
-                  <div className="space-y-2.5">
-                    {group.items.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => setInspectingItem({ historyItem: item })}
-                        className="p-3.5 rounded-xl bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-accent/40 transition-all cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:shadow-md"
-                      >
-                        <div className="space-y-1.5 flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {/* Domain Tag */}
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-chip)] text-accent border border-[var(--border-default)] font-semibold inline-flex items-center gap-1">
-                              <NuqtaIcon name={domainIcon(item.domain)} className="w-3 h-3" />
-                              {getDomainLabel(item.domain, isAr)}
-                            </span>
-
-                            {/* Event Type Pill */}
-                            <span className="text-[10px] px-2 py-0.5 rounded border font-semibold text-muted bg-[var(--surface-inset)] border-[var(--border-default)]">
-                              {getEventTypeLabel(item.eventType, isAr)}
-                            </span>
-
-                            {/* Extra Badge if any */}
-                            {item.badge && (
-                              <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--tone-success-wash)] text-[var(--tone-success)] border border-[var(--tone-success-line)] font-semibold">
-                                {item.badge}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Event Title */}
-                          <h4 className="text-sm font-bold text-[var(--text-primary)] group-hover:text-accent transition-colors leading-snug truncate">
-                            {item.title}
-                          </h4>
-
-                          {/* Description */}
-                          {item.description && (
-                            <p className="text-xs text-muted line-clamp-1">{item.description}</p>
-                          )}
-                        </div>
-
-                        {/* Right Meta Column */}
-                        <div className="flex sm:flex-col sm:items-end justify-between items-center shrink-0 text-xs font-mono">
-                          {item.metricsSummary && (
-                            <span className="text-accent font-medium text-[11px]">
-                              {item.metricsSummary}
-                            </span>
-                          )}
-
-                          {item.linkedGoalTitle && (
-                            <span className="text-[10px] text-[var(--tone-success)] flex items-center gap-1 mt-0.5">
-                              <NuqtaIcon name="target" className="w-3.5 h-3.5" />
-                              <span className="truncate max-w-[140px]">{item.linkedGoalTitle}</span>
-                            </span>
-                          )}
-
-                          <span className="text-[10px] text-muted mt-1">
-                            {item.timestamp ? localTimeKey(new Date(item.timestamp)) : ''}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* ========================================================================= */}
+      {/* TAB 3: COMMITMENT MAP                                                      */}
+      {/* ========================================================================= */}
+      {activeTab === 'map' && (
+        <section>
+          <CommitmentMap
+            sources={{ tasks, habits, focusSessions, journalEntries, healthMetrics, history: allHistory }}
+            isAr={isAr}
+            history={allHistory}
+            initialDay={focusDate}
+            variant="full"
+            onOpenTimeline={(dateKey) => {
+              setFocusDate(dateKey);
+              setActiveTab('timeline');
+            }}
+            onOpenSource={(domain, entityId) => {
+              if (isNavTab(domain)) {
+                requestFocus(domain, entityId);
+                setActiveNavTab(domain);
+              }
+            }}
+          />
         </section>
       )}
 

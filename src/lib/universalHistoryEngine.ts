@@ -1,4 +1,4 @@
-import { localDateKey, localDayFrom } from './dateKey';
+import { localDayFrom, isDateKey } from './dateKey';
 import {
   Task,
   Habit,
@@ -39,7 +39,6 @@ export interface HistoryFilterCriteria {
  */
 export function generateUniversalHistory(sources: HistoryDataSources): UniversalHistoryItem[] {
   const events: UniversalHistoryItem[] = [];
-  const todayStr = localDateKey();
 
   // Helper to map goal ID to goal title
   const goalMap = new Map<string, string>();
@@ -189,11 +188,14 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
 
       // Completed Surahs
       (h.quranData.surahs || []).forEach((surah) => {
-        if (surah.status === 'completed') {
+        // A completion with no recorded date is a state, not an event. Stamping it
+        // with `today` would invent history on every reload and inflate today's
+        // commitment, so it is skipped rather than dated by guesswork.
+        if (surah.status === 'completed' && isDateKey(surah.lastReviewedDate ?? '')) {
           events.push({
             id: `evt-quran-surah-${h.id}-${surah.surahNumber}`,
-            timestamp: `${surah.lastReviewedDate || todayStr}T12:00:00.000Z`,
-            date: surah.lastReviewedDate || todayStr,
+            timestamp: `${surah.lastReviewedDate}T12:00:00.000Z`,
+            date: surah.lastReviewedDate!,
             domain: 'quran',
             eventType: 'milestone',
             title: `إنجاز قرآني: إتمام حفظ سورة رقم ${surah.surahNumber}`,
@@ -238,11 +240,12 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
 
       // Books
       (h.readingData.books || []).forEach((b) => {
-        if (b.status === 'completed') {
+        // Completed with no date => state, not an event. See the surah note above.
+        if (b.status === 'completed' && isDateKey(b.completedDate ?? '')) {
           events.push({
             id: `evt-book-complete-${b.id}`,
-            timestamp: `${b.completedDate || todayStr}T18:00:00.000Z`,
-            date: b.completedDate || todayStr,
+            timestamp: `${b.completedDate}T18:00:00.000Z`,
+            date: b.completedDate!,
             domain: 'reading',
             eventType: 'completed',
             title: `إتمام قراءة كتاب: ${b.title}`,
@@ -258,11 +261,11 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
             rawEntity: b
           });
         }
-        if (b.status === 'archived') {
+        if (b.status === 'archived' && b.archivedAt) {
           events.push({
             id: `evt-book-archive-${b.id}`,
-            timestamp: `${b.archivedAt || todayStr}T18:00:00.000Z`,
-            date: localDayFrom(b.archivedAt || todayStr),
+            timestamp: b.archivedAt,
+            date: localDayFrom(b.archivedAt),
             domain: 'reading',
             eventType: 'archived',
             title: `أرشفة كتاب: ${b.title}`,
@@ -305,11 +308,11 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
       });
 
       (h.workoutData.customRoutines || []).forEach((r) => {
-        if (r.isArchived) {
+        if (r.isArchived && r.archivedAt) {
           events.push({
             id: `evt-workout-routine-archive-${r.id}`,
-            timestamp: `${r.archivedAt || todayStr}T10:00:00.000Z`,
-            date: localDayFrom(r.archivedAt || todayStr),
+            timestamp: r.archivedAt,
+            date: localDayFrom(r.archivedAt),
             domain: 'workout',
             eventType: 'archived',
             title: `أرشفة روتين: ${r.nameAr || r.name}`,
@@ -352,11 +355,12 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
 
       // Projects
       (h.drawingData.projects || []).forEach((proj) => {
-        if (proj.stage === 'completed') {
+        // Completed with no date => state, not an event. See the surah note above.
+        if (proj.stage === 'completed' && isDateKey(proj.completedDate ?? '')) {
           events.push({
             id: `evt-art-project-complete-${proj.id}`,
-            timestamp: `${proj.completedDate || todayStr}T17:00:00.000Z`,
-            date: proj.completedDate || todayStr,
+            timestamp: `${proj.completedDate}T17:00:00.000Z`,
+            date: proj.completedDate!,
             domain: 'drawing',
             eventType: 'completed',
             title: `إتمام مشروع إبداعي: ${proj.title}`,
@@ -372,11 +376,11 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
             rawEntity: proj
           });
         }
-        if (proj.stage === 'archived' || proj.isArchived) {
+        if ((proj.stage === 'archived' || proj.isArchived) && proj.archivedAt) {
           events.push({
             id: `evt-art-project-archive-${proj.id}`,
-            timestamp: `${proj.archivedAt || todayStr}T17:00:00.000Z`,
-            date: localDayFrom(proj.archivedAt || todayStr),
+            timestamp: proj.archivedAt,
+            date: localDayFrom(proj.archivedAt),
             domain: 'drawing',
             eventType: 'archived',
             title: `أرشفة مشروع فني: ${proj.title}`,
@@ -457,11 +461,11 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
     }
 
     // Goal Completed
-    if (g.status === 'completed') {
+    if (g.status === 'completed' && g.updatedAt) {
       events.push({
         id: `evt-goal-complete-${g.id}`,
-        timestamp: g.updatedAt || `${todayStr}T12:00:00.000Z`,
-        date: localDayFrom(g.updatedAt || todayStr),
+        timestamp: g.updatedAt,
+        date: localDayFrom(g.updatedAt),
         domain: 'goals',
         eventType: 'completed',
         title: `تحقيق هدف استراتيجي: ${g.title}`,
@@ -479,11 +483,11 @@ export function generateUniversalHistory(sources: HistoryDataSources): Universal
     }
 
     // Goal Archived
-    if (g.status === 'archived') {
+    if (g.status === 'archived' && (g.archivedAt || g.updatedAt)) {
       events.push({
         id: `evt-goal-archive-${g.id}`,
-        timestamp: g.archivedAt || g.updatedAt || `${todayStr}T12:00:00.000Z`,
-        date: localDayFrom(g.archivedAt || g.updatedAt || todayStr),
+        timestamp: (g.archivedAt || g.updatedAt)!,
+        date: localDayFrom((g.archivedAt || g.updatedAt)!),
         domain: 'goals',
         eventType: 'archived',
         title: `أرشفة هدف: ${g.title}`,

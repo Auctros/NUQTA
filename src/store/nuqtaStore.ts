@@ -19,7 +19,8 @@ import {
   TaskStatus,
   HistoryAuditLogEntry,
   AppNotification,
-  NotificationPreferences
+  NotificationPreferences,
+  YoutubeCourse
 } from '../types';
 import { NuqtaStorageEngine } from '../lib/storage';
 import {
@@ -204,12 +205,15 @@ interface NuqtaStoreState {
   notifications: AppNotification[];
   notificationPreferences: NotificationPreferences;
 
+  // Imported YouTube courses (local-only cache; never synchronized)
+  courses: YoutubeCourse[];
+
   // Computed & UI State
   energyScore: number;
   isRescueModeOpen: boolean;
   isQuickCaptureOpen: boolean;
   isSundayRitualOpen: boolean;
-  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'walking' | 'archive';
+  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'walking' | 'courses' | 'archive';
   searchQuery: string;
   selectedTagFilter: string | null;
 
@@ -218,6 +222,13 @@ interface NuqtaStoreState {
   setActiveNavTab: (tab: NuqtaStoreState['activeNavTab']) => void;
   setSearchQuery: (query: string) => void;
   setSelectedTagFilter: (tag: string | null) => void;
+
+  // YouTube Courses (import + refresh; a local cache of YouTube's own data)
+  /** Add a course, or refresh the one already imported for this playlist. */
+  upsertCourse: (course: YoutubeCourse) => void;
+  removeCourse: (id: string) => void;
+  /** Is this playlist already in the library? */
+  hasCourseForPlaylist: (playlistId: string) => boolean;
 
   // Transient cross-screen focus request — UI only, never persisted
   focusRequest: { domain: string; entityId: string; nonce: number } | null;
@@ -375,6 +386,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   notifications: [],
   notificationPreferences: NuqtaStorageEngine.getNotificationPreferences(),
+  courses: NuqtaStorageEngine.getCourses(),
 
   energyScore: 50,
   isRescueModeOpen: false,
@@ -400,6 +412,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const sundayReviews = NuqtaStorageEngine.getSundayReviews();
     const historyAuditLogs = NuqtaStorageEngine.getHistoryAuditLogs();
     const notificationPreferences = NuqtaStorageEngine.getNotificationPreferences();
+    const courses = NuqtaStorageEngine.getCourses();
     // Expired rows are dropped at load: a notification that outlived its usefulness should
     // not reappear just because the app was reopened.
     const notifications = pruneNotifications(NuqtaStorageEngine.getNotifications());
@@ -427,6 +440,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       historyAuditLogs,
       notifications,
       notificationPreferences,
+      courses,
       energyScore: energy
     });
 
@@ -434,6 +448,25 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     // upcoming occurrences materialised without unbounded growth.
     get().topUpRecurringTasks();
   },
+
+  upsertCourse: (course) => {
+    const existing = get().courses;
+    const index = existing.findIndex((c) => c.id === course.id || c.playlistId === course.playlistId);
+    const next =
+      index >= 0
+        ? existing.map((c, i) => (i === index ? course : c))
+        : [course, ...existing];
+    NuqtaStorageEngine.saveCourses(next);
+    set({ courses: next });
+  },
+
+  removeCourse: (id) => {
+    const next = get().courses.filter((c) => c.id !== id);
+    NuqtaStorageEngine.saveCourses(next);
+    set({ courses: next });
+  },
+
+  hasCourseForPlaylist: (playlistId) => get().courses.some((c) => c.playlistId === playlistId),
 
   setActiveNavTab: (tab) => set({ activeNavTab: tab }),
   setSearchQuery: (query) => set({ searchQuery: query }),
