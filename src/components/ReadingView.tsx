@@ -2,7 +2,8 @@ import { localDateKey, parseDateKey, addDaysToKey } from '../lib/dateKey';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { BookItem, BookCategory } from '../types';
-import { Button, Field, Input, Modal, NuqtaSelect, Textarea, Toast } from './ui';
+import { Button, Field, Input, Modal, NuqtaSelect, Textarea } from './ui';
+import { dialogs, feedback } from './ui/dialogController';
 import { NuqtaIcon } from './NuqtaIcon';
 import {
   StudioFrame,
@@ -97,7 +98,6 @@ export const ReadingView: React.FC = () => {
   const [bookColor, setBookColor] = useState(COVER_PALETTE[0]);
   const [bookNotes, setBookNotes] = useState('');
   const [bookError, setBookError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
 
   // session logger
   const [sessionBookId, setSessionBookId] = useState<string>('');
@@ -185,8 +185,7 @@ export const ReadingView: React.FC = () => {
     });
     setEditing(null);
     setIsNewBook(false);
-    setToast(isNewBook ? (isAr ? 'تمت إضافة الكتاب.' : 'Book added.') : isAr ? 'تم تحديث الكتاب.' : 'Book updated.');
-    window.setTimeout(() => setToast(null), 2500);
+    feedback.success(isNewBook ? (isAr ? 'تمت إضافة الكتاب.' : 'Book added.') : isAr ? 'تم تحديث الكتاب.' : 'Book updated.');
   };
 
   const submitSession = (e: React.FormEvent) => {
@@ -216,8 +215,7 @@ export const ReadingView: React.FC = () => {
     setCapturedQuote('');
     setCapturedQuotePage('');
     setSessionNotes('');
-    setToast(isAr ? 'تم تسجيل جلسة القراءة.' : 'Reading session recorded.');
-    window.setTimeout(() => setToast(null), 2500);
+    feedback.success(isAr ? 'تم تسجيل جلسة القراءة.' : 'Reading session recorded.');
   };
 
   const saveTargets = (e: React.FormEvent) => {
@@ -449,8 +447,7 @@ export const ReadingView: React.FC = () => {
                   size="sm"
                   onClick={() => {
                     setActiveBook(readingHabit.id, openBook.id);
-                    setToast(isAr ? 'الكتاب النشط الآن.' : 'Set as active book.');
-                    window.setTimeout(() => setToast(null), 2000);
+                    feedback.success(isAr ? 'الكتاب النشط الآن.' : 'Set as active book.');
                   }}
                 >
                   {isAr ? 'اجعله النشط' : 'Make active'}
@@ -532,8 +529,18 @@ export const ReadingView: React.FC = () => {
                   variant="danger"
                   size="sm"
                   icon="trash"
-                  onClick={() => {
-                    if (confirm(isAr ? 'حذف هذا الكتاب؟' : 'Delete this book?')) {
+                  onClick={async () => {
+                    const ok = await dialogs.confirm({
+                      tone: 'danger',
+                      icon: 'trash',
+                      title: isAr ? 'حذف هذا الكتاب؟' : 'Delete this book?',
+                      description: isAr
+                        ? 'ستُحذف جلسات القراءة المرتبطة به من مكتبتك نهائياً.'
+                        : 'This removes the book and its reading sessions from your library permanently.',
+                      confirmLabel: isAr ? 'حذف' : 'Delete',
+                      cancelLabel: isAr ? 'إلغاء' : 'Cancel'
+                    });
+                    if (ok) {
                       deleteBook(readingHabit.id, openBook.id);
                       setOpenBookId(null);
                     }
@@ -841,8 +848,6 @@ export const ReadingView: React.FC = () => {
           )}
         </form>
       </Modal>
-
-      <Toast open={!!toast} message={toast || ''} tone="success" onClose={() => setToast(null)} />
     </StudioFrame>
   );
 };

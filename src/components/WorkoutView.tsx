@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { WorkoutRoutine, ExerciseEntry, ExerciseSet, MuscleMovement } from '../types';
 import { Button, NuqtaSelect } from './ui';
+import { dialogs } from './ui/dialogController';
 import { NuqtaIcon } from './NuqtaIcon';
 import {
   StudioFrame,
@@ -83,6 +84,20 @@ export const WorkoutView: React.FC = () => {
 
   const sessions = workoutData.sessions || [];
   const routines = workoutData.customRoutines || [];
+
+  const confirmDeleteRoutine = async (routineId: string) => {
+    const ok = await dialogs.confirm({
+      tone: 'danger',
+      icon: 'trash',
+      title: isAr ? 'حذف هذا البرنامج؟' : 'Delete this program?',
+      description: isAr
+        ? 'ستُحذف أيام البرنامج وتمارينه وسجل التقدّم المرتبط به نهائياً.'
+        : 'The program, its days and its logged progress are permanently removed.',
+      confirmLabel: isAr ? 'حذف' : 'Delete',
+      cancelLabel: isAr ? 'إلغاء' : 'Cancel'
+    });
+    if (ok && workoutHabit) deleteWorkoutRoutine(workoutHabit.id, routineId);
+  };
 
   const [activeTab, setActiveTab] = useState<WTab>('today');
 
@@ -917,11 +932,7 @@ export const WorkoutView: React.FC = () => {
                           size="sm"
                           icon="trash"
                           aria-label={isAr ? 'حذف البرنامج' : 'Delete program'}
-                          onClick={() => {
-                            if (confirm(isAr ? 'حذف هذا البرنامج؟' : 'Delete this program?')) {
-                              deleteWorkoutRoutine(workoutHabit.id, r.id);
-                            }
-                          }}
+                          onClick={() => confirmDeleteRoutine(r.id)}
                         />
                       </div>
                     </div>
@@ -969,11 +980,7 @@ export const WorkoutView: React.FC = () => {
                         onToggleDayComplete={(dayId, completed) => setProgramDayCompleted(workoutHabit.id, r.id, dayId, completed)}
                         onSetStatus={(s) => setWorkoutRoutineStatus(workoutHabit.id, r.id, s)}
                         onStartDay={(day) => startWorkout(isAr ? day.nameAr || day.name : day.name, day.exercises)}
-                        onDelete={() => {
-                          if (confirm(isAr ? 'حذف هذا البرنامج؟' : 'Delete this program?')) {
-                            deleteWorkoutRoutine(workoutHabit.id, r.id);
-                          }
-                        }}
+                        onDelete={() => confirmDeleteRoutine(r.id)}
                       />
                     )}
                   </div>

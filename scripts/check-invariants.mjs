@@ -487,8 +487,25 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 24. No browser-native dialogs. window.alert / confirm / prompt render outside the app
+//     shell: they ignore the theme, the language and RTL, block the main thread, and look
+//     like a different product. Every prompt must go through the interaction layer
+//     (src/components/ui/dialogController.ts), which is styled, localized and testable.
+{
+  const hits = grep(/(?<![\w.$])(?:window\.)?(?:alert|confirm|prompt)\s*\(/, {
+    // The controller defines the API under those names; nothing else may call them.
+    except: ['src/components/ui/dialogController.ts']
+  }).filter((hit) => !/dialogs\.(?:alert|confirm|prompt)\(/.test(hit));
+  if (hits.length) {
+    fail(
+      'Browser-native dialogs are forbidden — use dialogs.confirm/alert/prompt from ./ui',
+      hits.slice(0, 8).join('\n    ')
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (23 rules).');
+console.log('Invariant check passed (24 rules).');

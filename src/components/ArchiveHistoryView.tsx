@@ -15,6 +15,7 @@ import {
 } from '../types';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
 import { NuqtaDatePicker, NuqtaSelect } from './ui';
+import { feedback } from './ui/dialogController';
 import { useEscapeKey } from '../lib/useEscapeKey';
 
 export const ArchiveHistoryView: React.FC = () => {
@@ -58,9 +59,6 @@ export const ArchiveHistoryView: React.FC = () => {
     archivedItem?: ArchivedItemSummary;
   } | null>(null);
   useEscapeKey(inspectingItem !== null, () => setInspectingItem(null));
-
-  // Restore feedback toast
-  const [restoreFeedback, setRestoreFeedback] = useState<string | null>(null);
 
   const sources = useMemo(
     () => ({
@@ -164,8 +162,7 @@ export const ArchiveHistoryView: React.FC = () => {
       ? `تمت استعادة "${item.title}" بنجاح إلى ${getDomainLabel(item.domain, isAr)}!`
       : `Restored "${item.title}" back to ${getDomainLabel(item.domain, isAr)}!`;
 
-    setRestoreFeedback(msg);
-    setTimeout(() => setRestoreFeedback(null), 4000);
+    feedback.success(msg, { duration: 4000 });
 
     if (inspectingItem?.archivedItem?.id === item.id) {
       setInspectingItem(null);
@@ -263,14 +260,6 @@ export const ArchiveHistoryView: React.FC = () => {
 
   return (
     <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
-      {/* Toast Notification */}
-      {restoreFeedback && (
-        <div className="fixed bottom-6 start-6 z-50 p-4 rounded-xl bg-[var(--surface-active)] border border-accent text-[var(--text-primary)] shadow-2xl flex items-center gap-3 animate-fade-in">
-          <NuqtaIcon name="sparkle" className="w-5 h-5 text-[var(--accent)]" />
-          <span className="text-sm font-medium">{restoreFeedback}</span>
-        </div>
-      )}
-
       {/* Page Heading */}
       <div className="page-heading">
         <div>

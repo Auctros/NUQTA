@@ -42,6 +42,7 @@ import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { listenForNotificationRoutes } from './lib/notifications';
 import { unreadCount } from './lib/notificationEngine';
 import { NotificationCenter } from './components/NotificationCenter';
+import { DialogHost } from './components/ui/DialogHost';
 
 export default function App() {
   useNuqtaReminders();
@@ -354,6 +355,8 @@ export default function App() {
       {/* Global Modals */}
       <RescueModal />
       <SundayRitualModal />
+      {/* Interaction layer: every in-app confirm/alert/prompt and toast */}
+      <DialogHost />
       <CommandPalette
         open={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}

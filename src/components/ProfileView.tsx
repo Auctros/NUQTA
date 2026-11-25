@@ -7,6 +7,7 @@ import { NuqtaStorageEngine } from '../lib/storage';
 import { resetSyncState } from '../lib/sync/lifecycle';
 import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 import { NuqtaSelect, NuqtaTimePicker } from './ui';
+import { dialogs } from './ui/dialogController';
 import { isCategoryEnabled } from '../lib/notificationEngine';
 import { renderNotificationText } from '../lib/notificationMessages';
 import type { NotificationCategory } from '../types';
@@ -115,24 +116,42 @@ export const ProfileView: React.FC = () => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    const result = await restoreBackupFromFile(file, isAr, setImportStatus);
+    const result = await restoreBackupFromFile(file, isAr, setImportStatus, () =>
+      dialogs.confirm({
+        tone: 'warning',
+        icon: 'restore',
+        title: isAr ? 'استبدال كل بياناتك؟' : 'Replace all your data?',
+        description: isAr
+          ? 'سيتم استبدال كل بياناتك الحالية بمحتوى هذا الملف. سننزّل أولاً نسخة أمان من بياناتك الحالية.'
+          : 'This replaces ALL of your current data with the contents of this file. A safety copy of your current data will be downloaded first.',
+        confirmLabel: isAr ? 'استعادة' : 'Restore',
+        cancelLabel: isAr ? 'إلغاء' : 'Cancel'
+      })
+    );
     if (result && result.ok) setTimeout(() => window.location.reload(), 1000);
   };
 
   const handleWipeData = async () => {
-    const ok = window.confirm(
-      isAr
-        ? 'سيتم حذف كل بيانات نقطة من هذا المتصفح نهائياً (التخزين الأساسي والنسخة الاحتياطية الداخلية). صدّر نسخة احتياطية أولاً إن أردت الاحتفاظ بها. متابعة؟'
-        : 'This permanently deletes ALL NUQTA data from this browser (primary storage and its internal mirror). Export a backup first if you want to keep it. Continue?'
-    );
+    const ok = await dialogs.confirm({
+      tone: 'danger',
+      icon: 'trash',
+      title: isAr ? 'حذف كل بيانات نقطة؟' : 'Delete all NUQTA data?',
+      description: isAr
+        ? 'سيتم حذف كل بيانات نقطة من هذا المتصفح نهائياً (التخزين الأساسي والنسخة الاحتياطية الداخلية). صدّر نسخة احتياطية أولاً إن أردت الاحتفاظ بها.'
+        : 'This permanently deletes ALL NUQTA data from this browser (primary storage and its internal mirror). Export a backup first if you want to keep it.',
+      confirmLabel: isAr ? 'حذف نهائي' : 'Delete permanently',
+      cancelLabel: isAr ? 'إلغاء' : 'Cancel'
+    });
     if (!ok) return;
     const wiped = await NuqtaStorageEngine.wipeAll();
     if (!wiped) {
-      window.alert(
-        isAr
+      await dialogs.alert({
+        tone: 'danger',
+        title: isAr ? 'لم يتم حذف أي شيء' : 'Nothing was deleted',
+        description: isAr
           ? 'تعذّر مسح كل البيانات، ولم يتم حذف شيء. جرّب مجدداً أو امسح بيانات الموقع من إعدادات المتصفح.'
           : 'Not everything could be deleted, so nothing was removed. Try again or clear site data from your browser settings.'
-      );
+      });
       return;
     }
     // Drop queued/pulled sync state too. Otherwise a reconnect would either replay
