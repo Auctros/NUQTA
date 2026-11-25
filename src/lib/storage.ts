@@ -9,7 +9,9 @@ import {
   JournalEntry,
   UserProfile,
   SundayRitualReview,
-  HistoryAuditLogEntry
+  HistoryAuditLogEntry,
+  AppNotification,
+  NotificationPreferences
 } from '../types';
 import { DEMO_TASKS, DEMO_HABITS, DEMO_GOALS, DEMO_EXPENSES, DEMO_SAVINGS_GOALS } from './demoData';
 import { NuqtaIndexedDB, STORES } from './indexedDB';
@@ -41,6 +43,14 @@ const STORAGE_KEYS = {
   PROFILE: 'nuqta_profile_v1',
   SUNDAY_REVIEWS: 'nuqta_sunday_reviews_v1',
   HISTORY_AUDIT: 'nuqta_history_audit_v1',
+  NOTIFICATION_PREFS: 'nuqta_notification_prefs_v1',
+  /**
+   * Notifications are deliberately LOCAL-ONLY and absent from `SYNC_SECTION_KEYS`:
+   * read/dismissed state is per-device (a nudge you cleared on your phone should not
+   * vanish on your laptop), and the sync server rejects any store outside its fixed
+   * allow-list. Keeping it out of the sync map is what makes that true by construction.
+   */
+  NOTIFICATIONS: 'nuqta_notifications_v1',
   META: 'nuqta_meta_v1'
 } as const;
 
@@ -140,6 +150,40 @@ export function defaultProfile(): UserProfile {
     biometricLocked: false,
     encryptionPassphraseSet: false,
     weeklySundayReviewDue: false
+  };
+}
+
+/** Notification defaults: in-app always on, browser channel opt-in, every category on. */
+export function defaultNotificationPreferences(): NotificationPreferences {
+  return {
+    inApp: true,
+    browser: false,
+    categories: {}
+  };
+}
+
+/**
+ * Coerce a stored value into valid preferences. An absent or malformed record yields the
+ * defaults rather than throwing, so a corrupt value can never stop the app from loading.
+ */
+function normalizeNotificationPreferences(raw: unknown): NotificationPreferences {
+  const base = defaultNotificationPreferences();
+  if (!isPlainObject(raw)) return base;
+  const categories: NotificationPreferences['categories'] = {};
+  const storedCategories = isPlainObject(raw.categories) ? raw.categories : {};
+  for (const [key, value] of Object.entries(storedCategories)) {
+    if (typeof value === 'boolean') categories[key as keyof typeof categories] = value;
+  }
+  const quiet = isPlainObject(raw.quietHours) ? raw.quietHours : null;
+  const validTime = (v: unknown): v is string => typeof v === 'string' && /^\d{2}:\d{2}$/.test(v);
+  return {
+    inApp: true,
+    browser: raw.browser === true,
+    categories,
+    quietHours:
+      quiet && validTime(quiet.start) && validTime(quiet.end)
+        ? { enabled: quiet.enabled === true, start: quiet.start, end: quiet.end }
+        : undefined
   };
 }
 
@@ -470,6 +514,29 @@ export class NuqtaStorageEngine {
   }
   static saveHistoryAuditLogs(logs: HistoryAuditLogEntry[]): boolean {
     return persist(STORAGE_KEYS.HISTORY_AUDIT, logs, () => NuqtaIndexedDB.replaceAll(STORES.HISTORY_AUDIT, logs));
+  }
+
+  // Notifications — local-only (never synchronized; see STORAGE_KEYS.NOTIFICATIONS).
+  static getNotifications(): AppNotification[] {
+    return readValue(STORAGE_KEYS.NOTIFICATIONS, asList<AppNotification>, isRecordList);
+  }
+  static saveNotifications(notifications: AppNotification[]): boolean {
+    return persist(STORAGE_KEYS.NOTIFICATIONS, notifications, () =>
+      NuqtaIndexedDB.replaceAll(STORES.NOTIFICATIONS, notifications)
+    );
+  }
+
+  // Notification preferences — a singleton in its own key, mirrored with `put` so it
+  // cannot overwrite the `meta` record that shares the META store.
+  static getNotificationPreferences(): NotificationPreferences {
+    return normalizeNotificationPreferences(
+      readValue<unknown>(STORAGE_KEYS.NOTIFICATION_PREFS, () => null, () => true)
+    );
+  }
+  static saveNotificationPreferences(prefs: NotificationPreferences): boolean {
+    return persist(STORAGE_KEYS.NOTIFICATION_PREFS, prefs, () =>
+      NuqtaIndexedDB.put(STORES.META, { id: 'notification_prefs', ...prefs })
+    );
   }
 
   // ---------------------------------------------------------------- backup

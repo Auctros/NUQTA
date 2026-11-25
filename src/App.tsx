@@ -39,7 +39,9 @@ import { ArchiveHistoryView } from './components/ArchiveHistoryView';
 import { useNuqtaReminders } from './lib/useNuqtaReminders';
 import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
-import { NuqtaNotificationEngine, listenForNotificationRoutes } from './lib/notifications';
+import { listenForNotificationRoutes } from './lib/notifications';
+import { unreadCount } from './lib/notificationEngine';
+import { NotificationCenter } from './components/NotificationCenter';
 
 export default function App() {
   useNuqtaReminders();
@@ -55,9 +57,12 @@ export default function App() {
     setTheme,
     setRescueModeOpen,
     requestFocus,
-    tasks,
-    habits
+    tasks
   } = useNuqtaStore();
+
+  // A selector rather than a whole-store subscription: the badge must update on every
+  // read/dismiss, and deriving it here keeps that dependency explicit.
+  const unreadNotifications = useNuqtaStore((s) => unreadCount(s.notifications));
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
@@ -682,95 +687,30 @@ export default function App() {
                 onClick={() => setShowNotificationModal(!showNotificationModal)}
                 className="icon-btn"
                 title={isAr ? 'مركز الإشعارات والتنبيهات' : 'Notification Center'}
+                aria-expanded={showNotificationModal}
+                aria-haspopup="dialog"
               >
                 <NuqtaIcon name="bell" className="w-4 h-4" />
-                {todayDueCount > 0 && (
-                  <span className="absolute top-1 end-1 w-2 h-2 rounded-full bg-accent-strong animate-pulse"></span>
+                {unreadNotifications > 0 && (
+                  <span
+                    className="absolute -top-0.5 -end-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--brand-strong)] px-1 text-[9px] font-bold text-[var(--text-on-accent)]"
+                    aria-hidden="true"
+                  >
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </span>
                 )}
+                <span className="sr-only">
+                  {isAr
+                    ? `مركز الإشعارات، ${unreadNotifications} غير مقروء`
+                    : `Notification Center, ${unreadNotifications} unread`}
+                </span>
               </button>
 
-              {/* Notification Center Dropdown */}
-              {showNotificationModal && (
-                <div
-                  className="absolute top-full mt-2 end-0 w-80 panel p-4 z-50 shadow-2xl space-y-3"
-                  dir={isAr ? 'rtl' : 'ltr'}
-                >
-                  <div className="flex items-center justify-between border-b border-[var(--hairline)] pb-2">
-                    <strong className="text-xs font-mono uppercase tracking-wider text-accent">
-                      {isAr ? 'مركز التنبيهات المحلي' : 'Local Alert Center'}
-                    </strong>
-                    <button
-                      onClick={() => setShowNotificationModal(false)}
-                      aria-label={isAr ? 'إغلاق' : 'Close'}
-                      className="text-muted hover:text-[var(--text-primary)]"
-                    >
-                      <NuqtaIcon name="close" className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 text-xs">
-                    <div className="p-2.5 rounded bg-[var(--surface-faint)] border border-[var(--hairline)]">
-                      <div className="flex items-center gap-2 mb-1">
-                        <NuqtaIcon name="timer" className="w-3.5 h-3.5 text-accent" />
-                        <strong>{isAr ? 'مهام اليوم المجدولة' : "Today's Schedule"}</strong>
-                      </div>
-                      <p className="text-[11px] text-muted">
-                        {todayDueCount > 0
-                          ? isAr
-                            ? `لديك ${todayDueCount} مهمة بانتظار إنجازك اليوم.`
-                            : `You have ${todayDueCount} tasks pending today.`
-                          : isAr
-                          ? 'لا توجد مهام متأخرة أو معلقة.'
-                          : 'All clean. No overdue items.'}
-                      </p>
-                    </div>
-
-                    <div className="p-2.5 rounded bg-[var(--surface-faint)] border border-[var(--hairline)]">
-                      <div className="flex items-center gap-2 mb-1">
-                        <NuqtaIcon name="repeat" className="w-3.5 h-3.5 text-accent" />
-                        <strong>{isAr ? 'طقوس العادات اليومية' : 'Daily Habits'}</strong>
-                      </div>
-                      <p className="text-[11px] text-muted">
-                        {habits.length > 0
-                          ? isAr
-                            ? `متابعة ${habits.length} عادات مستمرة بدون كسر السلسلة.`
-                            : `Tracking ${habits.length} active daily habits.`
-                          : isAr
-                          ? 'لم تسجل عادات بعد.'
-                          : 'No habits logged.'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-[var(--hairline)] flex items-center justify-between">
-                    <button
-                      onClick={async () => {
-                        await NuqtaNotificationEngine.requestPermission();
-                        NuqtaNotificationEngine.notify({
-                          title: isAr ? 'نظام الإشعارات نشط' : 'Notifications Active',
-                          body: isAr ? 'ستصلك التنبيهات في أوقات المهام المحددة.' : 'You will receive timely cues on due times.',
-                          tag: 'bell-activate',
-                          chime: 'gentle-bell'
-                        });
-                        setShowNotificationModal(false);
-                      }}
-                      className="btn subtle text-[11px] py-1 px-2.5"
-                    >
-                      {isAr ? 'تفعيل إشعارات المتصفح' : 'Enable Device Alerts'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveNavTab('profile');
-                        setShowNotificationModal(false);
-                      }}
-                      className="text-[11px] text-accent hover:underline"
-                    >
-                      {isAr ? 'الملف الشخصي' : 'Profile'}
-                      <NuqtaIcon name="arrow" className="w-3 h-3 inline-block" />
-                    </button>
-                  </div>
-                </div>
-              )}
+              <NotificationCenter
+                open={showNotificationModal}
+                onClose={() => setShowNotificationModal(false)}
+                isAr={isAr}
+              />
             </div>
           </div>
         </header>

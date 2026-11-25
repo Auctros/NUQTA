@@ -8,6 +8,8 @@
  */
 
 import { useNuqtaStore } from '../store/nuqtaStore';
+import type { AppNotification } from '../types';
+import { renderNotificationText } from './notificationMessages';
 
 type ChimeType = 'focus-complete' | 'break-start' | 'task-reminder' | 'habit-cue' | 'gentle-bell';
 
@@ -131,6 +133,47 @@ export function listenForNotificationRoutes(): () => void {
   navigator.serviceWorker.addEventListener('message', handler);
   return () => navigator.serviceWorker.removeEventListener('message', handler);
 }
+
+/**
+ * Mirror an in-app notification to the OS/browser channel.
+ *
+ * This is an ADAPTER, not a second source of truth: the notification already exists in the
+ * store by the time this runs, and the return value only reports whether the optional
+ * channel accepted it. Permission is never requested here — a request must follow a user
+ * gesture, so it lives in the settings UI. A refusal is silent by design; the in-app inbox
+ * still holds the notification, so nothing is lost.
+ */
+export async function deliverBrowserNotification(
+  notification: AppNotification,
+  isAr: boolean
+): Promise<boolean> {
+  const text = renderNotificationText(
+    typeof notification.meta?.messageId === 'string' ? notification.meta.messageId : undefined,
+    notification.meta,
+    { title: notification.title, body: notification.body },
+    isAr
+  );
+
+  return NuqtaNotificationEngine.notify({
+    title: text.title,
+    body: text.body ?? '',
+    tag: notification.dedupeKey,
+    route: notification.route,
+    chime: CHIME_BY_CATEGORY[notification.category]
+  });
+}
+
+/** Each category gets a distinct, deliberate cue rather than one generic beep. */
+const CHIME_BY_CATEGORY: Record<AppNotification['category'], ChimeType> = {
+  focus: 'focus-complete',
+  task: 'task-reminder',
+  reminder: 'task-reminder',
+  habit: 'habit-cue',
+  goal: 'gentle-bell',
+  health: 'gentle-bell',
+  finance: 'gentle-bell',
+  system: 'gentle-bell'
+};
 
 export class NuqtaNotificationEngine {
   private static permissionCache: NotificationPermission = 'default';
