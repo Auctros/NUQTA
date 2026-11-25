@@ -125,43 +125,85 @@ describe('NuqtaTimePicker', () => {
     expect(trigger.textContent).toContain('No time');
   });
 
-  it('opens an hour + minute dialog', () => {
+  it('opens a wheel dialog with an hour and a minute column', () => {
     const { trigger } = renderTime();
     fireEvent.click(trigger);
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(screen.getAllByRole('listbox')).toHaveLength(2);
+    expect(screen.getByRole('listbox', { name: 'Hour' })).toBeTruthy();
+    expect(screen.getByRole('listbox', { name: 'Minute' })).toBeTruthy();
   });
 
-  it('emits "HH:mm" when an hour is picked, keeping the minute', () => {
+  it('starts the wheels on the stored time', () => {
+    const { trigger } = renderTime();
+    fireEvent.click(trigger);
+    const hour = screen.getByRole('listbox', { name: 'Hour' });
+    const minute = screen.getByRole('listbox', { name: 'Minute' });
+    expect(hour.querySelector('[aria-selected="true"]')!.getAttribute('aria-label')).toBe('09');
+    expect(minute.querySelector('[aria-selected="true"]')!.getAttribute('aria-label')).toBe('30');
+  });
+
+  it('moves the hour wheel with the keyboard and emits only on Set', () => {
     const { onChange, trigger } = renderTime();
     fireEvent.click(trigger);
-    const hours = screen.getAllByRole('listbox')[0];
-    fireEvent.mouseDown(hours.querySelector('[data-selected="true"]')!.nextElementSibling!);
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange.mock.calls[0][0].target.value).toMatch(/^\d{2}:30$/);
+    const hour = screen.getByRole('listbox', { name: 'Hour' });
+    fireEvent.keyDown(hour, { key: 'ArrowDown' });
+    // Scrolling a wheel is a draft edit: nothing is committed until the user says so.
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Set' }));
+    expect(onChange.mock.calls[0][0].target.value).toBe('10:30');
   });
 
-  it('emits "HH:mm" when a minute is picked, keeping the hour', () => {
+  it('moves the minute wheel and keeps the hour', () => {
     const { onChange, trigger } = renderTime();
     fireEvent.click(trigger);
-    const minutes = screen.getAllByRole('listbox')[1];
-    fireEvent.mouseDown(minutes.querySelector('[data-selected="true"]')!.nextElementSibling!);
-    expect(onChange.mock.calls[0][0].target.value).toBe('09:31');
+    fireEvent.keyDown(screen.getByRole('listbox', { name: 'Minute' }), { key: 'ArrowUp' });
+    fireEvent.click(screen.getByRole('button', { name: 'Set' }));
+    expect(onChange.mock.calls[0][0].target.value).toBe('09:29');
   });
 
-  it('defaults an empty value to the chosen hour at :00', () => {
+  it('jumps to the ends of a wheel with Home and End', () => {
+    const { onChange, trigger } = renderTime();
+    fireEvent.click(trigger);
+    const hour = screen.getByRole('listbox', { name: 'Hour' });
+    fireEvent.keyDown(hour, { key: 'End' });
+    fireEvent.click(screen.getByRole('button', { name: 'Set' }));
+    expect(onChange.mock.calls[0][0].target.value).toBe('23:30');
+  });
+
+  it('discards the draft on Cancel', () => {
+    const { onChange, trigger } = renderTime();
+    fireEvent.click(trigger);
+    fireEvent.keyDown(screen.getByRole('listbox', { name: 'Hour' }), { key: 'ArrowDown' });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('seeds an empty value from the current time rather than 00:00', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-12T15:45:00'));
     const { onChange, trigger } = renderTime({ value: '' });
     fireEvent.click(trigger);
-    const hours = screen.getAllByRole('listbox')[0];
-    fireEvent.mouseDown(hours.querySelector('[role="option"]')!); // 00
-    expect(onChange.mock.calls[0][0].target.value).toBe('00:00');
+    fireEvent.click(screen.getByRole('button', { name: 'Set' }));
+    expect(onChange.mock.calls[0][0].target.value).toBe('15:45');
+    vi.useRealTimers();
   });
 
   it('honours a minute step', () => {
     const { trigger } = renderTime({ minuteStep: 15 });
     fireEvent.click(trigger);
-    const minutes = screen.getAllByRole('listbox')[1];
+    const minutes = screen.getByRole('listbox', { name: 'Minute' });
     expect(minutes.querySelectorAll('[role="option"]')).toHaveLength(4); // 00,15,30,45
+  });
+
+  it('keeps an off-grid stored minute reachable instead of silently moving it', () => {
+    const { onChange, trigger } = renderTime({ value: '09:07', minuteStep: 15 });
+    fireEvent.click(trigger);
+    const minutes = screen.getByRole('listbox', { name: 'Minute' });
+    expect(minutes.querySelectorAll('[role="option"]')).toHaveLength(5);
+    fireEvent.click(screen.getByRole('button', { name: 'Set' }));
+    expect(onChange).not.toHaveBeenCalled(); // unchanged, so no spurious emit
   });
 
   it('clears the value through the clear affordance', () => {
@@ -181,5 +223,56 @@ describe('NuqtaTimePicker', () => {
     const { trigger } = renderTime({ disabled: true });
     fireEvent.click(trigger);
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('labels the panel and chrome in Arabic when isAr', () => {
+    const { trigger } = renderTime({ isAr: true });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('dialog').getAttribute('dir')).toBe('rtl');
+    expect(screen.getByRole('listbox', { name: 'الساعة' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'تعيين' })).toBeTruthy();
+  });
+});
+
+describe('NuqtaTimePicker — 12-hour mode', () => {
+  it('shows a period control and a 1-12 dial', () => {
+    const { trigger } = renderTime({ hourFormat: '12h', value: '21:45' });
+    expect(trigger.textContent).toContain('9:45 PM');
+    fireEvent.click(trigger);
+    const hour = screen.getByRole('listbox', { name: 'Hour' });
+    expect(hour.querySelectorAll('[role="option"]')).toHaveLength(12);
+    expect(hour.querySelector('[aria-selected="true"]')!.getAttribute('aria-label')).toBe('9');
+    expect(screen.getByRole('group', { name: 'AM or PM' })).toBeTruthy();
+  });
+
+  it('flips the period without changing the displayed hour', () => {
+    const { onChange, trigger } = renderTime({ hourFormat: '12h', value: '09:30' });
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('button', { name: 'PM' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Set' }));
+    expect(onChange.mock.calls[0][0].target.value).toBe('21:30');
+  });
+
+  it('accepts a typed time and normalises it', () => {
+    const { onChange, trigger } = renderTime({ hourFormat: '12h', value: '09:30' });
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('button', { name: 'Type a time instead' }));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: '7:05 pm' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'Set' }));
+    expect(onChange.mock.calls[0][0].target.value).toBe('19:05');
+  });
+
+  it('rejects an impossible typed time instead of guessing', () => {
+    const { onChange, trigger } = renderTime({ hourFormat: '12h' });
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('button', { name: 'Type a time instead' }));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: '99:99' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Set' }));
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

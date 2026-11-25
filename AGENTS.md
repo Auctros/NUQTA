@@ -20,7 +20,7 @@ with an IndexedDB mirror for recovery.
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(22 rules). Add a rule whenever a new safety property must never regress.
+(24 rules). Add a rule whenever a new safety property must never regress.
 
 ## Theming (light / dark)
 
@@ -223,6 +223,51 @@ with an IndexedDB mirror for recovery.
   filling a day keeps the flat `exercises` list in sync via `flattenProgramExercises`.
 - `WorkoutAppModal` / `ReadingAppModal` are the dashboard/habits entry points; keep them
   working.
+
+## Navigation & UI state
+
+- **A section is a destination; a filter is not.** The section lives in the URL
+  (`#/<section>`), so it is linkable and Back/Forward walk real screens. A view-level tab
+  rides along as the second segment (`#/workout/programs`) because it is a place inside a
+  section. Search queries, status filters and sort/view modes stay out of the URL and go to
+  `nuqta.ui.workflow.<scope>` instead — they are a working position, not somewhere to link.
+- **`navigate()` is the only way a screen changes section** (`src/lib/useNavigation.ts`).
+  It writes the store and the URL together. Calling `setActiveNavTab` directly desyncs the
+  address bar, so sidebar, command palette, notifications and deep links all go through it.
+- **Startup precedence** (`resolveInitialRoute` in `src/lib/navigation.ts`): a valid hash,
+  then the last visited section, then the dashboard. A deep link always wins over memory.
+- **`replace` is for corrections the person did not ask for** — normalising an invalid
+  hash, filling in a remembered view tab. A correction that pushed would make Back walk
+  through states nobody chose.
+- **Never restore anything transient.** Dialogs, open confirmations, in-flight forms and
+  destructive operations are never written to storage, so a reload cannot resume a
+  half-finished delete.
+- **UI preferences are not user data.** `NuqtaStorageEngine` treats every `nuqta_` key as a
+  record; UI state therefore uses `nuqta.ui.*` (navigation, time format, workflow filters)
+  and must never use the `nuqta_` prefix, or it would be mirrored and backed up as data.
+- Persisted workflow state is validated on read (`oneOf`, `isString`); a stored value that
+  no longer names a real filter falls back to the default instead of rendering an empty
+  view. Writes are debounced and flushed on unmount.
+
+## Time display
+
+- `src/lib/timeFormat.ts` is the single source of truth: values are stored as `"HH:mm"`
+  (24-hour) always, and `formatTimeLabel()` renders them per the user's preference.
+  Default is `24h`, so existing screens and stored data are unchanged.
+- Never format a time inline. `parseTypedTime()` accepts `9`, `9:30`, `9.30`, `930`, and
+  `7:05 pm` / `7:05 م`, and returns `null` for anything impossible rather than guessing.
+- The wheel picker (`src/components/ui/TimeWheel.tsx`) is a `scroll-snap` drum with
+  `aria-selected` on the centred row, and its selected row must sit exactly at the frame's
+  vertical centre. `scrollTop` and the index are kept in sync both ways, under two rules
+  that are easy to get wrong:
+  - the sync effect must not re-scroll when the index changed *because* the drum moved, or
+    it kills the fling mid-gesture;
+  - a scroll we started ourselves must not report back. A smooth scroll emits events at
+    every intermediate offset, and those are not values the person chose — release the
+    guard on arrival at the target, never on a timer.
+- jsdom has no layout, so scroll-to-index mapping cannot be unit tested. `tests/timeWheel`
+  covers marking, keyboard and pointer; verify the geometry in a real browser (the drum's
+  selected row must land at offset 0 from the frame's centre).
 
 ## Storage / backup rules
 

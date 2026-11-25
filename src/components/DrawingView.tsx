@@ -1,6 +1,7 @@
 import { localDateKey, parseDateKey, addDaysToKey } from '../lib/dateKey';
 import React, { useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { usePersistedViewTab } from '../lib/useNavigation';
 import { ArtMedium, ArtProject, ProjectStage } from '../types';
 import { Button, Field, Input, Modal, NuqtaSelect, Textarea } from './ui';
 import { dialogs, feedback } from './ui/dialogController';
@@ -62,7 +63,11 @@ export const DrawingView: React.FC = () => {
   const pieces = drawingData.pieces || [];
   const projects = drawingData.projects || [];
 
-  const [activeTab, setActiveTab] = useState<DTab>('workspace');
+  const [activeTab, setActiveTab] = usePersistedViewTab<DTab>(
+    'drawing',
+    ['workspace', 'projects', 'practice', 'gallery', 'progress'],
+    'workspace'
+  );
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
   const [galleryMedium, setGalleryMedium] = useState<'all' | ArtMedium>('all');
 

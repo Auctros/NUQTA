@@ -8,6 +8,7 @@
  */
 
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { applyRoute, isNavTab, readViewTab } from './navigation';
 import type { AppNotification } from '../types';
 import { renderNotificationText } from './notificationMessages';
 
@@ -118,7 +119,11 @@ export function openNotificationRoute(route?: { nav: string; entityId?: string }
   if (!route || typeof window === 'undefined') return;
   const store = useNuqtaStore.getState();
   if (route.entityId) store.requestFocus(route.nav, route.entityId);
-  store.setActiveNavTab(route.nav as never);
+  if (!isNavTab(route.nav)) return;
+  // Same path as the sidebar and the palette, so the URL follows the jump and a
+  // reminder click is Back-able rather than a silent state change.
+  store.setActiveNavTab(route.nav);
+  applyRoute({ tab: route.nav, view: readViewTab(route.nav) });
 }
 
 /** Listen for a routed click forwarded by the service worker. */

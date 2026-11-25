@@ -1,6 +1,7 @@
 import { localDateKey, parseDateKey, addDaysToKey } from '../lib/dateKey';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { usePersistedViewTab } from '../lib/useNavigation';
 import { BookItem, BookCategory } from '../types';
 import { Button, Field, Input, Modal, NuqtaSelect, Textarea } from './ui';
 import { dialogs, feedback } from './ui/dialogController';
@@ -68,7 +69,11 @@ export const ReadingView: React.FC = () => {
   const sessions = readingData.sessions || [];
   const quotes = readingData.quotes || [];
 
-  const [activeTab, setActiveTab] = useState<RTab>('library');
+  const [activeTab, setActiveTab] = usePersistedViewTab<RTab>(
+    'reading',
+    ['library', 'reading', 'journal', 'insights'],
+    'library'
+  );
   const [focusedEntityId, setFocusedEntityId] = useState<string | null>(null);
   const [openBookId, setOpenBookId] = useState<string | null>(null);
   const [libraryFilter, setLibraryFilter] = useState<'all' | BookItem['status']>('all');

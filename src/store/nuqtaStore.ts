@@ -39,6 +39,7 @@ import { computeDailyEnergyScore } from '../lib/energyAlgorithm';
 import { computeCurrentStreak } from '../lib/habitSchedule';
 import { isTaskPending } from '../lib/taskStatus';
 import { isWeeklyReviewDay } from '../lib/week';
+import { initialNavTab } from '../lib/navigation';
 import {
   draftFromTask,
   materializeSeries,
@@ -379,7 +380,9 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   isRescueModeOpen: false,
   isQuickCaptureOpen: false,
   isSundayRitualOpen: false,
-  activeNavTab: 'today',
+  // Resolved before first paint so a reload lands where the person was, not on
+  // the dashboard. See src/lib/navigation.ts for the startup policy.
+  activeNavTab: initialNavTab(),
   focusRequest: null,
   searchQuery: '',
   selectedTagFilter: null,

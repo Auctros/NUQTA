@@ -3425,3 +3425,81 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
     animation: none !important;
   }
 }
+
+/* ------------------------------------------------------------
+   Time wheel (NuqtaTimePicker)
+   A drum rather than a list: rows rotate away from the centre and
+   the settled row is upright. Scroll-snap does the physical
+   settling so momentum matches the platform.
+   ------------------------------------------------------------ */
+.nuqta-wheel {
+  width: 62px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* The drum is a 3D surface; without this the rows would sit flat. */
+  perspective: 420px;
+  border-radius: var(--r-sm);
+  background: var(--surface-inset);
+  outline: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 26%, #000 74%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 26%, #000 74%, transparent);
+}
+
+.nuqta-wheel::-webkit-scrollbar {
+  display: none;
+}
+
+.nuqta-wheel:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring-color);
+}
+
+.nuqta-wheel-item {
+  display: grid;
+  place-items: center;
+  scroll-snap-align: center;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--dur-fast) linear;
+  will-change: transform, opacity;
+}
+
+.nuqta-wheel-item.is-selected {
+  color: var(--text-primary);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-base);
+}
+
+/* The band marking the settled row. Sits on the frame, not the scroller,
+   so it stays put while the drum moves underneath it. */
+.nuqta-wheel-frame {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.nuqta-wheel-frame::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 40px;
+  transform: translateY(-50%);
+  border-radius: var(--r-sm);
+  border-top: 1px solid var(--brand-soft-border);
+  border-bottom: 1px solid var(--brand-soft-border);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nuqta-wheel {
+    scroll-behavior: auto;
+  }
+  .nuqta-wheel-item {
+    transition: none;
+  }
+}

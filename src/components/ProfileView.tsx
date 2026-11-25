@@ -7,6 +7,7 @@ import { NuqtaStorageEngine } from '../lib/storage';
 import { resetSyncState } from '../lib/sync/lifecycle';
 import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 import { NuqtaSelect, NuqtaTimePicker } from './ui';
+import { useTimeFormat, writeTimeFormat } from '../lib/timeFormat';
 import { dialogs } from './ui/dialogController';
 import { isCategoryEnabled } from '../lib/notificationEngine';
 import { renderNotificationText } from '../lib/notificationMessages';
@@ -73,6 +74,7 @@ export const ProfileView: React.FC = () => {
   };
 
   const isAr = profile.language === 'ar';
+  const timeFormat = useTimeFormat();
 
   const handleSaveName = (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,6 +273,22 @@ export const ProfileView: React.FC = () => {
                 <option value="ar">العربية (Arabic)</option>
                 <option value="en">English</option>
               </NuqtaSelect>
+            </div>
+
+            <div className="field">
+              <label>{isAr ? 'تنسيق الوقت' : 'Time format'}</label>
+              <NuqtaSelect
+                value={timeFormat}
+                onChange={(e) => writeTimeFormat(e.target.value as '12h' | '24h')}
+              >
+                <option value="24h">{isAr ? '٢٤ ساعة (٢١:٤٥)' : '24-hour (21:45)'}</option>
+                <option value="12h">{isAr ? '١٢ ساعة (٩:٤٥ م)' : '12-hour (9:45 PM)'}</option>
+              </NuqtaSelect>
+              <small className="mt-1 block text-[var(--fs-micro)] text-[var(--text-tertiary)]">
+                {isAr
+                  ? 'يغيّر طريقة عرض الوقت واختياره في كل التطبيق.'
+                  : 'Changes how times are shown and picked everywhere.'}
+              </small>
             </div>
 
             <div className="toggle-row">

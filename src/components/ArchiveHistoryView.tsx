@@ -1,6 +1,7 @@
 import { localDateKey, localDayFrom, localTimeKey } from '../lib/dateKey';
 import React, { useState, useMemo } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { usePersistedViewTab } from '../lib/useNavigation';
 import {
   generateUniversalHistory,
   getUniversalArchivedItems,
@@ -44,7 +45,11 @@ export const ArchiveHistoryView: React.FC = () => {
   const isAr = profile.language === 'ar';
 
   // Workspace sub-tabs
-  const [activeTab, setActiveTab] = useState<'archive' | 'timeline' | 'studios_logs'>('archive');
+  const [activeTab, setActiveTab] = usePersistedViewTab<'archive' | 'timeline' | 'studios_logs'>(
+    'archive',
+    ['archive', 'timeline', 'studios_logs'],
+    'archive'
+  );
 
   // Filter criteria
   const [domainFilter, setDomainFilter] = useState<UniversalHistoryDomain | 'all'>('all');

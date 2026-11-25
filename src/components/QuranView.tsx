@@ -1,6 +1,7 @@
 import { localDateKey, parseDateKey, addDaysToKey } from '../lib/dateKey';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { usePersistedViewTab } from '../lib/useNavigation';
 import { QURAN_SURAHS, TOTAL_QURAN_AYAHS, TOTAL_QURAN_SURAHS, getSurahMeta } from '../lib/quranData';
 import { QuranSessionType, QuranRecitationQuality, QuranSurahStatus, SurahMemorizationState } from '../types';
 import { Button, NuqtaSelect } from './ui';
@@ -48,7 +49,11 @@ export const QuranView: React.FC = () => {
   const quranHabit = habits.find((h) => h.specializedType === 'quran');
   const quranData = quranHabit?.quranData;
 
-  const [activeTab, setActiveTab] = useState<QTab>('overview');
+  const [activeTab, setActiveTab] = usePersistedViewTab<QTab>(
+    'quran',
+    ['overview', 'memorize', 'murajaah', 'map', 'history'],
+    'overview'
+  );
   const [focusedEntityId, setFocusedEntityId] = useState<string | null>(null);
 
   useEffect(() => {

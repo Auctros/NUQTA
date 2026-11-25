@@ -3,6 +3,11 @@ import { isTaskDone, isTaskPending } from '../lib/taskStatus';
 import { dayOfWeek, WEEK_DAY_ORDER, weekDayLabel } from '../lib/week';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import {
+  isString,
+  oneOf,
+  usePersistedWorkflowState
+} from '../lib/usePersistedWorkflowState';
 import { PriorityLevel, RecurrenceFrequency, RecurrenceRule, Task, TaskStatus } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
 import { EmptyState, NuqtaDatePicker, NuqtaSelect, NuqtaTimePicker, PageHeader, Surface, TabBar } from './ui';
@@ -82,7 +87,14 @@ export const TasksView: React.FC = () => {
   } = useNuqtaStore();
 
   const isAr = profile.language === 'ar';
-  const [viewMode, setViewMode] = useState<'list' | 'board' | 'matrix'>('list');
+  // Filters and the chosen view are working positions, not destinations: they are
+  // restored on reload but deliberately kept out of the URL (see usePersistedWorkflowState).
+  const [viewMode, setViewMode] = usePersistedWorkflowState<'list' | 'board' | 'matrix'>(
+    'tasks',
+    'viewMode',
+    'list',
+    oneOf(['list', 'board', 'matrix'])
+  );
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -99,9 +111,16 @@ export const TasksView: React.FC = () => {
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
-  const [sortBy, setSortBy] = useState<'due' | 'priority'>('due');
+  const [searchQuery, setSearchQuery] = usePersistedWorkflowState('tasks', 'search', '', isString);
+  const [statusFilter, setStatusFilter] = usePersistedWorkflowState<
+    'all' | 'active' | 'completed' | 'archived'
+  >('tasks', 'status', 'all', oneOf(['all', 'active', 'completed', 'archived']));
+  const [sortBy, setSortBy] = usePersistedWorkflowState<'due' | 'priority'>(
+    'tasks',
+    'sort',
+    'due',
+    oneOf(['due', 'priority'])
+  );
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 

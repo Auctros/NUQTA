@@ -12,6 +12,8 @@ import { AmbientBackdrop } from './components/AmbientBackdrop';
 import { SidebarNavGroup, SidebarNavItem } from './components/sidebar/SidebarNavGroup';
 import { applyThemeClass } from './lib/themeTransition';
 import { readSidebarCollapsed, writeSidebarCollapsed } from './lib/uiPrefs';
+import { initNavigationSync, isNavTab } from './lib/navigation';
+import { useNavigation } from './lib/useNavigation';
 
 // Modals
 import { RescueModal } from './components/RescueModal';
@@ -51,7 +53,6 @@ export default function App() {
 
   const {
     activeNavTab,
-    setActiveNavTab,
     initializeStore,
     profile,
     setLanguage,
@@ -64,6 +65,9 @@ export default function App() {
   // A selector rather than a whole-store subscription: the badge must update on every
   // read/dismiss, and deriving it here keeps that dependency explicit.
   const unreadNotifications = useNuqtaStore((s) => unreadCount(s.notifications));
+
+  // One path for every destination change: the URL and the store move together.
+  const { navigate } = useNavigation();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
@@ -93,6 +97,17 @@ export default function App() {
       cancelled = true;
     };
   }, [initializeStore]);
+
+  // Keep the address bar and the screen in step: Back/Forward re-enter the app
+  // through here, and a deep link sets the section on first paint. Mounted once.
+  useEffect(
+    () =>
+      initNavigationSync((route) => {
+        const store = useNuqtaStore.getState();
+        if (store.activeNavTab !== route.tab) store.setActiveNavTab(route.tab);
+      }, useNuqtaStore.getState().activeNavTab),
+    []
+  );
 
   // Starts only when VITE_NUQTA_SYNC_URL is configured; otherwise this hook is inert
   // and the app stays purely local-first. The returned status is rendered in the
@@ -145,7 +160,7 @@ export default function App() {
       };
 
       if (!focusInput()) {
-        setActiveNavTab('today');
+        navigate('today');
         window.setTimeout(focusInput, 80);
       }
     };
@@ -159,7 +174,7 @@ export default function App() {
       window.removeEventListener('nuqta:open-search', handleOpenSearch);
       window.removeEventListener('nuqta:open-palette', handleOpenPalette);
     };
-  }, [setActiveNavTab]);
+  }, [navigate]);
 
   const isAr = profile.language === 'ar';
   const todayStr = localDateKey();
@@ -194,7 +209,7 @@ export default function App() {
   };
 
   const handleNavSelect = (tab: typeof activeNavTab) => {
-    setActiveNavTab(tab);
+    navigate(tab);
     if (window.innerWidth <= 900) setSidebarOpen(false);
   };
 
@@ -292,7 +307,7 @@ export default function App() {
       hint: isAr ? 'صفحة' : 'Page',
       group: isAr ? 'التنقل' : 'Navigate',
       keywords: [String(item.id)],
-      run: () => setActiveNavTab(item.id)
+      run: () => navigate(item.id)
     })),
     {
       id: 'act-profile',
@@ -300,7 +315,7 @@ export default function App() {
       hint: isAr ? 'إجراء' : 'Action',
       group: isAr ? 'إجراءات' : 'Actions',
       keywords: ['profile', 'settings', 'preferences', 'data', 'backup'],
-      run: () => setActiveNavTab('profile')
+      run: () => navigate('profile')
     },
     {
       id: 'act-simulator',
@@ -308,7 +323,7 @@ export default function App() {
       hint: isAr ? 'إجراء' : 'Action',
       group: isAr ? 'إجراءات' : 'Actions',
       keywords: ['simulator', 'what if'],
-      run: () => setActiveNavTab('simulator')
+      run: () => navigate('simulator')
     },
     {
       id: 'act-focus',
@@ -316,7 +331,7 @@ export default function App() {
       hint: isAr ? 'إجراء' : 'Action',
       group: isAr ? 'إجراءات' : 'Actions',
       keywords: ['focus', 'timer', 'pomodoro'],
-      run: () => setActiveNavTab('focus')
+      run: () => navigate('focus')
     }
   ];
 
@@ -369,7 +384,9 @@ export default function App() {
         isAr={isAr}
         onOpenResult={(result) => {
           requestFocus(result.domain, result.recordId);
-          setActiveNavTab(result.domain as any);
+          // History domains are not all sections ('review' has no screen of its own),
+          // so only follow the ones that actually navigate.
+          if (isNavTab(result.domain)) navigate(result.domain);
         }}
       />
 
@@ -433,7 +450,7 @@ export default function App() {
                 setSidebarCollapsed(false);
                 hideCollapsedTooltip();
               } else {
-                setActiveNavTab('today');
+                navigate('today');
                 if (window.innerWidth <= 900) setSidebarOpen(false);
               }
             }}
@@ -488,7 +505,7 @@ export default function App() {
           aria-describedby={sidebarTooltip?.id === 'capture' ? 'sidebar-tip-capture' : undefined}
           onClick={() => {
             hideCollapsedTooltip();
-            setActiveNavTab('tasks');
+            navigate('tasks');
             if (window.innerWidth <= 900) setSidebarOpen(false);
           }}
           onMouseEnter={(e) =>
@@ -572,7 +589,7 @@ export default function App() {
           aria-describedby={sidebarTooltip?.id === 'profile' ? 'sidebar-tip-profile' : undefined}
           onClick={() => {
             hideCollapsedTooltip();
-            setActiveNavTab('profile');
+            navigate('profile');
             if (window.innerWidth <= 900) setSidebarOpen(false);
           }}
           onMouseEnter={(e) =>

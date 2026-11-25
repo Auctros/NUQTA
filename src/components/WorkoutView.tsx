@@ -1,6 +1,7 @@
 import { localDateKey, parseDateKey } from '../lib/dateKey';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
+import { usePersistedViewTab } from '../lib/useNavigation';
 import { WorkoutRoutine, ExerciseEntry, ExerciseSet, MuscleMovement } from '../types';
 import { Button, NuqtaSelect } from './ui';
 import { dialogs } from './ui/dialogController';
@@ -99,7 +100,11 @@ export const WorkoutView: React.FC = () => {
     if (ok && workoutHabit) deleteWorkoutRoutine(workoutHabit.id, routineId);
   };
 
-  const [activeTab, setActiveTab] = useState<WTab>('today');
+  const [activeTab, setActiveTab] = usePersistedViewTab<WTab>(
+    'workout',
+    ['today', 'programs', 'exercises', 'history', 'progress'],
+    'today'
+  );
 
   // ---------- Active workout (execution mode) ----------
   const [active, setActive] = useState(false);
