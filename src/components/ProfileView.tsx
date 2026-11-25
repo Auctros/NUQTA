@@ -363,8 +363,8 @@ export const ProfileView: React.FC = () => {
                   <strong>{isAr ? 'ساعات الهدوء' : 'Quiet hours'}</strong>
                   <small>
                     {isAr
-                      ? 'إيقاف تنبيهات الجهاز خلال هذه الفترة. تبقى الإشعارات داخل التطبيق.'
-                      : 'Silences device alerts during this window. In-app notifications still arrive.'}
+                      ? 'لا تُرسل تنبيهات الجهاز خلال هذه الفترة، لكن الإشعارات تبقى محفوظة في مركز الإشعارات.'
+                      : 'Device alerts are not sent during this window. Notifications are still saved in the Notification Center.'}
                   </small>
                 </div>
                 <input

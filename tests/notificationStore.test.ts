@@ -41,13 +41,24 @@ describe('notification store actions', () => {
     expect(useNuqtaStore.getState().notifications).toHaveLength(1);
   });
 
-  it('allows the same event again after the row is dismissed', () => {
+  it('keeps a dismissed event suppressed for the rest of its lifetime', () => {
     useNuqtaStore.getState().notify(draft());
     const id = useNuqtaStore.getState().notifications[0].id;
     useNuqtaStore.getState().dismissNotification(id);
     expect(useNuqtaStore.getState().notifications).toHaveLength(1);
 
-    expect(useNuqtaStore.getState().notify(draft())).toBe(true);
+    // A reload clears the hook's in-memory guard, so this is the same path the ticker
+    // takes after a restart: the dismissal must still hold.
+    expect(useNuqtaStore.getState().notify(draft())).toBe(false);
+    expect(useNuqtaStore.getState().notifications).toHaveLength(1);
+  });
+
+  it('still notifies a later occurrence that has its own dedupe key', () => {
+    useNuqtaStore.getState().notify(draft());
+    const id = useNuqtaStore.getState().notifications[0].id;
+    useNuqtaStore.getState().dismissNotification(id);
+
+    expect(useNuqtaStore.getState().notify(draft({ dedupeKey: 'task:1:due:2026-01-01:10:00' }))).toBe(true);
     expect(useNuqtaStore.getState().notifications).toHaveLength(2);
   });
 

@@ -102,6 +102,16 @@ describe('notification settings in Profile', () => {
     expect(prefs.quietHours).toEqual({ enabled: true, start: '22:00', end: '07:00' });
   });
 
+  it('explains that quiet hours only silence device alerts', async () => {
+    await openProfile();
+    const section = settingsSection();
+
+    expect(
+      within(section).getByText(/Device alerts are not sent during this window/i)
+    ).toBeTruthy();
+    expect(within(section).getByText(/still saved in the Notification Center/i)).toBeTruthy();
+  });
+
   it('keeps quiet hours when the toggle is switched back off', async () => {
     await openProfile();
     const section = settingsSection();

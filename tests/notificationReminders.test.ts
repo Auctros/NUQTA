@@ -112,6 +112,26 @@ describe('useNuqtaReminders', () => {
     second.unmount();
   });
 
+  it('keeps a dismissed reminder dismissed after a remount', async () => {
+    freezeAt(9, 5);
+    useNuqtaStore.setState({ tasks: [baseTask() as never] });
+
+    const first = renderHook(() => useNuqtaReminders());
+    await settle();
+    const [row] = useNuqtaStore.getState().notifications;
+    expect(row).toBeTruthy();
+
+    useNuqtaStore.getState().dismissNotification(row.id);
+    first.unmount();
+
+    // Reload: empty in-memory guard, task still inside its reminder window.
+    const second = renderHook(() => useNuqtaReminders());
+    await settle();
+    expect(useNuqtaStore.getState().notifications).toHaveLength(1);
+    expect(useNuqtaStore.getState().notifications[0].dismissedAt).toBeTruthy();
+    second.unmount();
+  });
+
   it('raises the morning habit cue only for habits actually due today', async () => {
     freezeAt(8, 0);
     useNuqtaStore.setState({

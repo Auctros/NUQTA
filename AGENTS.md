@@ -240,8 +240,9 @@ with an IndexedDB mirror for recovery.
     wording at creation time. Rows without a `messageId` keep their stored text.
 - Identity is `dedupeKey`, not `id`. Re-raising the same event returns the SAME list
   reference, so a 20-second reminder ticker cannot spam the inbox and a restart cannot
-  re-notify something already seen. Dedupe is checked against live rows only: a
-  dismissed or expired row must not block a genuinely new occurrence.
+  re-notify something already seen. Dedupe is checked against every row still inside its
+  lifetime, dismissed included: dismissing means "handled", so the reminder stays gone
+  until the row expires. A new occurrence carries its own key and still fires.
 - `useNuqtaReminders` builds keys that encode the occurrence
   (`task:<id>:due:<date>:<time>`), so the guard survives a reload. It never keeps an
   in-memory "already notified" set.

@@ -168,9 +168,12 @@ export function addNotification(
 
   const pruned = pruneNotifications(list, now);
 
-  // Dedupe against a live entry only. A dismissed or expired row must not block a
-  // genuinely new occurrence of the same event.
-  const existing = pruned.find((n) => n.dedupeKey === draft.dedupeKey && !n.dismissedAt && !isExpired(n, now));
+  // Dedupe against any row that is still within its lifetime, dismissed or not: a
+  // dismissal means "I have dealt with this event", so the reminder must stay gone for
+  // the rest of its validity — including across a reload, which resets the caller's
+  // in-memory guard. Expired rows never reach here (prune drops them), and a new
+  // occurrence carries a different dedupeKey, so later reminders still fire.
+  const existing = pruned.find((n) => n.dedupeKey === draft.dedupeKey);
   if (existing) {
     return { added: false, list: pruned === list ? list : pruned, reason: 'duplicate' };
   }

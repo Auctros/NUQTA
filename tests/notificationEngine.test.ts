@@ -64,6 +64,34 @@ describe('addNotification', () => {
     expect(second.list[0].title).toBe('Title');
   });
 
+  it('keeps a dismissed event suppressed until the row expires', () => {
+    const first = addNotification([], draft({ ttlMinutes: 120 }), { prefs: prefs() });
+    if (!first.added) throw new Error('unreachable');
+    const at = new Date(first.notification.createdAt);
+
+    const dismissed = dismissNotification(first.list, first.notification.id, at);
+    // Same event, twenty seconds later, as the ticker would raise it after a reload.
+    const later = new Date(at.getTime() + 20_000);
+    const again = addNotification(dismissed, draft({ ttlMinutes: 120 }), { now: later, prefs: prefs() });
+
+    expect(again.added).toBe(false);
+    expect(again.list).toHaveLength(1);
+  });
+
+  it('notifies the same event again once the dismissed row has expired', () => {
+    const first = addNotification([], draft({ ttlMinutes: 60 }), { prefs: prefs() });
+    if (!first.added) throw new Error('unreachable');
+    const at = new Date(first.notification.createdAt);
+    const dismissed = dismissNotification(first.list, first.notification.id, at);
+
+    // Two hours on: the row is past its expiry, so the event is new again.
+    const afterExpiry = new Date(at.getTime() + 2 * 60 * 60 * 1000);
+    const again = addNotification(dismissed, draft({ ttlMinutes: 60 }), { now: afterExpiry, prefs: prefs() });
+
+    expect(again.added).toBe(true);
+    expect(again.list).toHaveLength(1);
+  });
+
   it('rejects when the category is switched off', () => {
     const outcome = addNotification([], draft(), {
       prefs: prefs({ categories: { task: false } })
