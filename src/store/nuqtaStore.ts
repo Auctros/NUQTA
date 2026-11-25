@@ -17,9 +17,23 @@ import {
   SundayRitualReview,
   PriorityLevel,
   TaskStatus,
-  HistoryAuditLogEntry
+  HistoryAuditLogEntry,
+  AppNotification,
+  NotificationPreferences
 } from '../types';
 import { NuqtaStorageEngine } from '../lib/storage';
+import {
+  addNotification,
+  dismissNotification as dismissNotificationInList,
+  markAllRead as markAllReadInList,
+  markRead as markReadInList,
+  markUnread as markUnreadInList,
+  pruneNotifications,
+  shouldDeliverToBrowser,
+  type NotificationDraft
+} from '../lib/notificationEngine';
+import { deliverBrowserNotification } from '../lib/notifications';
+import { renderNotificationText } from '../lib/notificationMessages';
 import { parseNaturalLanguageTask } from '../lib/nlpParser';
 import { computeDailyEnergyScore } from '../lib/energyAlgorithm';
 import { computeCurrentStreak } from '../lib/habitSchedule';
@@ -185,6 +199,10 @@ interface NuqtaStoreState {
   sundayReviews: SundayRitualReview[];
   historyAuditLogs: HistoryAuditLogEntry[];
 
+  // Notifications (local-only; never synchronized)
+  notifications: AppNotification[];
+  notificationPreferences: NotificationPreferences;
+
   // Computed & UI State
   energyScore: number;
   isRescueModeOpen: boolean;
@@ -327,6 +345,18 @@ interface NuqtaStoreState {
   archiveGoal: (id: string) => void;
   restoreGoal: (id: string) => void;
   logHistoryAudit: (entry: Omit<HistoryAuditLogEntry, 'id' | 'timestamp'>) => void;
+
+  // Notification Actions (local-only)
+  /** Raise a notification. Returns true when a new row was created (false = duplicate). */
+  notify: (draft: NotificationDraft) => boolean;
+  markNotificationRead: (id: string) => void;
+  markNotificationUnread: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  dismissNotification: (id: string) => void;
+  clearReadNotifications: () => void;
+  setNotificationPreferences: (prefs: NotificationPreferences) => void;
+  /** Prune expired rows. Called on load and on a slow timer. */
+  pruneNotificationInbox: () => void;
 }
 
 export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
@@ -341,6 +371,9 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   historyAuditLogs: [],
   profile: defaultProfile(),
   sundayReviews: [],
+
+  notifications: [],
+  notificationPreferences: NuqtaStorageEngine.getNotificationPreferences(),
 
   energyScore: 50,
   isRescueModeOpen: false,
@@ -363,6 +396,10 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const profile = NuqtaStorageEngine.getProfile();
     const sundayReviews = NuqtaStorageEngine.getSundayReviews();
     const historyAuditLogs = NuqtaStorageEngine.getHistoryAuditLogs();
+    const notificationPreferences = NuqtaStorageEngine.getNotificationPreferences();
+    // Expired rows are dropped at load: a notification that outlived its usefulness should
+    // not reappear just because the app was reopened.
+    const notifications = pruneNotifications(NuqtaStorageEngine.getNotifications());
 
     const todayStr = localDateKey();
     const todayHealth = healthMetrics[todayStr] ?? null;
@@ -385,6 +422,8 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       profile: { ...profile, weeklySundayReviewDue },
       sundayReviews,
       historyAuditLogs,
+      notifications,
+      notificationPreferences,
       energyScore: energy
     });
 
@@ -1860,11 +1899,31 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   updateGoal: (id, updates) => {
+    const before = get().goals.find((g) => g.id === id);
     const updated = get().goals.map((g) =>
       g.id === id ? { ...g, ...updates, updatedAt: new Date().toISOString() } : g
     );
     NuqtaStorageEngine.saveGoals(updated);
     set({ goals: updated });
+
+    // Celebrate the transition into "completed" once, not every later edit.
+    const after = updated.find((g) => g.id === id);
+    if (before && after && before.status !== 'completed' && after.status === 'completed') {
+      const isAr = get().profile.language === 'ar';
+      const params = { title: after.title };
+      const text = renderNotificationText('goal.completed', params, { title: after.title }, isAr);
+      get().notify({
+        category: 'goal',
+        priority: 'high',
+        title: text.title,
+        body: text.body,
+        route: { nav: 'goals', entityId: id },
+        actionLabel: isAr ? 'افتح الهدف' : 'Open goal',
+        dedupeKey: `goal:${id}:completed`,
+        messageId: 'goal.completed',
+        params
+      });
+    }
   },
 
   updateKeyResult: (goalId, krId, val) => {
@@ -1919,6 +1978,10 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
 
   toggleGoalMilestone: (goalId, milestoneId) => {
     const todayStr = localDateKey();
+    const goal = get().goals.find((g) => g.id === goalId);
+    const target = goal?.milestones?.find((ms) => ms.id === milestoneId);
+    const markedComplete = !!target && !target.isCompleted;
+
     const updated = get().goals.map((g) => {
       if (g.id !== goalId) return g;
       const milestones = (g.milestones || []).map((ms) => {
@@ -1938,6 +2001,23 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     try {
       confetti({ particleCount: 30, spread: 50, origin: { y: 0.7 } });
     } catch {}
+
+    if (markedComplete && goal && target) {
+      const params = { title: target.title, goal: goal.title };
+      const text = renderNotificationText('goal.milestone', params, { title: target.title }, get().profile.language === 'ar');
+      get().notify({
+        category: 'goal',
+        priority: 'normal',
+        title: text.title,
+        body: text.body,
+        route: { nav: 'goals', entityId: goalId },
+        actionLabel: get().profile.language === 'ar' ? 'افتح الهدف' : 'Open goal',
+        // Re-completing the same milestone is a new event; each completion has its own key.
+        dedupeKey: `goal:${goalId}:milestone:${milestoneId}:${todayStr}`,
+        messageId: 'goal.milestone',
+        params
+      });
+    }
   },
 
   deleteGoalMilestone: (goalId, milestoneId) => {
@@ -2062,6 +2142,22 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     NuqtaStorageEngine.saveFocusSessions(updated);
     set({ focusSessions: updated });
     get().addXP(sessionDraft.durationMinutes * 2);
+
+    const isAr = get().profile.language === 'ar';
+    const params = { minutes: sessionDraft.durationMinutes };
+    const text = renderNotificationText('focus.complete', params, { title: '' }, isAr);
+    get().notify({
+      category: 'focus',
+      priority: 'low',
+      title: text.title,
+      body: text.body,
+      route: { nav: 'focus' },
+      actionLabel: isAr ? 'افتح التركيز' : 'Open focus',
+      // One notification per completed session; the session id makes it unique.
+      dedupeKey: `focus:session:${newSession.id}`,
+      messageId: 'focus.complete',
+      params
+    });
   },
 
   // HEALTH ACTIONS
@@ -2104,12 +2200,32 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   },
 
   updateSavingsGoal: (id, amountToAdd) => {
+    const before = get().savingsGoals.find((sg) => sg.id === id);
     const updated = get().savingsGoals.map((sg) =>
       sg.id === id ? { ...sg, currentAmount: sg.currentAmount + amountToAdd } : sg
     );
     NuqtaStorageEngine.saveSavingsGoals(updated);
     set({ savingsGoals: updated });
     get().addXP(20);
+
+    // Notify only on the crossing, not on every deposit that happens to sit above target.
+    const after = updated.find((sg) => sg.id === id);
+    if (before && after && before.currentAmount < after.targetAmount && after.currentAmount >= after.targetAmount) {
+      const isAr = get().profile.language === 'ar';
+      const params = { title: after.title };
+      const text = renderNotificationText('finance.savings', params, { title: after.title }, isAr);
+      get().notify({
+        category: 'finance',
+        priority: 'normal',
+        title: text.title,
+        body: text.body,
+        route: { nav: 'finance' },
+        actionLabel: isAr ? 'افتح المال' : 'Open money',
+        dedupeKey: `finance:savings:${id}:reached`,
+        messageId: 'finance.savings',
+        params
+      });
+    }
   },
 
   addSavingsGoal: (goalDraft) => {
@@ -2490,6 +2606,84 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const updated = [newLog, ...get().historyAuditLogs];
     NuqtaStorageEngine.saveHistoryAuditLogs(updated);
     set({ historyAuditLogs: updated });
+  },
+
+  // ------------------------------------------------------------------ notifications
+  //
+  // The store is the only writer of the notification list: the engine decides *what* the
+  // next list is, and every mutation persists through the storage engine so a reload keeps
+  // the same read/dismissed state. Browser delivery is attempted only when the optional
+  // channel is on, so the in-app inbox is always the source of truth.
+  notify: (draft) => {
+    const { notifications, notificationPreferences } = get();
+    const outcome = addNotification(notifications, draft, { prefs: notificationPreferences });
+    if (!outcome.added) {
+      // A duplicate can still mean expiry pruning happened, so persist when the list moved.
+      if (outcome.list !== notifications) {
+        NuqtaStorageEngine.saveNotifications(outcome.list);
+        set({ notifications: outcome.list });
+      }
+      return false;
+    }
+
+    NuqtaStorageEngine.saveNotifications(outcome.list);
+    set({ notifications: outcome.list });
+
+    if (shouldDeliverToBrowser(notificationPreferences, draft.category)) {
+      // Fire-and-forget: delivery failure must never block the in-app record.
+      void deliverBrowserNotification(outcome.notification, get().profile.language === 'ar');
+    }
+    return true;
+  },
+
+  markNotificationRead: (id) => {
+    const next = markReadInList(get().notifications, id);
+    if (next === get().notifications) return;
+    NuqtaStorageEngine.saveNotifications(next);
+    set({ notifications: next });
+  },
+
+  markNotificationUnread: (id) => {
+    const next = markUnreadInList(get().notifications, id);
+    if (next === get().notifications) return;
+    NuqtaStorageEngine.saveNotifications(next);
+    set({ notifications: next });
+  },
+
+  markAllNotificationsRead: () => {
+    const next = markAllReadInList(get().notifications);
+    if (next === get().notifications) return;
+    NuqtaStorageEngine.saveNotifications(next);
+    set({ notifications: next });
+  },
+
+  dismissNotification: (id) => {
+    const next = dismissNotificationInList(get().notifications, id);
+    if (next === get().notifications) return;
+    NuqtaStorageEngine.saveNotifications(next);
+    set({ notifications: next });
+  },
+
+  /** Removes already-read, non-dismissed rows. Unread work is never silently discarded. */
+  clearReadNotifications: () => {
+    const current = get().notifications;
+    const next = current.filter((n) => !n.readAt || n.dismissedAt);
+    if (next.length === current.length) return;
+    NuqtaStorageEngine.saveNotifications(next);
+    set({ notifications: next });
+  },
+
+  setNotificationPreferences: (prefs) => {
+    NuqtaStorageEngine.saveNotificationPreferences(prefs);
+    set({ notificationPreferences: prefs });
+  },
+
+  pruneNotificationInbox: () => {
+    const current = get().notifications;
+    const next = pruneNotifications(current);
+    if (next.length === current.length) return;
+    NuqtaStorageEngine.saveNotifications(next);
+    set({ notifications: next });
   }
 }));
 

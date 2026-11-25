@@ -462,8 +462,33 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 23. Notifications are local-only. Read/dismissed state is per-device, and the sync
+//     server rejects stores outside its allow-list, so a notification key in the sync map
+//     would silently break sync rather than sync notifications.
+{
+  const storage = readFileSync(join(root, 'src/lib/storage.ts'), 'utf8');
+  const syncMap = /SYNC_SECTION_KEYS[^{]*\{([\s\S]*?)\n\};/.exec(storage);
+  if (syncMap && /NOTIFICATIONS/.test(syncMap[1])) {
+    fail(
+      'Notifications must never be synchronized',
+      'STORAGE_KEYS.NOTIFICATIONS appears in SYNC_SECTION_KEYS; notification read state is local-only'
+    );
+  }
+  // Comments legitimately mention React/storage when explaining why they are avoided, so
+  // only executable lines count.
+  const impure = grep(/localStorage|indexedDB|\bReact\b|window\./, {
+    except: []
+  }).filter((hit) => hit.startsWith('src/lib/notificationEngine.ts'));
+  if (impure.length) {
+    fail(
+      'The notification engine must stay pure',
+      impure.join('\n    ')
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (22 rules).');
+console.log('Invariant check passed (23 rules).');

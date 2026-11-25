@@ -6,7 +6,32 @@ import { NuqtaIcon } from './NuqtaIcon';
 import { NuqtaStorageEngine } from '../lib/storage';
 import { resetSyncState } from '../lib/sync/lifecycle';
 import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
-import { NuqtaSelect } from './ui';
+import { NuqtaSelect, NuqtaTimePicker } from './ui';
+import { isCategoryEnabled } from '../lib/notificationEngine';
+import { renderNotificationText } from '../lib/notificationMessages';
+import type { NotificationCategory } from '../types';
+
+/** The categories a user can switch. `reminder` is a system alias, not a choice. */
+const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
+  'task',
+  'habit',
+  'goal',
+  'focus',
+  'health',
+  'finance',
+  'system'
+];
+
+const CATEGORY_LABEL: Record<NotificationCategory, { ar: string; en: string }> = {
+  task: { ar: 'المهام', en: 'Tasks' },
+  habit: { ar: 'العادات', en: 'Habits' },
+  goal: { ar: 'الأهداف', en: 'Goals' },
+  focus: { ar: 'التركيز', en: 'Focus sessions' },
+  health: { ar: 'الصحة', en: 'Health' },
+  finance: { ar: 'المال', en: 'Money' },
+  system: { ar: 'النظام', en: 'System' },
+  reminder: { ar: 'تذكير', en: 'Reminder' }
+};
 
 export const ProfileView: React.FC = () => {
   const {
@@ -18,14 +43,19 @@ export const ProfileView: React.FC = () => {
     habits,
     goals,
     journalEntries,
-    savingsGoals
+    savingsGoals,
+    notificationPreferences,
+    setNotificationPreferences,
+    notify
   } = useNuqtaStore();
   const [importStatus, setImportStatus] = useState<string>('');
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+  const [notifSupported, setNotifSupported] = useState(true);
   const [nameInput, setNameInput] = useState(profile.name);
   const [nameSaved, setNameSaved] = useState(false);
 
   useEffect(() => {
+    setNotifSupported(NuqtaNotificationEngine.isSupported());
     setNotifPermission(NuqtaNotificationEngine.getPermission());
   }, []);
 
@@ -34,6 +64,11 @@ export const ProfileView: React.FC = () => {
   const handleRequestPermission = async () => {
     const res = await NuqtaNotificationEngine.requestPermission();
     setNotifPermission(res);
+    // Granting permission is the user's intent to use the channel, so switch it on here
+    // rather than making them grant and then toggle a second control.
+    if (res === 'granted') {
+      setNotificationPreferences({ ...notificationPreferences, browser: true });
+    }
   };
 
   const isAr = profile.language === 'ar';
@@ -240,48 +275,167 @@ export const ProfileView: React.FC = () => {
           {/* Notifications & Audio System */}
           <div className="panel settings-section">
             <h2>{isAr ? 'الإشعارات والتنبيهات الصوتية' : 'Notifications & Audio Alerts'}</h2>
-            <p>{isAr ? 'تنبيهات المتصفح والنظام الصوتي التخليقي المحلي عند حلول مواعيد المهام والعادات وانتهاء التركيز.' : 'Browser notifications and synthesized harmonic chimes for tasks, habits, and focus sessions.'}</p>
+            <p>
+              {isAr
+                ? 'الإشعارات تظهر داخل نقطة دائماً. يمكنك اختيار ما يصلك، وتفعيل تنبيهات الجهاز عند إغلاق التطبيق.'
+                : 'Notifications always appear inside NUQTA. Choose what reaches you, and optionally mirror them to the device.'}
+            </p>
 
             <div className="space-y-3 pt-2">
               <div className="toggle-row">
                 <div className="toggle-copy">
-                  <strong>{isAr ? 'إذن إشعارات المتصفح' : 'Browser Notification Permission'}</strong>
+                  <strong>{isAr ? 'تنبيهات الجهاز' : 'Device alerts'}</strong>
                   <small>
-                    {notifPermission === 'granted'
-                      ? (isAr ? 'الإشعارات مفعّلة في المتصفح' : 'Notifications granted')
+                    {!notifSupported
+                      ? isAr
+                        ? 'هذا المتصفح لا يدعم تنبيهات الجهاز.'
+                        : 'This browser does not support device alerts.'
+                      : notifPermission === 'granted'
+                      ? isAr
+                        ? 'مسموح. تُعرض التنبيهات أيضاً خارج التطبيق.'
+                        : 'Allowed. Alerts also appear outside the app.'
                       : notifPermission === 'denied'
-                      ? (isAr ? 'تم رفض الإذن من إعدادات المتصفح' : 'Permission blocked by browser')
-                      : (isAr ? 'لم يتم تفعيل الإذن بعد' : 'Permission not requested yet')}
+                      ? isAr
+                        ? 'محظور من إعدادات المتصفح. الإشعارات داخل التطبيق تعمل كالمعتاد.'
+                        : 'Blocked in browser settings. In-app notifications still work.'
+                      : isAr
+                        ? 'يتطلب إذن المتصفح. الإشعارات داخل التطبيق تعمل بالفعل.'
+                        : 'Needs browser permission. In-app notifications already work.'}
                   </small>
                 </div>
-                <button
-                  type="button"
-                  className={`btn small ${notifPermission === 'granted' ? 'subtle' : 'primary'}`}
-                  onClick={handleRequestPermission}
-                >
-                  {notifPermission === 'granted'
-                    ? (isAr ? 'مفعّل' : 'Granted')
-                    : (isAr ? 'تفعيل الإشعارات' : 'Enable Notifications')}
-                </button>
+                {notifPermission === 'granted' ? (
+                  <input
+                    type="checkbox"
+                    className="toggle"
+                    checked={notificationPreferences.browser}
+                    onChange={(e) =>
+                      setNotificationPreferences({ ...notificationPreferences, browser: e.target.checked })
+                    }
+                    aria-label={isAr ? 'تنبيهات الجهاز' : 'Device alerts'}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="btn small primary"
+                    disabled={!notifSupported || notifPermission === 'denied'}
+                    onClick={handleRequestPermission}
+                  >
+                    {isAr ? 'تفعيل' : 'Enable'}
+                  </button>
+                )}
               </div>
+
+              <div className="pt-1">
+                <strong className="text-[var(--fs-xs)] text-[var(--text-primary)]">
+                  {isAr ? 'أنواع الإشعارات' : 'What you get notified about'}
+                </strong>
+                <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {NOTIFICATION_CATEGORIES.map((category) => (
+                    <label
+                      key={category}
+                      className="flex items-center justify-between gap-3 rounded-[var(--r-sm)] border border-[var(--border-subtle)] px-2.5 py-2"
+                    >
+                      <span className="text-[var(--fs-xs)] text-[var(--text-secondary)]">
+                        {CATEGORY_LABEL[category][isAr ? 'ar' : 'en']}
+                      </span>
+                      <input
+                        type="checkbox"
+                        className="toggle"
+                        checked={isCategoryEnabled(notificationPreferences, category)}
+                        onChange={(e) =>
+                          setNotificationPreferences({
+                            ...notificationPreferences,
+                            categories: {
+                              ...notificationPreferences.categories,
+                              [category]: e.target.checked
+                            }
+                          })
+                        }
+                        aria-label={CATEGORY_LABEL[category][isAr ? 'ar' : 'en']}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="toggle-row">
+                <div className="toggle-copy">
+                  <strong>{isAr ? 'ساعات الهدوء' : 'Quiet hours'}</strong>
+                  <small>
+                    {isAr
+                      ? 'لا تُرسل تنبيهات الجهاز خلال هذه الفترة، لكن الإشعارات تبقى محفوظة في مركز الإشعارات.'
+                      : 'Device alerts are not sent during this window. Notifications are still saved in the Notification Center.'}
+                  </small>
+                </div>
+                <input
+                  type="checkbox"
+                  className="toggle"
+                  checked={notificationPreferences.quietHours?.enabled === true}
+                  onChange={(e) =>
+                    setNotificationPreferences({
+                      ...notificationPreferences,
+                      quietHours: {
+                        enabled: e.target.checked,
+                        start: notificationPreferences.quietHours?.start ?? '22:00',
+                        end: notificationPreferences.quietHours?.end ?? '07:00'
+                      }
+                    })
+                  }
+                  aria-label={isAr ? 'ساعات الهدوء' : 'Quiet hours'}
+                />
+              </div>
+
+              {notificationPreferences.quietHours?.enabled && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <NuqtaTimePicker
+                    value={notificationPreferences.quietHours.start}
+                    onChange={(e) =>
+                      setNotificationPreferences({
+                        ...notificationPreferences,
+                        quietHours: { ...notificationPreferences.quietHours!, start: e.target.value }
+                      })
+                    }
+                    isAr={isAr}
+                    ariaLabel={isAr ? 'بداية ساعات الهدوء' : 'Quiet hours start'}
+                    minuteStep={30}
+                  />
+                  <span className="text-[var(--fs-xs)] text-[var(--text-tertiary)]">
+                    {isAr ? 'إلى' : 'to'}
+                  </span>
+                  <NuqtaTimePicker
+                    value={notificationPreferences.quietHours.end}
+                    onChange={(e) =>
+                      setNotificationPreferences({
+                        ...notificationPreferences,
+                        quietHours: { ...notificationPreferences.quietHours!, end: e.target.value }
+                      })
+                    }
+                    isAr={isAr}
+                    ariaLabel={isAr ? 'نهاية ساعات الهدوء' : 'Quiet hours end'}
+                    minuteStep={30}
+                  />
+                </div>
+              )}
 
               <div className="pt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
                   className="btn"
                   onClick={() => {
-                    NuqtaNotificationEngine.notify({
-                      title: isAr ? 'تنبيه تجريبي من نقطة' : 'Nuqta Test Alert',
-                      body: isAr
-                        ? 'النظام الصوتي التخليقي وإشعارات المتصفح تعمل محلياً بكفاءة 100%!'
-                        : 'Local synthesized audio and notifications are operating at 100%!',
-                      tag: 'test-chime',
-                      chime: 'focus-complete'
+                    const text = renderNotificationText('system.test', {}, { title: '' }, isAr);
+                    notify({
+                      category: 'system',
+                      priority: 'normal',
+                      title: text.title,
+                      body: text.body,
+                      route: { nav: 'profile' },
+                      dedupeKey: `system:test:${crypto.randomUUID().slice(0, 8)}`,
+                      messageId: 'system.test'
                     });
                   }}
                 >
                   <NuqtaIcon name="bell" className="w-3.5 h-3.5 text-accent" />
-                  <span>{isAr ? 'تجربة نغمة التركيز والإشعار' : 'Test Focus Chime & Alert'}</span>
+                  <span>{isAr ? 'إشعار تجريبي' : 'Send a test notification'}</span>
                 </button>
 
                 <button
@@ -292,7 +446,7 @@ export const ProfileView: React.FC = () => {
                   }}
                 >
                   <NuqtaIcon name="timer" className="w-3.5 h-3.5" />
-                  <span>{isAr ? 'نغمة المهمة' : 'Task Tone'}</span>
+                  <span>{isAr ? 'نغمة المهمة' : 'Task tone'}</span>
                 </button>
 
                 <button
@@ -303,9 +457,15 @@ export const ProfileView: React.FC = () => {
                   }}
                 >
                   <NuqtaIcon name="repeat" className="w-3.5 h-3.5" />
-                  <span>{isAr ? 'نغمة العادة' : 'Habit Tone'}</span>
+                  <span>{isAr ? 'نغمة العادة' : 'Habit tone'}</span>
                 </button>
               </div>
+
+              <p className="text-[var(--fs-micro)] leading-[var(--lh-snug)] text-[var(--text-tertiary)]">
+                {isAr
+                  ? 'تُحفظ الإشعارات على هذا الجهاز فقط ولا تُزامن، لأن حالة القراءة تخصك أنت على هذا الجهاز.'
+                  : 'Notifications are stored on this device only and are not synced, because read state is yours on this device.'}
+              </p>
             </div>
           </div>
 

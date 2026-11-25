@@ -5,7 +5,11 @@
  */
 
 const DB_NAME = 'nuqta_local_db';
-const DB_VERSION = 2;
+/**
+ * v3 adds `notifications`. Bumping the version is what runs `onupgradeneeded` so an
+ * existing install gains the new store instead of silently mirroring nothing.
+ */
+const DB_VERSION = 3;
 
 export const STORES = {
   TASKS: 'tasks',
@@ -19,6 +23,7 @@ export const STORES = {
   PROFILE: 'profile',
   SUNDAY_REVIEWS: 'sunday_reviews',
   HISTORY_AUDIT: 'history_audit',
+  NOTIFICATIONS: 'notifications',
   META: 'meta'
 } as const;
 
@@ -94,6 +99,13 @@ export function openNuqtaDB(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(STORES.HISTORY_AUDIT)) {
         db.createObjectStore(STORES.HISTORY_AUDIT, { keyPath: 'id' });
+      }
+
+      // v3: in-app notifications (local-only; see STORAGE_KEYS.NOTIFICATIONS).
+      if (!db.objectStoreNames.contains(STORES.NOTIFICATIONS)) {
+        const store = db.createObjectStore(STORES.NOTIFICATIONS, { keyPath: 'id' });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+        store.createIndex('dedupeKey', 'dedupeKey', { unique: false });
       }
 
       if (!db.objectStoreNames.contains(STORES.META)) {

@@ -226,6 +226,42 @@ with an IndexedDB mirror for recovery.
 - Wipe clears the mirror first; if the mirror cannot be cleared, localStorage is kept so a
   later recovery cannot resurrect deleted data.
 
+## Notifications
+
+- Three layers, and each has exactly one job:
+  - `src/lib/notificationEngine.ts` — PURE rules: dedupe, expiry, pruning, ordering,
+    read state, category gating, quiet hours. Takes a list, returns a list. No React, no
+    storage, no browser APIs. All notification policy belongs here.
+  - `src/store/nuqtaStore.ts` — owns the array and persists it. Domain actions
+    (focus complete, goal milestone, goal completed, savings target crossed) raise
+    notifications here, so no component has to remember to.
+  - `src/lib/notificationMessages.ts` — copy keyed by `NotificationMessageId`, so a
+    message-backed row re-renders in the active language instead of freezing the
+    wording at creation time. Rows without a `messageId` keep their stored text.
+- Identity is `dedupeKey`, not `id`. Re-raising the same event returns the SAME list
+  reference, so a 20-second reminder ticker cannot spam the inbox and a restart cannot
+  re-notify something already seen. Dedupe is checked against every row still inside its
+  lifetime, dismissed included: dismissing means "handled", so the reminder stays gone
+  until the row expires. A new occurrence carries its own key and still fires.
+- `useNuqtaReminders` builds keys that encode the occurrence
+  (`task:<id>:due:<date>:<time>`), so the guard survives a reload. It never keeps an
+  in-memory "already notified" set.
+- Staleness is `expiresAt` (per-category default TTL), so an overdue nudge disappears on
+  its own. `MAX_NOTIFICATIONS` (200) bounds the inbox; when it is hit, read rows are
+  evicted before unread ones.
+- `inApp` is typed as the literal `true`: the in-app inbox is not an optional channel and
+  cannot be switched off. Only the browser channel is opt-in.
+- Browser delivery is an ADAPTER (`deliverBrowserNotification`), not a second source of
+  truth: the notification already exists in the store before it runs. Permission is
+  requested only from a user gesture (the Profile settings panel), never from the ticker.
+- Notifications are LOCAL-ONLY. `STORAGE_KEYS.NOTIFICATIONS` is deliberately absent from
+  `SYNC_SECTION_KEYS`, because read/dismissed state is per-device and the sync server
+  rejects stores outside its allow-list. Adding a notification store to the sync map would
+  silently break sync.
+- Adding an IndexedDB store requires bumping `DB_VERSION` in `src/lib/indexedDB.ts`;
+  otherwise `onupgradeneeded` never runs on an existing install and the mirror silently
+  writes nothing. `tests/notificationIndexedDB.test.ts` guards the v2 → v3 upgrade.
+
 ## Insights engine
 
 - `src/lib/insightsEngine.ts` is the single source of truth for every Insights figure.

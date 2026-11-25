@@ -741,3 +741,77 @@ export interface ArchivedItemSummary {
   raw: any;
   parentHabitId?: string;
 }
+
+// ==========================================
+// 5. Notification & Messaging System
+// ==========================================
+/**
+ * What a notification is about. Mirrors the application's own areas so a
+ * notification is always traceable to the domain that produced it.
+ */
+export type NotificationCategory =
+  | 'task'
+  | 'habit'
+  | 'goal'
+  | 'focus'
+  | 'health'
+  | 'finance'
+  | 'system'
+  | 'reminder';
+
+/** Urgency, not importance: drives ordering and how loud the row reads. */
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'critical';
+
+/** Where clicking a notification should take the user. */
+export interface NotificationRoute {
+  nav: string;
+  entityId?: string;
+}
+
+/**
+ * One in-app notification record.
+ *
+ * Timestamps are ISO-8601 UTC instants (`createdAt`, `readAt`, `expiresAt`); grouping
+ * by day happens at render time through `localDateKey`, never by slicing a UTC string.
+ *
+ * `dedupeKey` is the identity that prevents the same event from notifying twice
+ * (e.g. `task:<id>:due:2026-11-12:09:00`). It is stable across reloads, which is what
+ * lets a reminder that already fired stay silent after a restart.
+ */
+export interface AppNotification {
+  id: string;
+  category: NotificationCategory;
+  priority: NotificationPriority;
+  title: string;
+  body?: string;
+  /** Actionable notifications carry a destination; informational ones omit it. */
+  route?: NotificationRoute;
+  /** Label for the primary action when it is not simply "open". */
+  actionLabel?: string;
+  createdAt: string;
+  readAt?: string;
+  /** Set when the user dismisses it. Dismissed rows are hidden but kept for dedupe. */
+  dismissedAt?: string;
+  /** After this instant the notification is stale and pruned by the engine. */
+  expiresAt?: string;
+  dedupeKey: string;
+  /** Category-specific payload for rendering context (never required to display). */
+  meta?: Record<string, string | number | boolean>;
+}
+
+/** A delivery channel the user can switch on. In-app is always on. */
+export type NotificationChannel = 'browser';
+
+/**
+ * Notification preferences. Deliberately small: category switches plus one optional
+ * delivery channel. `inApp` exists so the shape is honest about the always-on channel
+ * rather than implying it can be turned off.
+ */
+export interface NotificationPreferences {
+  inApp: true;
+  browser: boolean;
+  /** Per-category switches. Absent key = enabled (sensible default). */
+  categories: Partial<Record<NotificationCategory, boolean>>;
+  /** Suppress browser delivery outside these hours ("HH:mm"), local time. */
+  quietHours?: { enabled: boolean; start: string; end: string };
+}
