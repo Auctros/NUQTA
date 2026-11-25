@@ -2,7 +2,8 @@ import { localDateKey, parseDateKey, addDaysToKey } from '../lib/dateKey';
 import React, { useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { ArtMedium, ArtProject, ProjectStage } from '../types';
-import { Button, Field, Input, Modal, NuqtaSelect, Textarea, Toast } from './ui';
+import { Button, Field, Input, Modal, NuqtaSelect, Textarea } from './ui';
+import { dialogs, feedback } from './ui/dialogController';
 import { StudioFrame, StudioSection, StudioStat, StudioBars, StudioEmpty, StudioTab } from './studios/StudioKit';
 
 type DTab = 'workspace' | 'projects' | 'practice' | 'gallery' | 'progress';
@@ -86,7 +87,6 @@ export const DrawingView: React.FC = () => {
   // targets
   const [targetHours, setTargetHours] = useState(drawingData.weeklyTargetHours || 3);
   const [targetsSaved, setTargetsSaved] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   const handleInitDrawingHabit = () =>
     createHabit({
@@ -140,8 +140,7 @@ export const DrawingView: React.FC = () => {
     });
     setEditingProject(null);
     setIsNewProject(false);
-    setToast(isAr ? 'تم حفظ المشروع.' : 'Project saved.');
-    window.setTimeout(() => setToast(null), 2200);
+    feedback.success(isAr ? 'تم حفظ المشروع.' : 'Project saved.');
   };
 
   const submitPiece = (e: React.FormEvent) => {
@@ -159,8 +158,7 @@ export const DrawingView: React.FC = () => {
     });
     setPieceTitle('');
     setPieceNotes('');
-    setToast(isAr ? 'تم تسجيل العمل.' : 'Practice logged.');
-    window.setTimeout(() => setToast(null), 2200);
+    feedback.success(isAr ? 'تم تسجيل العمل.' : 'Practice logged.');
   };
 
   const saveTargets = (e: React.FormEvent) => {
@@ -487,8 +485,18 @@ export const DrawingView: React.FC = () => {
               variant="danger"
               size="sm"
               icon="trash"
-              onClick={() => {
-                if (confirm(isAr ? 'حذف هذا المشروع؟ ستصبح أعماله مستقلة.' : 'Delete this project? Its pieces become standalone.')) {
+              onClick={async () => {
+                const ok = await dialogs.confirm({
+                  tone: 'danger',
+                  icon: 'trash',
+                  title: isAr ? 'حذف هذا المشروع؟' : 'Delete this project?',
+                  description: isAr
+                    ? 'سيُحذف المشروع، وستبقى الأعمال المرتبطة به محفوظة كأعمال مستقلة.'
+                    : 'The project is removed; its pieces stay in your gallery as standalone work.',
+                  confirmLabel: isAr ? 'حذف' : 'Delete',
+                  cancelLabel: isAr ? 'إلغاء' : 'Cancel'
+                });
+                if (ok) {
                   deleteArtProject(drawingHabit.id, openProject.id);
                   setOpenProjectId(null);
                 }
@@ -577,8 +585,18 @@ export const DrawingView: React.FC = () => {
                       size="sm"
                       icon="trash"
                       aria-label={isAr ? 'حذف العمل' : 'Delete piece'}
-                      onClick={() => {
-                        if (confirm(isAr ? 'حذف هذا العمل؟' : 'Delete this piece?')) deleteArtworkPiece(drawingHabit.id, p.id);
+                      onClick={async () => {
+                        const ok = await dialogs.confirm({
+                          tone: 'danger',
+                          icon: 'trash',
+                          title: isAr ? 'حذف هذا العمل؟' : 'Delete this piece?',
+                          description: isAr
+                            ? 'سيُحذف هذا العمل من معرضك نهائياً.'
+                            : 'This piece is permanently removed from your gallery.',
+                          confirmLabel: isAr ? 'حذف' : 'Delete',
+                          cancelLabel: isAr ? 'إلغاء' : 'Cancel'
+                        });
+                        if (ok) deleteArtworkPiece(drawingHabit.id, p.id);
                       }}
                     />
                   </li>
@@ -791,8 +809,6 @@ export const DrawingView: React.FC = () => {
           </Field>
         </form>
       </Modal>
-
-      <Toast open={!!toast} message={toast || ''} tone="success" onClose={() => setToast(null)} />
     </StudioFrame>
   );
 };

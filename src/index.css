@@ -141,7 +141,11 @@
   --z-sidebar: 30;
   --z-dropdown: 40;
   --z-modal: 60;
-  --z-toast: 80;
+  /* The interaction layer must outrank every other surface: a confirm() that the
+     user cannot see is worse than no confirm at all. Legacy .modal-backdrop (80)
+     and .toast-region (110) already sit above the kit tokens above. */
+  --z-dialog: 120;
+  --z-feedback: 130;
 
   /* ========================================================
      ACCENT TONE TOKENS (theme-aware hues)
@@ -3388,4 +3392,36 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
   }
   .walk-stage-progress span,
   .walk-ring-fill { transition: none; }
+}
+
+/* ============================================================
+   INTERACTION LAYER (dialogs + feedback)
+   ------------------------------------------------------------
+   The in-app replacement for window.alert / confirm / prompt.
+   Motion is transform+opacity only, and is disabled wholesale
+   under prefers-reduced-motion.
+   ============================================================ */
+@keyframes nuqtaDialogIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes nuqtaToastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.nuqta-dialog-in {
+  animation: nuqtaDialogIn var(--dur-base) var(--ease-spring) both;
+}
+
+.nuqta-toast-in {
+  animation: nuqtaToastIn var(--dur-base) var(--ease-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nuqta-dialog-in,
+  .nuqta-toast-in {
+    animation: none !important;
+  }
 }

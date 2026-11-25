@@ -12,12 +12,20 @@ import { useEffect, useRef } from 'react';
  * Returns a ref to attach to the panel element (which should be focusable —
  * give it `tabIndex={-1}`).
  *
+ * `initialFocusSelector` picks which element receives focus on open (e.g. a
+ * prompt's input, or a destructive dialog's Cancel button). Without it the
+ * first focusable element wins.
+ *
  * It is deliberately dependency-free and side-effect-light so it can be layered
  * onto the existing legacy `.modal` markup without restructuring it.
  */
-export function useModalFocus<T extends HTMLElement>(open: boolean) {
+export function useModalFocus<T extends HTMLElement>(open: boolean, initialFocusSelector?: string) {
   const panelRef = useRef<T | null>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  // Read through a ref so changing the selector never re-runs the effect and
+  // steals focus back from the user mid-interaction.
+  const focusSelector = useRef(initialFocusSelector);
+  focusSelector.current = initialFocusSelector;
 
   useEffect(() => {
     if (!open) return;
@@ -30,8 +38,14 @@ export function useModalFocus<T extends HTMLElement>(open: boolean) {
       'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
     const focusFirst = () => {
-      const first = panel.querySelector<HTMLElement>(focusableSelector);
+      const preferred = focusSelector.current
+        ? panel.querySelector<HTMLElement>(focusSelector.current)
+        : null;
+      const first = preferred ?? panel.querySelector<HTMLElement>(focusableSelector);
       (first ?? panel).focus();
+      if (first instanceof HTMLInputElement || first instanceof HTMLTextAreaElement) {
+        first.select?.();
+      }
     };
     const timer = window.setTimeout(focusFirst, 20);
 

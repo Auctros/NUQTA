@@ -4,6 +4,7 @@ import { useNuqtaStore } from '../store/nuqtaStore';
 import { QURAN_SURAHS, TOTAL_QURAN_AYAHS, TOTAL_QURAN_SURAHS, getSurahMeta } from '../lib/quranData';
 import { QuranSessionType, QuranRecitationQuality, QuranSurahStatus, SurahMemorizationState } from '../types';
 import { Button, NuqtaSelect } from './ui';
+import { dialogs } from './ui/dialogController';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
 import {
   StudioFrame,
@@ -1263,10 +1264,18 @@ export const QuranView: React.FC = () => {
                         size="sm"
                         icon="trash"
                         aria-label={isAr ? 'حذف الجلسة' : 'Delete session'}
-                        onClick={() => {
-                          if (confirm(isAr ? 'هل تريد حذف هذه الجلسة من السجل؟' : 'Delete this session?')) {
-                            deleteQuranSession(quranHabit.id, s.id);
-                          }
+                        onClick={async () => {
+                          const ok = await dialogs.confirm({
+                            tone: 'danger',
+                            icon: 'trash',
+                            title: isAr ? 'حذف هذه الجلسة؟' : 'Delete this session?',
+                            description: isAr
+                              ? 'ستُحذف الجلسة من سجل التسميع نهائياً.'
+                              : 'The session will be permanently removed from your recitation log.',
+                            confirmLabel: isAr ? 'حذف' : 'Delete',
+                            cancelLabel: isAr ? 'إلغاء' : 'Cancel'
+                          });
+                          if (ok) deleteQuranSession(quranHabit.id, s.id);
                         }}
                       />
                     </div>

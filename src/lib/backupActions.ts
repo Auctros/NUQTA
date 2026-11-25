@@ -61,11 +61,15 @@ export function backupErrorMessage(
 /**
  * Validate -> confirm -> download a safety copy -> atomic restore.
  * Returns the import result, or null if the user cancelled.
+ *
+ * `confirmRestore` is injected rather than imported so this module stays free of
+ * UI concerns: the caller decides how to ask (today, an in-app dialog).
  */
 export async function restoreBackupFromFile(
   file: File,
   isAr: boolean,
-  setStatus: (message: string) => void
+  setStatus: (message: string) => void,
+  confirmRestore: () => Promise<boolean>
 ): Promise<ImportResult | null> {
   const content = await file.text();
   const check = NuqtaStorageEngine.validateBackup(content);
@@ -73,11 +77,7 @@ export async function restoreBackupFromFile(
     setStatus(backupErrorMessage(check.error, check.section, isAr));
     return { ok: false, error: check.error, section: check.section };
   }
-  const proceed = window.confirm(
-    isAr
-      ? 'سيتم استبدال كل بياناتك الحالية بمحتوى هذا الملف. سننزّل أولاً نسخة أمان من بياناتك الحالية. هل تريد المتابعة؟'
-      : 'This replaces ALL of your current data with the contents of this file. A safety copy of your current data will be downloaded first. Continue?'
-  );
+  const proceed = await confirmRestore();
   if (!proceed) {
     setStatus('');
     return null;

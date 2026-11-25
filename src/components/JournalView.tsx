@@ -2,6 +2,7 @@ import { localDateKey } from '../lib/dateKey';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
+import { feedback } from './ui/dialogController';
 import confetti from 'canvas-confetti';
 
 export const JournalView: React.FC = () => {
@@ -53,7 +54,7 @@ export const JournalView: React.FC = () => {
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
     } catch {}
 
-    alert(isAr ? 'تم حفظ تأمل اليوم بنجاح في جهازك!' : 'Reflection saved locally.');
+    feedback.success(isAr ? 'تم حفظ تأمل اليوم بنجاح في جهازك!' : 'Reflection saved locally.');
   };
 
   return (

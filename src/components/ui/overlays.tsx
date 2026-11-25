@@ -3,7 +3,7 @@ import { IconButton } from './primitives';
 
 /* ============================================================
    NUQTA — overlays
-   Modal · Sheet · Toast
+   Modal · Sheet
    Accessible defaults: Escape closes, backdrop closes, focus is
    moved into the panel, scroll is locked while open.
    ============================================================ */
@@ -175,47 +175,6 @@ export const Sheet: React.FC<SheetProps> = ({
           <IconButton icon="close" label={closeLabel} onClick={onClose} size="sm" />
         </header>
         <div className="overflow-y-auto px-5 py-4 flex-1">{children}</div>
-      </div>
-    </div>
-  );
-};
-
-export type ToastTone = 'neutral' | 'success' | 'warning' | 'danger';
-
-const TOAST_TONE: Record<ToastTone, string> = {
-  neutral: 'border-[var(--border-default)]',
-  success: 'border-[var(--state-success)]',
-  warning: 'border-[var(--state-warning)]',
-  danger: 'border-[var(--state-danger)]'
-};
-
-export interface ToastProps {
-  open: boolean;
-  message: React.ReactNode;
-  tone?: ToastTone;
-  onClose?: () => void;
-  action?: React.ReactNode;
-}
-
-export const Toast: React.FC<ToastProps> = ({ open, message, tone = 'neutral', onClose, action }) => {
-  if (!open) return null;
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="fixed bottom-5 inset-x-0 mx-auto w-fit max-w-[92vw]"
-      style={{ zIndex: 'var(--z-toast)' }}
-    >
-      <div
-        className={[
-          'flex items-center gap-2 px-4 py-2.5 rounded-[var(--r-sm)] border shadow-[var(--elev-2)]',
-          'bg-[var(--surface-raised)] text-[var(--text-primary)] text-[var(--fs-sm)]',
-          TOAST_TONE[tone]
-        ].join(' ')}
-      >
-        <span className="truncate">{message}</span>
-        {action}
-        {onClose && <IconButton icon="close" label="Dismiss" onClick={onClose} size="sm" />}
       </div>
     </div>
   );

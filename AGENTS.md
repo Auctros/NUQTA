@@ -113,6 +113,15 @@ with an IndexedDB mirror for recovery.
 - **Escape closes overlays.** Any overlay that renders its own backdrop (legacy `.modal`
   markup and the kit `Modal`/`Sheet`) closes on Escape via `useEscapeKey(open, onClose)`
   from `src/lib/useEscapeKey.ts`, and exposes `role="dialog"` + `aria-modal="true"`.
+- **Never call `window.alert` / `confirm` / `prompt`.** They render outside the app shell:
+  they ignore the theme, the language and RTL, block the main thread, and look like a
+  different product. Ask through `dialogs.confirm/alert/prompt` from
+  `src/components/ui/dialogController.ts`, which resolves like the native calls
+  (`confirm` → `boolean`, `prompt` → `string | null`) and is rendered by the single
+  `DialogHost` mounted in `App`. Transient feedback about something that just happened goes
+  through `feedback.success/error/warning/info` (ephemeral toasts, capped at three); it is
+  deliberately *not* the Notification Center, which holds durable events that survive a
+  reload. Invariant #24 fails the build on a stray native dialog call.
 - **A modal must never move the page.** Every backdrop is `position: fixed` inside
   `.page-content`, so `.page-content` must not become a containing block: no `transform`,
   `filter`, `perspective`, `contain` or `will-change` on it, and its entry animation

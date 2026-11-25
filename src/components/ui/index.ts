@@ -5,3 +5,5 @@ export * from './overlays';
 export * from './NuqtaSelect';
 export * from './NuqtaPickers';
 export * from './LiquidTabs';
+export * from './dialogController';
+export * from './DialogHost';
