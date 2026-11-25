@@ -224,6 +224,48 @@ with an IndexedDB mirror for recovery.
 - `WorkoutAppModal` / `ReadingAppModal` are the dashboard/habits entry points; keep them
   working.
 
+## History views (Timeline / Commitment Map / Courses)
+
+- **`src/lib/lifeTimeline.ts` is the only timeline query engine.** `buildTimelineView`
+  takes a `TimelineQuery` (period, domain, event type, search, `fromDate`/`untilDate`) and
+  returns the filtered events, the day/week/month groups and the counts the chips render.
+  `LifeTimeline` renders that result and must not re-filter `items` itself — that is how
+  the old `ArchiveHistoryView` accumulated a second, drifting filter chain.
+- **Administrative events are hidden by default.** `created` / `updated` are bookkeeping,
+  not history; `includeAdministrative` is opt-in. A test asserts they stay out of the feed.
+- **A focused day replaces the period, it does not narrow it.** Passing `focusDate` sets
+  `period: 'all'` with `fromDate === untilDate`, so a day picked on the map shows that day
+  only rather than silently widening back to "this month".
+- **`src/lib/commitmentMap.ts` scores follow-through, not activity.** A day is `missed`
+  only when something was actually due; a day with nothing scheduled is `rest`, and days
+  before `trackingStart` are `no_data`. These three must never collapse into one visual —
+  the whole point of the map is that "nothing was due" and "you skipped it" are different
+  facts. `buildCommitmentYear(sources, year, scope, todayKey)` is pure; the compact
+  dashboard card and the full view are the same engine at two sizes.
+- **Timeline ⇄ map day handoff is a gesture, not persisted state.** `focusDate` lives in
+  `ArchiveHistoryView`'s local state (see "Never restore anything transient"). Do not move
+  it into `nuqta.ui.*`.
+- **Courses store a local snapshot of a YouTube playlist** (`YoutubeCourse.videos`) so the
+  course reads offline; a refresh is explicit, never automatic. Watch progress is the
+  user's own statement in `nuqta.ui.courseProgress` — playback is never scraped, because
+  that integration is exactly what this app avoids. The library sorts by nearest-to-done.
+- **`src/lib/youtubeLink.ts` owns link parsing and id validation** (`parsePlaylistLink`,
+  `isValidPlaylistId`, `canonical*Url`); the UI must not hand-build a YouTube URL.
+- **The YouTube API key never reaches the browser.** `scripts/youtube-proxy.mjs` serves
+  `/api/youtube/*` on the app's own origin and is attached in both `vite.config.ts` (dev)
+  and `scripts/serve-dist.mjs` (production). A missing key returns `503 not_configured` and
+  the UI shows setup instructions — never invented course data. The playlist id is
+  validated before it is interpolated into an outbound URL, and responses are `no-store`.
+  `tests/youtubeProxy.test.ts` guards this boundary: the key must not appear in any
+  response body or header, and must only ever be sent to `googleapis.com`.
+- **Network primitives are allow-listed by file.** The invariant rule permits `fetch` only
+  in `src/lib/sync/client.ts` and `src/lib/youtubeClient.ts`. Adding a third requires a
+  reviewed, same-origin reason; never widen it to an arbitrary third-party URL.
+- **Derive a view from its data, not from the URL round-trip.** `CoursesView` computes
+  `showingCourse` from the open course and only mirrors it into the view tab; deriving the
+  rendered view from the persisted tab made opening a card depend on navigation timing and
+  could render nothing.
+
 ## Navigation & UI state
 
 - **A section is a destination; a filter is not.** The section lives in the URL
