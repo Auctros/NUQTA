@@ -407,3 +407,20 @@ describe('ProjectWorkspace — dates and task links', () => {
     expect(S().tasks).toHaveLength(1);
   });
 });
+
+describe('the status pill resolves for every lifecycle state', () => {
+  /*
+   * The pill builds its class from `statusTone[status]`. When a tone has no CSS token the
+   * browser drops the unresolved `var()` and the pill silently loses its background — so
+   * the assertion is on the token name being one the stylesheet actually declares.
+   */
+  it('names a tone for every status, and each one is a declared token', async () => {
+    const { statusTone } = await import('../src/lib/projectLabels');
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync('src/index.css', 'utf8');
+
+    for (const [status, tone] of Object.entries(statusTone)) {
+      expect(css, `--tone-${tone} is used by status '${status}'`).toContain(`--tone-${tone}:`);
+    }
+  });
+});

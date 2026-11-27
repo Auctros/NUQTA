@@ -542,8 +542,47 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 25. Every tone role interpolated into a class name must resolve to real CSS tokens.
+//     Status pills build their class names from a map (`bg-[var(--tone-${statusTone[...]}-wash)]`),
+//     so a tone value with no matching `--tone-*` declaration fails silently: the browser
+//     drops the unresolved `var()` and the pill renders with no background at all. That is
+//     exactly how the `active` project state shipped invisible — `statusTone.active` said
+//     `brand` while no `--tone-brand*` token existed.
+{
+  const css = readFileSync(join(root, 'src/index.css'), 'utf8');
+  // The BASE role must exist. A `--tone-x-wash` on its own is not enough: it is defined
+  // by mixing the base role, so it would resolve to an invalid colour.
+  const defined = new Set([...css.matchAll(/--tone-([a-z]+)\s*:/g)].map((m) => m[1]));
+
+  // Only the identifiers actually interpolated into `var(--tone-${X}…)` are checked;
+  // an unrelated `tone:` prop elsewhere in the app is none of this rule's business.
+  const roles = new Set();
+  for (const f of srcFiles) {
+    for (const m of f.text.matchAll(/--tone-\$\{\s*([A-Za-z_$][\w$]*)/g)) roles.add(m[1]);
+  }
+
+  const missing = [];
+  for (const role of roles) {
+    // `const statusTone: Record<X, string> = { active: 'brand', … }`
+    const def = new RegExp(`(?:const|let|var)\\s+${role}\\b[^=]*=\\s*\\{([\\s\\S]*?)\\n\\};?`).exec(
+      srcFiles.map((f) => f.text).join('\n')
+    );
+    if (!def) continue; // e.g. `row.tone`, whose values come from data — not a static map.
+    for (const v of def[1].matchAll(/['"]([a-z]+)['"]/g)) {
+      if (!defined.has(v[1])) missing.push(`${role} → '${v[1]}' has no --tone-${v[1]} token`);
+    }
+  }
+
+  if (missing.length) {
+    fail(
+      'A tone role has no CSS token — the class name will not resolve and the element renders unstyled',
+      [...new Set(missing)].slice(0, 8).join('\n    ')
+    );
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (24 rules).');
+console.log('Invariant check passed (25 rules).');

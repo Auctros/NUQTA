@@ -165,6 +165,10 @@
   --tone-info: #5eead4;
   --tone-purple: #d8b4fe;
   --tone-accent: var(--accent-strong);
+  /* `statusTone.active` and the project Gantt bar name a `brand` tone, so it has to
+     exist as a token: without it the most common project state (active) painted an
+     unresolved `var()` and rendered no pill background at all. */
+  --tone-brand: var(--accent-strong);
   --tone-neutral: var(--muted);
 
   --tone-success-wash: color-mix(in srgb, var(--tone-success) 15%, transparent);
@@ -172,6 +176,7 @@
   --tone-danger-wash: color-mix(in srgb, var(--tone-danger) 15%, transparent);
   --tone-info-wash: color-mix(in srgb, var(--tone-info) 15%, transparent);
   --tone-purple-wash: color-mix(in srgb, var(--tone-purple) 15%, transparent);
+  --tone-brand-wash: color-mix(in srgb, var(--tone-brand) 15%, transparent);
   --tone-neutral-wash: color-mix(in srgb, var(--tone-neutral) 15%, transparent);
 
   --tone-success-line: color-mix(in srgb, var(--tone-success) 40%, transparent);
@@ -179,6 +184,7 @@
   --tone-danger-line: color-mix(in srgb, var(--tone-danger) 40%, transparent);
   --tone-info-line: color-mix(in srgb, var(--tone-info) 40%, transparent);
   --tone-purple-line: color-mix(in srgb, var(--tone-purple) 40%, transparent);
+  --tone-brand-line: color-mix(in srgb, var(--tone-brand) 40%, transparent);
   --tone-neutral-line: color-mix(in srgb, var(--tone-neutral) 40%, transparent);
 
   /* Intensity ramp for heatmaps / calendars — five steps from the
