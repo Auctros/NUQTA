@@ -239,7 +239,13 @@ describe('NUQTA Sync Server (Stage 1)', () => {
       const meta = server.db
         .prepare("SELECT value FROM server_meta WHERE key = 'schema_version'")
         .get();
-      expect(meta.value).toBe('1');
+      // 2 adds the authoritative-tombstone and workspace-generation protocol.
+      expect(meta.value).toBe('2');
+
+      const generation = server.db
+        .prepare("SELECT value FROM server_meta WHERE key = 'workspace_generation'")
+        .get();
+      expect(generation.value).toBe('1');
     });
 
     it('rejects database paths located inside dist/ or public/', () => {

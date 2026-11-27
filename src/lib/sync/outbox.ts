@@ -173,6 +173,25 @@ export function acknowledge(clientChangeIds: string[]): number {
   return removed;
 }
 
+/**
+ * Drop queued entries for records the server has already deleted.
+ *
+ * Without this the outbox would retry a write forever: the server answers
+ * `superseded` for a tombstoned record, so the entry is never "applied", yet keeping it
+ * means every flush re-sends a change that can never succeed. Dropping it is the honest
+ * outcome — the record no longer exists, so the local edit has nowhere to land.
+ */
+export function dropOutboxEntriesFor(keys: Set<string>): number {
+  if (keys.size === 0) return 0;
+  const state = readOutbox();
+  const remaining = state.entries.filter((e) => !keys.has(`${e.section}::${e.recordId}`));
+  const removed = state.entries.length - remaining.length;
+  if (removed === 0) return 0;
+  writeOutbox({ entries: remaining, nextSeq: state.nextSeq, lastAckedSeq: state.lastAckedSeq });
+  notifyOutboxChange();
+  return removed;
+}
+
 /** The oldest `limit` entries, in insertion order. */
 export function peekBatch(limit: number): OutboxEntry[] {
   return readOutbox().entries.slice(0, Math.max(0, limit));

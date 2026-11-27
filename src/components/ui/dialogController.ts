@@ -139,6 +139,14 @@ export interface FeedbackOptions {
   tone?: FeedbackTone;
   /** Milliseconds on screen. 0 keeps the toast until it is dismissed. */
   duration?: number;
+  /**
+   * A single reversible action, e.g. "Undo" after completing a task.
+   *
+   * Undo lives on the toast rather than in a separate dialog because the moment to
+   * reverse a completion is the moment the task disappears from the list: the reader
+   * must be able to undo without hunting for the record in another view.
+   */
+  action?: { label: string; onClick: () => void };
 }
 
 export interface ToastItem {
@@ -146,6 +154,7 @@ export interface ToastItem {
   message: string;
   tone: FeedbackTone;
   duration: number;
+  action?: { label: string; onClick: () => void };
 }
 
 /** Beyond this, the oldest toast is dropped so the stack never covers the UI. */
@@ -164,7 +173,8 @@ const pushToast = (message: string, tone: FeedbackTone, options: FeedbackOptions
     id: nextId(),
     message,
     tone,
-    duration: options.duration ?? DEFAULT_DURATION
+    duration: options.duration ?? DEFAULT_DURATION,
+    ...(options.action ? { action: options.action } : {})
   };
   toasts = [...toasts, item].slice(-MAX_TOASTS);
   emitToasts();

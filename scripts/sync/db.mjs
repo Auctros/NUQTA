@@ -11,6 +11,16 @@ export class DeviceIdentityConflictError extends Error {
   }
 }
 
+/**
+ * How long a tombstone is retained.
+ *
+ * A tombstone is the only thing preventing a device that was offline when a record was
+ * deleted from re-uploading it, so it must outlive every realistic offline period.
+ * 30 days is the product's stated retention; the value is centralised so the cleanup
+ * job and the documentation cannot drift apart.
+ */
+export const TOMBSTONE_RETENTION_DAYS = 30;
+
 export class BatchValidationError extends Error {
   constructor(message) {
     super(message);
@@ -122,6 +132,16 @@ export function createSyncRepository(db) {
     VALUES (@device_id, @client_change_id, @server_change_id, datetime('now'))
   `);
 
+  const stmtGetMeta = db.prepare(`
+    SELECT value FROM server_meta WHERE key = @key
+  `);
+
+  const stmtSetMeta = db.prepare(`
+    INSERT INTO server_meta (key, value, updated_at)
+    VALUES (@key, @value, datetime('now'))
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+  `);
+
   const stmtUpsertTombstone = db.prepare(`
     INSERT INTO tombstones (device_id, store_name, record_id, server_change_id, deleted_at, expires_at)
     VALUES (@device_id, @store_name, @record_id, @server_change_id, datetime('now'), datetime('now', '+30 days'))
@@ -130,6 +150,24 @@ export function createSyncRepository(db) {
       server_change_id = excluded.server_change_id,
       deleted_at = datetime('now'),
       expires_at = datetime('now', '+30 days')
+  `);
+
+  /**
+   * Is this record tombstoned?
+   *
+   * Consulted on ingest for every create/update. This is the single guard that stops a
+   * stale device from resurrecting a deleted record: without it the server happily
+   * appends an `update` after a `delete` and every client replays the resurrection.
+   */
+  const stmtFindTombstone = db.prepare(`
+    SELECT server_change_id, deleted_at, expires_at
+    FROM tombstones
+    WHERE store_name = @store_name AND record_id = @record_id
+  `);
+
+  const stmtDeleteTombstone = db.prepare(`
+    DELETE FROM tombstones
+    WHERE store_name = @store_name AND record_id = @record_id
   `);
 
   const stmtGetDelta = db.prepare(`
@@ -222,6 +260,34 @@ export function createSyncRepository(db) {
           continue;
         }
 
+        const isDeletion = change.operation === 'delete' || change.operation === 'tombstone';
+
+        /*
+         * Deletion wins over any older write.
+         *
+         * A record that is tombstoned stays deleted: a create or update for it is
+         * acknowledged as `superseded` rather than committed, so the change log never
+         * contains a write that would resurrect it. The client treats `superseded` as
+         * "drop this outbox entry" — the delete is the newer intent, and keeping the
+         * entry would retry forever.
+         *
+         * A new `delete` for an already-tombstoned record is also superseded, which is
+         * what makes a repeated deletion idempotent instead of appending a duplicate
+         * change on every retry.
+         */
+        const tombstone = stmtFindTombstone.get({
+          store_name: change.store_name,
+          record_id: change.record_id,
+        });
+        if (tombstone) {
+          acknowledged.push({
+            clientChangeId: change.client_change_id,
+            serverChangeId: Number(tombstone.server_change_id),
+            status: 'superseded',
+          });
+          continue;
+        }
+
         const serializedPayload = JSON.stringify(change.payload);
         const insertResult = stmtInsertChange.run({
           device_id: deviceId,
@@ -242,7 +308,7 @@ export function createSyncRepository(db) {
           server_change_id: serverChangeId,
         });
 
-        if (change.operation === 'delete' || change.operation === 'tombstone') {
+        if (isDeletion) {
           stmtUpsertTombstone.run({
             device_id: deviceId,
             store_name: change.store_name,
@@ -324,8 +390,65 @@ export function createSyncRepository(db) {
     };
   }
 
+  function getWorkspaceGeneration() {
+    const row = stmtGetMeta.get({ key: 'workspace_generation' });
+    return Number(row?.value ?? 1) || 1;
+  }
+
+  /**
+   * Global reset: bump the workspace generation and clear the change log.
+   *
+   * Bumping the generation is the load-bearing part. Deleting rows alone would not stop
+   * an offline device from re-uploading its stale snapshot the moment it reconnects; the
+   * generation is what lets the server recognise that upload as belonging to a
+   * superseded workspace and refuse it. The bump and the delete happen in one
+   * transaction so a crash cannot leave a cleared log with an unbumped generation.
+   *
+   * Device cursors are reset to the new generation's baseline (0) because the log is
+   * empty; keeping old cursors would make devices wait forever for changes that no
+   * longer exist.
+   */
+  const resetWorkspaceTx = db.transaction(() => {
+    const previousGeneration = getWorkspaceGeneration();
+    const nextGeneration = previousGeneration + 1;
+
+    stmtSetMeta.run({ key: 'workspace_generation', value: String(nextGeneration) });
+    db.prepare('DELETE FROM tombstones').run();
+    db.prepare('DELETE FROM processed_changes').run();
+    db.prepare('DELETE FROM changes').run();
+    db.prepare('UPDATE device_cursors SET last_processed_change_id = 0').run();
+    db.prepare("DELETE FROM sqlite_sequence WHERE name = 'changes'").run();
+
+    return {
+      previousGeneration,
+      generation: nextGeneration,
+      serverCursor: 0,
+    };
+  });
+
+  /**
+   * Remove tombstones past their retention window.
+   *
+   * Safe only because retention (30 days) exceeds any realistic offline period: after
+   * expiry the deleted record is simply forgotten, and a device that returns later is
+   * treated as a brand-new writer rather than being refused forever.
+   */
+  function pruneExpiredTombstones() {
+    const result = db
+      .prepare("DELETE FROM tombstones WHERE expires_at <= datetime('now')")
+      .run();
+    return result.changes;
+  }
+
   return {
     registerDevice: (params) => registerDeviceTx(params),
+    getWorkspaceGeneration,
+    resetWorkspace: () => resetWorkspaceTx(),
+    pruneExpiredTombstones,
+    isTombstoned: (storeName, recordId) =>
+      stmtFindTombstone.get({ store_name: storeName, record_id: recordId }) ?? null,
+    clearTombstone: (storeName, recordId) =>
+      stmtDeleteTombstone.run({ store_name: storeName, record_id: recordId }).changes,
     getDevice: (deviceId) => stmtGetDevice.get({ device_id: deviceId }) ?? null,
     getDeviceCursor: (deviceId) =>
       Number(stmtGetCursor.get({ device_id: deviceId })?.last_processed_change_id ?? 0),

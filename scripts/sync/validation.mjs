@@ -145,9 +145,18 @@ export function validateSyncMessage(message, maxBatchSize = DEFAULT_MAX_BATCH_SI
     return { ok: false, error: 'batch too large', maxSize: maxBatchSize };
   }
 
+  // Optional workspace generation. A client that omits it is treated as generation 1
+  // for backward compatibility with devices that predate the reset protocol.
+  if (message.workspaceGeneration !== undefined) {
+    if (!Number.isSafeInteger(message.workspaceGeneration) || message.workspaceGeneration < 1) {
+      return { ok: false, error: 'invalid workspaceGeneration' };
+    }
+  }
+
   return {
     ok: true,
     clientCursor: message.clientCursor,
+    workspaceGeneration: message.workspaceGeneration,
     changes: message.changes,
   };
 }

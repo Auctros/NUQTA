@@ -21,11 +21,19 @@ import {
   peekBatch,
   toOutboundChange,
   outboxSize,
-  onOutboxChange
+  onOutboxChange,
+  clearOutbox
 } from './outbox';
-import { advanceCursor, readCursor, setDeviceCursor } from './cursor';
-import { applyRemoteChanges } from './applyRemote';
+import { advanceCursor, readCursor, setDeviceCursor, clearCursor } from './cursor';
+import {
+  applyRemoteChanges,
+  clearApplied,
+  clearConflicts,
+  clearTombstones,
+  dropRecordLocally
+} from './applyRemote';
 import { getDeviceMeta, getOrCreateDeviceId } from './deviceIdentity';
+import { readWorkspaceGeneration, setWorkspaceGeneration } from './workspaceGeneration';
 import type {
   DeltaResponse,
   InboundChange,
@@ -71,6 +79,11 @@ export interface SyncClientOptions {
   origin?: string;
   /** Optional observer for state transitions. */
   onStateChange?: (state: SyncConnectionState) => void;
+  /**
+   * Called when this client learns the workspace was reset and has discarded its local
+   * copy. The app uses it to reload, because in-memory state still holds the old data.
+   */
+  onWorkspaceReset?: (generation: number | null) => void;
 }
 
 const DEFAULT_BATCH_SIZE = 50;
@@ -314,6 +327,9 @@ export class SyncClient {
     switch (message.type) {
       case 'welcome':
         this.everConnected = true;
+        if (typeof message.workspaceGeneration === 'number') {
+          setWorkspaceGeneration(message.workspaceGeneration);
+        }
         setDeviceCursor(message.deviceCursor);
         this.setState('connected');
         // A reconnect may have missed broadcasts; pull the authoritative delta first.
@@ -324,8 +340,28 @@ export class SyncClient {
         return;
 
       case 'sync_ack':
-        // Remove ONLY the entries the server explicitly acknowledged.
-        acknowledge(message.acknowledged.map((entry) => entry.clientChangeId));
+        /*
+         * Remove every entry the server resolved, whatever the verdict.
+         *
+         * `applied` means committed; `duplicate` means already committed; `superseded`
+         * means the record is deleted and the write will never be accepted. Keeping a
+         * superseded entry would retry it forever, so all three clear the queue — what
+         * differs is only the server-side outcome, not this device's obligation.
+         */
+        const resolved = message.acknowledged ?? [];
+        const supersededIds = new Set(
+          resolved.filter((entry) => entry.status === 'superseded').map((entry) => entry.clientChangeId)
+        );
+        if (supersededIds.size > 0) {
+          // The record is gone server-side; drop it here too so this device stops
+          // showing a record no other device has.
+          const pending = readOutbox().entries;
+          for (const entry of pending) {
+            if (!supersededIds.has(entry.clientChangeId)) continue;
+            dropRecordLocally(entry.section, entry.recordId);
+          }
+        }
+        acknowledge(resolved.map((entry) => entry.clientChangeId));
         setDeviceCursor(message.deviceCursor);
         this.flushing = false;
         if (outboxSize() > 0) await this.flush();
@@ -334,6 +370,13 @@ export class SyncClient {
 
       case 'sync_broadcast':
         this.applyInbound(message.changes);
+        return;
+
+      case 'workspace_reset':
+        // Pushed by the server when any device performs a global reset.
+        this.handleWorkspaceReset(
+          typeof message.workspaceGeneration === 'number' ? message.workspaceGeneration : null
+        );
         return;
 
       case 'ack_ok':
@@ -345,6 +388,17 @@ export class SyncClient {
 
       case 'error':
         this.flushing = false;
+        /*
+         * The workspace was reset elsewhere. This device's copy belongs to a previous
+         * generation, so uploading it would refill what the user cleared. Adopt the new
+         * generation, discard the stale queue, and re-pull from scratch instead.
+         */
+        if (message.error === 'workspace_reset') {
+          const generation =
+            typeof message.workspaceGeneration === 'number' ? message.workspaceGeneration : null;
+          this.handleWorkspaceReset(generation);
+          return;
+        }
         if (FATAL_ERRORS.has(message.error)) {
           // Retrying cannot help: surface the failure and stop instead of looping.
           this.stopped = true;
@@ -443,6 +497,7 @@ export class SyncClient {
         JSON.stringify({
           type: 'sync',
           clientCursor: readCursor().appliedCursor,
+          workspaceGeneration: readWorkspaceGeneration(),
           changes: batch.map((entry) => toOutboundChange(entry, this.deviceId))
         })
       );
@@ -468,6 +523,64 @@ export class SyncClient {
     this.clearReconnectTimer();
     this.attempt = 0;
     this.connect();
+  }
+
+  /**
+   * Adopt a new workspace generation after a reset performed elsewhere.
+   *
+   * The local copy is dropped rather than merged: it describes a workspace the user
+   * explicitly cleared, so re-uploading any part of it would undo the reset. The outbox
+   * is cleared for the same reason, and the cursor restarts so the (empty) new
+   * generation is pulled from the beginning.
+   */
+  private handleWorkspaceReset(generation: number | null): void {
+    if (generation !== null) setWorkspaceGeneration(generation);
+    clearOutbox();
+    clearCursor();
+    clearApplied();
+    clearTombstones();
+    clearConflicts();
+    this.flushing = false;
+    this.everConnected = false;
+    this.options.onWorkspaceReset?.(generation);
+  }
+
+  /** The endpoint this client was configured with (used to derive sibling URLs). */
+  getEndpoint(): string {
+    return this.options.url;
+  }
+
+  /**
+   * Ask the server to start a new workspace generation, deleting every device's copy.
+   *
+   * This lives on the client because it is a network call and the sync client is the
+   * reviewed module allowed to make them. It returns the new generation on success so
+   * the caller can adopt it, and `null` when the server could not be reached or refused
+   * — never a silent success, because the caller is about to delete the user's data.
+   */
+  async requestWorkspaceReset(): Promise<number | null> {
+    // `ws://host/sync` → `http(s)://host/sync/reset`
+    const resetUrl = this.options.url.replace(/^ws/, 'http').replace(/\/sync$/, '/sync/reset');
+
+    let response: Response;
+    try {
+      response = await fetch(resetUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' }
+      });
+    } catch {
+      return null;
+    }
+    if (!response.ok) return null;
+
+    try {
+      const body = (await response.json()) as { workspaceGeneration?: number };
+      return typeof body.workspaceGeneration === 'number' ? body.workspaceGeneration : null;
+    } catch {
+      // The reset already happened server-side; only the generation is unknown.
+      return null;
+    }
   }
 
   /** Count of changes still owed to the server. */

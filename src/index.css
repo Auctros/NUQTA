@@ -368,6 +368,41 @@ body {
   padding: 13px 15px;
   gap: 12px;
 }
+/* Completion history is grouped by day: a quiet label, not a card, so the tasks stay
+   the visual focus and the header only marks where one day ends and the next begins. */
+.completed-day-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 2px 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.completed-day-header:first-child {
+  margin-top: 0;
+}
+.completed-day-header span:last-child {
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+/* The two destructive actions are separated by their explanations, so they read as
+   two different promises rather than two ways to do the same thing. */
+.data-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.data-actions .small-muted {
+  margin: 0;
+  line-height: 1.5;
+}
 .check-circle {
   width: 19px;
   height: 19px;

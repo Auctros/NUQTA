@@ -29,21 +29,26 @@ export const SINGLETON_RECORD_ID = 'primary';
 type Baseline = Partial<Record<SyncSectionName, Record<string, string>>>;
 
 let suppressionDepth = 0;
-let baselineCache: Baseline | null = null;
 
+/**
+ * Read the baseline straight from storage on every call.
+ *
+ * Caching this in a module variable looks harmless but is not: localStorage is shared
+ * by every tab, while a module instance is not. A cached copy in tab B would stay frozen
+ * at whatever it saw first, so a write in tab A would be invisible to B's diff — B would
+ * then re-create records A had already updated or deleted. The baseline is small and
+ * written once per section save, so re-reading it is the cheaper correctness choice.
+ */
 function readBaseline(): Baseline {
-  if (baselineCache) return baselineCache;
   try {
     const raw = localStorage.getItem(BASELINE_KEY);
-    baselineCache = raw ? (JSON.parse(raw) as Baseline) : {};
+    return raw ? (JSON.parse(raw) as Baseline) : {};
   } catch {
-    baselineCache = {};
+    return {};
   }
-  return baselineCache;
 }
 
 function writeBaseline(next: Baseline): void {
-  baselineCache = next;
   try {
     localStorage.setItem(BASELINE_KEY, JSON.stringify(next));
   } catch {
@@ -182,7 +187,6 @@ export function hasBaseline(): boolean {
 
 /** Forget all baselines (local wipe / identity reset). */
 export function clearBaseline(): void {
-  baselineCache = null;
   try {
     localStorage.removeItem(BASELINE_KEY);
   } catch {

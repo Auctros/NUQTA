@@ -1,6 +1,7 @@
--- NUQTA Sync Server Schema (Stage 1)
+-- NUQTA Sync Server Schema
 -- Durable server-side state for ordered change logging, idempotency,
--- per-device synchronization cursors, and future conflict/tombstone support.
+-- per-device synchronization cursors, authoritative tombstones, and the
+-- workspace generation used by the global reset protocol.
 
 -- Registered devices participating in synchronization.
 -- device_id is a persistent client UUID bound to an authenticated subject
@@ -66,7 +67,12 @@ CREATE TABLE IF NOT EXISTS processed_changes (
   FOREIGN KEY (server_change_id) REFERENCES changes(server_change_id)
 );
 
--- Tombstones for deleted records (supports conflict resolution & retention in later stages).
+-- Tombstones: the authoritative record of deletions.
+--
+-- A row here means "this record is deleted" and it outranks any later create/update.
+-- The server consults this table during ingest (see db.mjs) so a stale device cannot
+-- resurrect a deleted record by pushing an old copy. Rows are retained well past the
+-- longest plausible offline period; see TOMBSTONE_RETENTION_DAYS in db.mjs.
 CREATE TABLE IF NOT EXISTS tombstones (
   tombstone_id INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id TEXT NOT NULL,
@@ -94,5 +100,8 @@ CREATE TABLE IF NOT EXISTS server_meta (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-INSERT OR IGNORE INTO server_meta (key, value) VALUES ('schema_version', '1');
+INSERT OR IGNORE INTO server_meta (key, value) VALUES ('schema_version', '2');
 INSERT OR IGNORE INTO server_meta (key, value) VALUES ('created_at', datetime('now'));
+-- Workspace generation. Bumped by a global reset; a device that presents an older
+-- generation is told to adopt the new one instead of uploading its stale data.
+INSERT OR IGNORE INTO server_meta (key, value) VALUES ('workspace_generation', '1');

@@ -103,7 +103,8 @@ export function attachSyncToServer(httpServer, options = {}) {
       deviceId: normalizedId,
       deviceCursor: registration.deviceCursor,
       serverCursor: registration.serverCursor,
-      schemaVersion: 1,
+      schemaVersion: 2,
+      workspaceGeneration: repo.getWorkspaceGeneration(),
     });
 
     return true;
@@ -116,6 +117,26 @@ export function attachSyncToServer(httpServer, options = {}) {
         type: 'error',
         error: validation.error,
         ...(validation.maxSize !== undefined ? { maxSize: validation.maxSize } : {}),
+      });
+      return;
+    }
+
+    /*
+     * A device from a previous workspace generation must not write anything.
+     *
+     * This is what makes a global reset stick: without it, an offline device would
+     * reconnect after the reset and upload its entire pre-reset snapshot, refilling the
+     * workspace the user just cleared. The client answers `workspace_reset` by wiping
+     * its local copy and adopting the new generation, so it never retries.
+     */
+    const serverGeneration = repo.getWorkspaceGeneration();
+    const clientGeneration = validation.workspaceGeneration ?? 1;
+    if (clientGeneration < serverGeneration) {
+      sendJson(ws, {
+        type: 'error',
+        error: 'workspace_reset',
+        detail: 'workspace was reset; discard local state and re-pull',
+        workspaceGeneration: serverGeneration,
       });
       return;
     }
@@ -419,8 +440,57 @@ export function attachSyncToServer(httpServer, options = {}) {
         service: 'nuqta-sync',
         version: '1.0.0',
         syncConfigured: isSyncAuthConfigured(config),
-        schemaVersion: 1,
+        schemaVersion: 2,
+        workspaceGeneration: repo.getWorkspaceGeneration(),
         timestamp: new Date().toISOString(),
+      });
+      return true;
+    }
+
+    /*
+     * POST /sync/reset — global workspace reset.
+     *
+     * Authenticated like every other endpoint (the identity header is checked above).
+     * This is deliberately the only destructive endpoint, and it is destructive across
+     * devices: it bumps the generation so a stale device cannot refill the workspace.
+     * Local-only clearing must never call this — see the client's wipe path.
+     */
+    if (pathname === '/sync/reset') {
+      if (req.method !== 'POST') {
+        writeJson(res, 405, { error: 'method_not_allowed' });
+        return true;
+      }
+      const callerKey = rateLimitKey(req);
+      const authResult = authenticateRequest(req, config, { mode: 'http' });
+      if (!authResult.authenticated) {
+        authLimiter.recordFailure(callerKey);
+        if (authLimiter.isLimited(callerKey)) {
+          writeJson(res, 429, { error: 'too_many_attempts' });
+          return true;
+        }
+        writeJson(res, authResult.status || 401, { error: authResult.code || 'unauthorized' });
+        return true;
+      }
+      if (req.headers.origin !== undefined && !validateOrigin(req.headers.origin, config.allowedOrigins)) {
+        writeJson(res, 403, { error: 'origin_not_allowed' });
+        return true;
+      }
+      authLimiter.recordSuccess(callerKey);
+      const result = repo.resetWorkspace();
+      const payload = JSON.stringify({
+        type: 'workspace_reset',
+        workspaceGeneration: result.generation,
+        serverCursor: result.serverCursor,
+      });
+      for (const client of wss.clients) {
+        if (client.readyState === WebSocket.OPEN && client.isAuthenticated) {
+          client.send(payload);
+        }
+      }
+      writeJson(res, 200, {
+        ok: true,
+        workspaceGeneration: result.generation,
+        previousGeneration: result.previousGeneration,
       });
       return true;
     }
@@ -515,6 +585,7 @@ export function attachSyncToServer(httpServer, options = {}) {
       writeJson(res, 200, {
         ...delta,
         deviceCursor: repo.getDeviceCursor(deviceId),
+        workspaceGeneration: repo.getWorkspaceGeneration(),
       });
       return true;
     }

@@ -271,6 +271,18 @@ const ToastRow: React.FC<{ toast: ToastItem }> = ({ toast }) => {
         <NuqtaIcon name={FEEDBACK_ICON[toast.tone]} className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1">{toast.message}</span>
+      {toast.action && (
+        <button
+          type="button"
+          className="btn subtle text-xs py-1 px-2 shrink-0"
+          onClick={() => {
+            toast.action?.onClick();
+            feedback.dismiss(toast.id);
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
       <IconButton icon="close" label="Dismiss" size="sm" onClick={() => feedback.dismiss(toast.id)} />
     </div>
   );

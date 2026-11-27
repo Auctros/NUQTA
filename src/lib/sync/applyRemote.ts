@@ -4,9 +4,15 @@
  * Applies inbound server changes to localStorage, which remains the source of truth.
  * The invariants this module exists to protect:
  *
- *  - Never silently overwrite local data. A remote change that would replace a record
- *    this device has unsent local edits for is NOT applied; it is recorded as a
- *    conflict and left alone. Stage 2 preserves the competing versions for Stage 3.
+ *  - Deletion wins over any older write. A remote delete is always applied, even when
+ *    this device holds an unsent edit for the same record: the delete is an explicit
+ *    user intent, and letting a stale offline edit win is exactly the resurrection bug
+ *    this module must prevent. The blocked outbox entries are dropped rather than
+ *    retried, because the server would refuse them anyway.
+ *  - A remote create/update for a record this device has tombstoned is skipped, so a
+ *    device cannot be made to re-create a record it just deleted.
+ *  - Otherwise, a remote change that would replace a record with unsent local edits is
+ *    NOT applied; it is recorded as a conflict and left alone.
  *  - Never write a partial record set. All changes for one section are computed first
  *    and written once, so a section is never left half-updated.
  *  - Applying is idempotent: re-applying the same serverChangeId is a no-op.
@@ -15,12 +21,23 @@
  */
 
 import { NuqtaStorageEngine, SYNC_SECTION_KEYS, type SyncSectionName } from '../storage';
-import { readOutbox } from './outbox';
+import { readOutbox, dropOutboxEntriesFor } from './outbox';
 import { SINGLETON_RECORD_ID, withCaptureSuppressed } from './changeCapture';
 import type { InboundChange } from './protocol';
 
 const APPLIED_KEY = 'nuqta_sync_applied_v1';
 const CONFLICTS_KEY = 'nuqta_sync_conflicts_v1';
+/**
+ * Records this device knows to be deleted.
+ *
+ * The server also enforces this, so why keep a local copy? Because the two protections
+ * cover different windows. The server guard stops a *write*; this ledger stops a *read* —
+ * a delta page or broadcast that was already in flight when the delete landed can still
+ * carry an older `create` for the record, and applying it would resurrect the record on
+ * this device only. Entries expire with the same 30-day horizon the server uses.
+ */
+const TOMBSTONES_KEY = 'nuqta_sync_tombstones_v1';
+const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Sections whose stored value is a keyed map rather than a list. */
 const MAP_SECTIONS = new Set<SyncSectionName>(['health_metrics']);
@@ -41,6 +58,8 @@ export interface SyncConflict {
 export interface ApplyResult {
   applied: number;
   skippedDuplicates: number;
+  /** Inbound writes ignored because the record is deleted (locally or by the delete). */
+  supersededInbound: number;
   conflicts: SyncConflict[];
   /** Highest serverChangeId actually consumed (applied or intentionally skipped). */
   highestConsumed: number;
@@ -109,6 +128,88 @@ export function clearConflicts(): void {
   } catch {
     /* nothing else we can do */
   }
+}
+
+/** Local tombstone ledger: `${section}::${recordId}` → deletion timestamp (ms). */
+type TombstoneLedger = Record<string, number>;
+
+function readTombstones(): TombstoneLedger {
+  try {
+    const raw = localStorage.getItem(TOMBSTONES_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? (parsed as TombstoneLedger) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeTombstones(ledger: TombstoneLedger): void {
+  try {
+    localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(ledger));
+  } catch {
+    /* the server guard still prevents resurrection; this is defence in depth */
+  }
+}
+
+/** Record that a record is deleted locally, so an inbound stale write cannot revive it. */
+export function rememberTombstone(storeName: SyncSectionName, recordId: string): void {
+  const ledger = pruneTombstones(readTombstones());
+  ledger[`${storeName}::${recordId}`] = Date.now();
+  writeTombstones(ledger);
+}
+
+/** True when this device has recorded a deletion for the record. */
+export function isLocallyDeleted(storeName: SyncSectionName, recordId: string): boolean {
+  const stamp = readTombstones()[`${storeName}::${recordId}`];
+  if (typeof stamp !== 'number') return false;
+  return Date.now() - stamp < TOMBSTONE_TTL_MS;
+}
+
+/**
+ * Drop expired ledger entries so the key cannot grow without bound.
+ * Called on write, which is the only moment the set can grow.
+ */
+function pruneTombstones(ledger: TombstoneLedger): TombstoneLedger {
+  const now = Date.now();
+  const next: TombstoneLedger = {};
+  for (const [key, stamp] of Object.entries(ledger)) {
+    if (typeof stamp === 'number' && now - stamp < TOMBSTONE_TTL_MS) next[key] = stamp;
+  }
+  return next;
+}
+
+export function clearTombstones(): void {
+  try {
+    localStorage.removeItem(TOMBSTONES_KEY);
+  } catch {
+    /* nothing else we can do */
+  }
+}
+
+/**
+ * Remove one record locally without enqueuing a delete.
+ *
+ * Used when the server tells this device its write was superseded: the record no longer
+ * exists server-side, so keeping the local copy would leave this device showing data
+ * nobody else has and that no future sync can ever reconcile. Capture is suppressed
+ * because the deletion is not a user action — sending a delete for an already-deleted
+ * record would just be superseded again.
+ */
+export function dropRecordLocally(storeName: SyncSectionName, recordId: string): boolean {
+  const current = readSection(storeName);
+  if (storeName === 'profile') {
+    // `profile` is a singleton object, not a list; nothing to remove.
+    return false;
+  }
+  if (!Array.isArray(current)) return false;
+  const next = current.filter((item) => {
+    if (!item || typeof item !== 'object') return true;
+    return (item as { id?: unknown }).id !== recordId;
+  });
+  if (next.length === current.length) return false;
+  rememberTombstone(storeName, recordId);
+  return withCaptureSuppressed(() => writeSection(storeName, next));
 }
 
 function readSection(section: SyncSectionName): unknown {
@@ -203,7 +304,10 @@ export function applyRemoteChanges(changes: InboundChange[]): ApplyResult {
 
   const conflicts: SyncConflict[] = [];
   const bySection = new Map<SyncSectionName, InboundChange[]>();
+  /** Outbox entries invalidated by an inbound delete, keyed `section::recordId`. */
+  const supersededOutboxKeys = new Set<string>();
   let skippedDuplicates = 0;
+  let supersededInbound = 0;
   let highestConsumed = 0;
 
   for (const change of changes) {
@@ -219,7 +323,16 @@ export function applyRemoteChanges(changes: InboundChange[]): ApplyResult {
     }
 
     const key = `${change.storeName}::${change.recordId}`;
-    if (pendingKeys.has(key)) {
+    const isDeletion = change.operation === 'delete' || change.operation === 'tombstone';
+
+    /*
+     * A remote deletion is applied even when this device has an unsent edit for the same
+     * record. That asymmetry is the whole point of the conflict policy: an explicit
+     * delete outranks a stale offline edit, because the alternative — letting the local
+     * edit win — is what resurrects deleted records. The pending entries are dropped
+     * below rather than retried, since the server would reject them as superseded.
+     */
+    if (pendingKeys.has(key) && !isDeletion) {
       conflicts.push({
         storeName: change.storeName,
         recordId: change.recordId,
@@ -234,9 +347,27 @@ export function applyRemoteChanges(changes: InboundChange[]): ApplyResult {
       continue;
     }
 
+    /*
+     * A create/update for a record this device already deleted must not be replayed.
+     * The delete may have come from this device (a queued delete whose delta page
+     * arrives later) or from another device whose delete this one already applied.
+     */
+    if (!isDeletion && isLocallyDeleted(change.storeName, change.recordId)) {
+      applied.add(change.serverChangeId);
+      highestConsumed = Math.max(highestConsumed, change.serverChangeId);
+      supersededInbound += 1;
+      continue;
+    }
+
     const bucket = bySection.get(change.storeName) ?? [];
     bucket.push(change);
     bySection.set(change.storeName, bucket);
+  }
+
+  // Drop outbox entries the server will refuse anyway, so the queue cannot wedge on a
+  // record that no longer exists.
+  if (supersededOutboxKeys.size > 0) {
+    dropOutboxEntriesFor(supersededOutboxKeys);
   }
 
   let appliedCount = 0;
@@ -250,6 +381,11 @@ export function applyRemoteChanges(changes: InboundChange[]): ApplyResult {
         if (change.recordId in map) {
           delete map[change.recordId];
           mutated = true;
+        }
+        // Remember the deletion locally so a stale create in a later page is ignored.
+        rememberTombstone(change.storeName, change.recordId);
+        if (pendingKeys.has(`${change.storeName}::${change.recordId}`)) {
+          supersededOutboxKeys.add(`${change.storeName}::${change.recordId}`);
         }
       } else {
         map[change.recordId] = change.payload;
@@ -285,7 +421,13 @@ export function applyRemoteChanges(changes: InboundChange[]): ApplyResult {
     }
   }
 
-  return { applied: appliedCount, skippedDuplicates, conflicts, highestConsumed };
+  return {
+    applied: appliedCount,
+    skippedDuplicates,
+    supersededInbound,
+    conflicts,
+    highestConsumed
+  };
 }
 
 /** Forget the applied ledger and conflicts (local wipe / identity reset). */

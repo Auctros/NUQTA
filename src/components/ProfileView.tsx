@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon } from './NuqtaIcon';
 import { NuqtaStorageEngine } from '../lib/storage';
-import { resetSyncState } from '../lib/sync/lifecycle';
+import { resetSyncState, deleteEverywhere, isSyncEnabled } from '../lib/sync/lifecycle';
 import { NuqtaNotificationEngine, nuqtaAudio } from '../lib/notifications';
 import { NuqtaSelect, NuqtaTimePicker } from './ui';
 import { useTimeFormat, writeTimeFormat } from '../lib/timeFormat';
@@ -133,15 +133,27 @@ export const ProfileView: React.FC = () => {
     if (result && result.ok) setTimeout(() => window.location.reload(), 1000);
   };
 
-  const handleWipeData = async () => {
+  /*
+   * Two genuinely different deletions, kept apart on purpose.
+   *
+   * "Clear this device" removes the data from this browser only and stops syncing so
+   * the device is not silently refilled from the server. "Delete everywhere" is the
+   * destructive one: it asks the server to start a new workspace generation, which is
+   * the only way other devices can be made to drop their copies too.
+   *
+   * Merging them into one button would be a lie either way round — one label would
+   * promise a global delete it cannot perform, or a local delete that then quietly
+   * returns from the server.
+   */
+  const handleClearThisDevice = async () => {
     const ok = await dialogs.confirm({
       tone: 'danger',
       icon: 'trash',
-      title: isAr ? 'حذف كل بيانات نقطة؟' : 'Delete all NUQTA data?',
+      title: isAr ? 'مسح بيانات هذا الجهاز؟' : 'Clear data on this device?',
       description: isAr
-        ? 'سيتم حذف كل بيانات نقطة من هذا المتصفح نهائياً (التخزين الأساسي والنسخة الاحتياطية الداخلية). صدّر نسخة احتياطية أولاً إن أردت الاحتفاظ بها.'
-        : 'This permanently deletes ALL NUQTA data from this browser (primary storage and its internal mirror). Export a backup first if you want to keep it.',
-      confirmLabel: isAr ? 'حذف نهائي' : 'Delete permanently',
+        ? 'سيتم حذف بيانات نقطة من هذا المتصفح فقط، وستتوقف المزامنة هنا حتى لا تعود البيانات من الخادم. الأجهزة الأخرى لن تتأثر. صدّر نسخة احتياطية أولاً إن أردت الاحتفاظ بها.'
+        : 'Deletes NUQTA data from this browser only, and turns sync off here so the data is not pulled back from the server. Other devices are not affected. Export a backup first if you want to keep it.',
+      confirmLabel: isAr ? 'امسح هذا الجهاز' : 'Clear this device',
       cancelLabel: isAr ? 'إلغاء' : 'Cancel'
     });
     if (!ok) return;
@@ -156,9 +168,41 @@ export const ProfileView: React.FC = () => {
       });
       return;
     }
-    // Drop queued/pulled sync state too. Otherwise a reconnect would either replay
-    // changes for deleted records or pull the whole history back into a wiped device.
+    // Latch the sync gate: without it this device would reconnect with a zero cursor and
+    // pull the whole history back, which is the exact resurrection this feature fixes.
     resetSyncState();
+    window.location.reload();
+  };
+
+  const handleDeleteEverywhere = async () => {
+    const ok = await dialogs.confirm({
+      tone: 'danger',
+      icon: 'trash',
+      title: isAr ? 'حذف البيانات من كل الأجهزة؟' : 'Delete data on every device?',
+      description: isAr
+        ? 'سيتم حذف كل بيانات نقطة من هذا الجهاز ومن كل جهاز متزامن معه، ولن تعود حتى لو كان أحد الأجهزة غير متصل الآن. لا يمكن التراجع. صدّر نسخة احتياطية أولاً.'
+        : 'Deletes all NUQTA data here and on every synced device, and prevents it from coming back even if a device was offline. This cannot be undone. Export a backup first.',
+      confirmLabel: isAr ? 'احذف من كل الأجهزة' : 'Delete everywhere',
+      cancelLabel: isAr ? 'إلغاء' : 'Cancel'
+    });
+    if (!ok) return;
+
+    const result = await deleteEverywhere();
+    if (!result.ok) {
+      await dialogs.alert({
+        tone: 'danger',
+        title: isAr ? 'لم يُحذف شيء' : 'Nothing was deleted',
+        description:
+          result.reason === 'sync_not_configured'
+            ? isAr
+              ? 'المزامنة غير مفعّلة، فلا توجد أجهزة أخرى. استخدم «امسح هذا الجهاز» بدلاً من ذلك.'
+              : 'Sync is not enabled, so there are no other devices. Use "Clear this device" instead.'
+            : isAr
+              ? 'تعذّر الوصول إلى الخادم، فلم يُحذف أي شيء. تحقّق من الاتصال وحاول مجدداً.'
+              : 'The server could not be reached, so nothing was deleted. Check the connection and try again.'
+      });
+      return;
+    }
     window.location.reload();
   };
 
@@ -551,13 +595,35 @@ export const ProfileView: React.FC = () => {
 
             <div className="subtle-line"></div>
 
-            <button
-              onClick={handleWipeData}
-              className="btn danger w-full justify-center"
-            >
-              <NuqtaIcon name="trash" className="w-3.5 h-3.5" />
-              <span>{isAr ? 'مسح كافة البيانات وإعادة الضبط' : 'Wipe all local data & Reset'}</span>
-            </button>
+            <div className="data-actions">
+              <button onClick={handleClearThisDevice} className="btn danger w-full justify-center">
+                <NuqtaIcon name="trash" className="w-3.5 h-3.5" />
+                <span>{isAr ? 'امسح بيانات هذا الجهاز' : 'Clear data on this device'}</span>
+              </button>
+              <p className="small-muted">
+                {isAr
+                  ? 'يحذف من هذا المتصفح فقط ويوقف المزامنة هنا. الأجهزة الأخرى تحتفظ ببياناتها.'
+                  : 'Removes data from this browser only and stops syncing here. Other devices keep their data.'}
+              </p>
+
+              {isSyncEnabled() && (
+                <>
+                  <div className="subtle-line"></div>
+                  <button
+                    onClick={handleDeleteEverywhere}
+                    className="btn danger w-full justify-center"
+                  >
+                    <NuqtaIcon name="trash" className="w-3.5 h-3.5" />
+                    <span>{isAr ? 'احذف البيانات من كل الأجهزة' : 'Delete data on every device'}</span>
+                  </button>
+                  <p className="small-muted">
+                    {isAr
+                      ? 'يحذف من هذا الجهاز ومن كل جهاز متزامن، ويمنع عودة البيانات من أي جهاز كان غير متصل. لا يمكن التراجع.'
+                      : 'Deletes here and on every synced device, and stops an offline device from bringing it back. Cannot be undone.'}
+                  </p>
+                </>
+              )}
+            </div>
           </div>
         </section>
 

@@ -12,6 +12,16 @@ import { PriorityLevel, RecurrenceFrequency, RecurrenceRule, Task, TaskStatus } 
 import { NuqtaIcon } from './NuqtaIcon';
 import { EmptyState, NuqtaDatePicker, NuqtaSelect, NuqtaTimePicker, PageHeader, Surface, TabBar } from './ui';
 import { suggestSmartReschedule } from '../lib/energyAlgorithm';
+import { feedback } from './ui/dialogController';
+import {
+  asTaskView,
+  countTasksForViews,
+  describeTaskView,
+  groupCompletedByDay,
+  selectTasksForView,
+  TASK_VIEWS,
+  type TaskView
+} from '../lib/taskViews';
 
 /**
  * Turn the repeat picker into a recurrence rule. `weekdays` maps to NUQTA's
@@ -101,7 +111,16 @@ export const TasksView: React.FC = () => {
     if (!focusRequest || focusRequest.domain !== 'tasks') return;
     const id = focusRequest.entityId;
     setViewMode('list');
-    setStatusFilter('all');
+    // Jump to the view that actually contains the task: forcing a single view would
+    // scroll to nothing whenever the task lives in another one (a completed task is not
+    // in Today, an undated task is not in Upcoming).
+    const target = tasks.find((t) => t.id === id);
+    if (target) {
+      const home = TASK_VIEWS.find((view) =>
+        selectTasksForView([target], view, todayStr).length > 0
+      );
+      if (home) setTaskView(home);
+    }
     setFocusedTaskId(id);
     consumeFocus();
     window.setTimeout(() => {
@@ -112,9 +131,19 @@ export const TasksView: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest]);
   const [searchQuery, setSearchQuery] = usePersistedWorkflowState('tasks', 'search', '', isString);
-  const [statusFilter, setStatusFilter] = usePersistedWorkflowState<
-    'all' | 'active' | 'completed' | 'archived'
-  >('tasks', 'status', 'all', oneOf(['all', 'active', 'completed', 'archived']));
+  /*
+   * The default view is `today`, not "everything".
+   *
+   * A single flat list that mixed finished work with live work was the original
+   * complaint: the reader had to re-filter it mentally on every visit. Each view now
+   * answers one question, and finished work has its own home.
+   */
+  const [taskView, setTaskView] = usePersistedWorkflowState<TaskView>(
+    'tasks',
+    'view',
+    'today',
+    (value): value is TaskView => typeof value === 'string' && (TASK_VIEWS as string[]).includes(value)
+  );
   const [sortBy, setSortBy] = usePersistedWorkflowState<'due' | 'priority'>(
     'tasks',
     'sort',
@@ -225,21 +254,75 @@ export const TasksView: React.FC = () => {
   };
 
   // Filter & sort tasks
-  const filtered = tasks.filter((t) => {
-    const isArch = t.isArchived || t.status === 'archived' || t.status === 'skipped';
-    if (statusFilter === 'archived') {
-      if (!isArch) return false;
-    } else {
-      if (isArch) return false;
-      if (statusFilter === 'active' && t.status === 'completed') return false;
-      if (statusFilter === 'completed' && t.status !== 'completed') return false;
-    }
-    if (searchQuery.trim()) {
-      const matchText = `${t.title} ${t.notes || ''} ${(t.tags || []).join(' ')}`.toLowerCase();
-      if (!matchText.includes(searchQuery.toLowerCase())) return false;
-    }
-    return true;
+  const viewTasks = selectTasksForView(tasks, taskView, todayStr);
+  const viewCounts = countTasksForViews(tasks, todayStr);
+  const filtered = viewTasks.filter((t) => {
+    if (!searchQuery.trim()) return true;
+    const matchText = `${t.title} ${t.notes || ''} ${(t.tags || []).join(' ')}`.toLowerCase();
+    return matchText.includes(searchQuery.toLowerCase());
   });
+
+  /**
+   * Complete or re-open a task, with an immediate undo.
+   *
+   * The undo toast is the reason completing can feel safe: the task leaves the active
+   * list instantly (that is the point of the change), and the one action that reverses
+   * it is offered while the disappearance is still on screen.
+   */
+  /** Empty-state wording per view: "nothing due" and "nothing finished" are different facts. */
+  const emptyCopy = {
+    today: {
+      titleEn: 'Nothing due today',
+      titleAr: 'لا شيء مستحق اليوم',
+      bodyEn: 'No tasks are scheduled for today or overdue. Check Upcoming, or add something new.',
+      bodyAr: 'لا توجد مهام مجدولة لليوم أو متأخرة. راجع «قادم» أو أضف مهمة جديدة.'
+    },
+    upcoming: {
+      titleEn: 'Nothing scheduled ahead',
+      titleAr: 'لا شيء مجدول قادماً',
+      bodyEn: 'Tasks you date for a future day will appear here.',
+      bodyAr: 'ستظهر هنا المهام التي تحدد لها موعداً في يوم قادم.'
+    },
+    inbox: {
+      titleEn: 'Inbox is empty',
+      titleAr: 'لا مهام بدون موعد',
+      bodyEn: 'Every task has a date. Add one without a date to capture it first and plan later.',
+      bodyAr: 'كل المهام لها مواعيد. أضف مهمة بدون موعد لالتقاطها أولاً والتخطيط لاحقاً.'
+    },
+    completed: {
+      titleEn: 'Nothing completed yet',
+      titleAr: 'لم تُنجز مهام بعد',
+      bodyEn: 'Tasks you finish will be recorded here, grouped by the day you finished them.',
+      bodyAr: 'ستُسجَّل هنا المهام التي تنجزها، مجمّعة حسب يوم الإنجاز.'
+    },
+    archived: {
+      titleEn: 'Nothing set aside',
+      titleAr: 'لا شيء مؤرشف',
+      bodyEn: 'Archived, cancelled and skipped tasks are kept here so nothing is lost.',
+      bodyAr: 'تُحفظ هنا المهام المؤرشفة والملغاة والمتخطّاة حتى لا يضيع شيء.'
+    }
+  }[taskView];
+
+  const handleToggleTask = (task: Task) => {
+    const wasCompleted = isTaskDone(task);
+    toggleTaskStatus(task.id);
+    feedback.success(
+      wasCompleted
+        ? isAr
+          ? 'أُعيدت المهمة إلى النشطة'
+          : 'Task reopened'
+        : isAr
+          ? 'أُنجزت المهمة'
+          : 'Task completed',
+      {
+        duration: 5000,
+        action: {
+          label: isAr ? 'تراجع' : 'Undo',
+          onClick: () => toggleTaskStatus(task.id)
+        }
+      }
+    );
+  };
 
   const sorted = [...filtered].sort((a, b) => {
     if (sortBy === 'priority') {
@@ -313,12 +396,16 @@ export const TasksView: React.FC = () => {
           )}
         </div>
 
-        <NuqtaSelect style={{ width: 'auto' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
-          <option value="all">{isAr ? 'الكل (غير المؤرشفة)' : 'All Active'}</option>
-          <option value="active">{isAr ? 'النشطة' : 'Active'}</option>
-          <option value="completed">{isAr ? 'المكتملة' : 'Completed'}</option>
-          <option value="archived">{isAr ? 'المؤرشفة' : 'Archived'}</option>
-        </NuqtaSelect>
+        <TabBar
+          items={TASK_VIEWS.map((view) => {
+            const count = viewCounts[view];
+            const label = describeTaskView(view, isAr).label;
+            return { id: view, label: count > 0 ? `${label} (${count})` : label };
+          })}
+          value={taskView}
+          onChange={(id) => setTaskView(asTaskView(id))}
+          ariaLabel={isAr ? 'أقسام المهام' : 'Task views'}
+        />
 
         <button
           onClick={() => setActiveNavTab('archive')}
@@ -359,16 +446,10 @@ export const TasksView: React.FC = () => {
                 : isAr ? 'قائمة المهام' : 'Task List'}
             </h2>
             <p>
-              {sorted.length} · {isAr ? 'مهام مطابقة' : 'tasks'}
+              {sorted.length} · {describeTaskView(taskView, isAr).hint}
             </p>
           </div>
-          <span className="tag green">
-            {statusFilter === 'completed'
-              ? isAr ? 'مكتملة' : 'Completed'
-              : statusFilter === 'active'
-              ? isAr ? 'نشطة' : 'Active'
-              : isAr ? 'الكل' : 'All'}
-          </span>
+          <span className="tag green">{describeTaskView(taskView, isAr).label}</span>
         </div>
 
         {/* View Mode: List */}
@@ -377,20 +458,34 @@ export const TasksView: React.FC = () => {
             {sorted.length === 0 ? (
               <EmptyState
                 icon="check-square"
-                title={isAr ? 'لا توجد مهام هنا' : 'No tasks here'}
-                description={
+                title={
                   isAr
-                    ? 'كل شيء نظيف ومنجز! أضف مهمة جديدة للبدء.'
-                    : 'Everything is clear! Add a new task to get started.'
+                    ? emptyCopy.titleAr
+                    : emptyCopy.titleEn
                 }
+                description={isAr ? emptyCopy.bodyAr : emptyCopy.bodyEn}
                 action={
-                  <button className="btn primary" onClick={openNewTaskModal}>
-                    + {isAr ? 'مهمة جديدة' : 'Add Task'}
-                  </button>
+                  // Completed and Archived are records, not backlogs: offering "Add Task"
+                  // there would suggest the view is empty because work is missing.
+                  taskView === 'completed' || taskView === 'archived' ? undefined : (
+                    <button className="btn primary" onClick={openNewTaskModal}>
+                      + {isAr ? 'مهمة جديدة' : 'Add Task'}
+                    </button>
+                  )
                 }
               />
             ) : (
-              sorted.map((task) => {
+              sorted.map((task, index) => {
+                // Completed work is a record, so it is grouped by the day it was finished.
+                // `sorted` is already newest-first for this view, so a day header is shown
+                // whenever the day changes from the previous row.
+                const completionDay =
+                  taskView === 'completed' && task.completedAt ? task.completedAt.slice(0, 10) : null;
+                const previousDay =
+                  taskView === 'completed' && index > 0 && sorted[index - 1].completedAt
+                    ? sorted[index - 1].completedAt!.slice(0, 10)
+                    : null;
+                const showDayHeader = completionDay !== null && completionDay !== previousDay;
                 const pInfo = priorityMeta(task.priority);
                 const isCompleted = isTaskDone(task);
                 const subtasks = task.subtasks || [];
@@ -398,11 +493,18 @@ export const TasksView: React.FC = () => {
                 const isExpanded = expandedTaskId === task.id;
 
                 return (
-                  <div key={task.id} className="space-y-2" id={'task-' + task.id}>
+                  <React.Fragment key={task.id}>
+                  {showDayHeader && (
+                    <div className="completed-day-header">
+                      <span>{completionDay}</span>
+                      <span>{sorted.filter((t) => t.completedAt?.slice(0, 10) === completionDay).length}</span>
+                    </div>
+                  )}
+                  <div className="space-y-2" id={'task-' + task.id}>
                     <div className={`task-row ${isCompleted ? 'done' : ''} ${focusedTaskId === task.id ? 'focus-flash' : ''}`}>
                       <button
                         className={`check-circle ${isCompleted ? 'checked' : ''}`}
-                        onClick={() => toggleTaskStatus(task.id)}
+                        onClick={() => handleToggleTask(task)}
                         aria-label="Toggle completed"
                       />
 
@@ -554,6 +656,7 @@ export const TasksView: React.FC = () => {
                       </div>
                     )}
                   </div>
+                  </React.Fragment>
                 );
               })
             )}
@@ -650,7 +753,7 @@ export const TasksView: React.FC = () => {
                       </button>
                       <button
                         className={`check-circle ${isTaskDone(task) ? 'checked' : ''} shrink-0`}
-                        onClick={() => toggleTaskStatus(task.id)}
+                        onClick={() => handleToggleTask(task)}
                       />
                     </div>
                   ))

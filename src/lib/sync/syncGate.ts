@@ -1,15 +1,18 @@
 /**
  * Sync gate: remembers that synchronization must stay off for this installation.
  *
- * Why this exists. `wipeAll()` deletes every `nuqta_` key, which includes the device
- * identity and the client cursor. On the next load the client would therefore start with
- * a fresh identity and `cursor = 0`, pull the entire server history, and silently
- * resurrect the data the user just asked to delete. Stage 2 has no deletion propagation
- * and no settings UI, so the only honest options are "do not sync" or "quietly refill".
+ * Why this exists. "Clear this device" is deliberately a local-only action: it removes
+ * the user's data from this browser and leaves every other device untouched. But
+ * `wipeAll()` also deletes the device identity and the client cursor, so without a gate
+ * the next load would start with a fresh identity at `cursor = 0`, pull the entire
+ * server history, and quietly refill the device the user just cleared.
  *
- * This gate picks "do not sync": an explicit local wipe latches it, `startSync` refuses
- * to run while it is set, and nothing is pulled or pushed until it is cleared
- * deliberately. It is a local flag, never a synchronized record.
+ * The gate keeps that promise: a local clear latches it, `startSync` refuses to run
+ * while it is set, and nothing is pulled or pushed until it is cleared deliberately.
+ *
+ * A *global* delete is the opposite action and does not use this gate — it bumps the
+ * workspace generation so no device can refill the workspace at all. See
+ * `deleteEverywhere` in lifecycle.ts. This flag is local, never synchronized.
  */
 
 const PAUSED_KEY = 'nuqta_sync_paused_v1';
@@ -32,7 +35,7 @@ export function isSyncPaused(): boolean {
   }
 }
 
-/** Clear the latch so synchronization may start again (future settings UI). */
+/** Clear the latch so synchronization may start again. */
 export function resumeSyncAfterWipe(): void {
   try {
     localStorage.removeItem(PAUSED_KEY);

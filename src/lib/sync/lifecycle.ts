@@ -15,7 +15,8 @@ import {
 } from './changeCapture';
 import { clearCursor } from './cursor';
 import { clearOutbox } from './outbox';
-import { pauseSync, isSyncPaused } from './syncGate';
+import { pauseSync, isSyncPaused, resumeSyncAfterWipe } from './syncGate';
+import { setWorkspaceGeneration } from './workspaceGeneration';
 import { NuqtaStorageEngine, type SyncSectionName } from '../storage';
 
 export interface SyncRuntimeOptions extends SyncClientOptions {
@@ -118,6 +119,17 @@ export function startSync(options: SyncRuntimeOptions): SyncClient | null {
   return client;
 }
 
+/**
+ * Whether synchronization is actually running right now.
+ *
+ * Used by the UI to decide whether "delete everywhere" is even meaningful: with no sync
+ * there is nothing to delete elsewhere, and offering the button would imply a guarantee
+ * the app cannot make.
+ */
+export function isSyncEnabled(): boolean {
+  return activeClient !== null;
+}
+
 export function getSyncClient(): SyncClient | null {
   return activeClient;
 }
@@ -147,6 +159,53 @@ export function resetSyncState(): void {
   clearConflicts();
   clearBaseline();
   pauseSync();
+}
+
+/**
+ * Delete every record on every device — the global semantic.
+ *
+ * This is the only action that is allowed to destroy other devices' data, so it is
+ * explicit and separate from clearing a single device:
+ *
+ *   1. Ask the server to bump the workspace generation and empty the change log.
+ *   2. Clear the local copy only after the server has confirmed. If the request fails,
+ *      nothing is deleted anywhere and the caller can report a truthful error instead of
+ *      leaving the user with a cleared device and an intact server.
+ *   3. Adopt the new generation so this device does not try to re-upload its old data.
+ *
+ * The generation bump is what makes the reset stick: a device that was offline comes
+ * back holding pre-reset data, presents an older generation, and is refused. Without
+ * that, this function would be a local wipe with extra steps.
+ *
+ * Returns `{ ok: false }` when sync is not configured or the server refuses, so the UI
+ * can say so plainly rather than silently doing nothing.
+ */
+export async function deleteEverywhere(): Promise<{ ok: boolean; reason?: string }> {
+  const client = activeClient;
+  if (!client) {
+    return { ok: false, reason: 'sync_not_configured' };
+  }
+
+  const generation = await client.requestWorkspaceReset();
+  if (generation === null) {
+    // Nothing has been deleted yet, so the UI can honestly say so.
+    return { ok: false, reason: 'server_unreachable' };
+  }
+
+  const wiped = await NuqtaStorageEngine.wipeAll();
+  if (!wiped) return { ok: false, reason: 'local_wipe_failed' };
+
+  stopSync();
+  clearOutbox();
+  clearCursor();
+  clearApplied();
+  clearConflicts();
+  clearBaseline();
+  // The workspace is genuinely empty, so syncing again is safe and desirable.
+  resumeSyncAfterWipe();
+  setWorkspaceGeneration(generation);
+
+  return { ok: true };
 }
 
 /**

@@ -42,7 +42,13 @@ export interface InboundChange {
 export interface SyncAckEntry {
   clientChangeId: string;
   serverChangeId: number;
-  status: 'applied' | 'duplicate';
+  /**
+   * `applied`  — committed now.
+   * `duplicate`— already committed (idempotent retry).
+   * `superseded` — the record is tombstoned, so the write was refused and will never
+   *                be accepted. The client must drop the entry rather than retry.
+   */
+  status: 'applied' | 'duplicate' | 'superseded';
 }
 
 export interface WelcomeMessage {
@@ -51,6 +57,8 @@ export interface WelcomeMessage {
   deviceCursor: number;
   serverCursor: number;
   schemaVersion: number;
+  /** Absent from servers that predate the reset protocol; treated as 1. */
+  workspaceGeneration?: number;
 }
 
 export interface SyncAckMessage {
@@ -77,6 +85,8 @@ export interface ErrorMessage {
   error: string;
   detail?: string;
   maxSize?: number;
+  /** Present on `workspace_reset`: the generation this device must adopt. */
+  workspaceGeneration?: number;
 }
 
 export interface PongMessage {
@@ -90,7 +100,15 @@ export type ServerMessage =
   | SyncBroadcastMessage
   | AckOkMessage
   | ErrorMessage
+  | WorkspaceResetMessage
   | PongMessage;
+
+/** Server-pushed notice that the workspace was reset (also sent as a broadcast). */
+export interface WorkspaceResetMessage {
+  type: 'workspace_reset';
+  workspaceGeneration: number;
+  serverCursor: number;
+}
 
 /** Response body of `GET /sync/delta`. */
 export interface DeltaResponse {

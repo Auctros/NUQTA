@@ -20,7 +20,7 @@ beforeEach(() => {
  * appear and the assertion would fail.
  */
 describe('Destructive actions ask through the in-app dialog', () => {
-  it('wipes data only after the in-app dialog is confirmed', async () => {
+  it('clears this device only after the in-app dialog is confirmed', async () => {
     NuqtaStorageEngine.saveTasks([
       { id: 'keep-1', title: 'A task', status: 'todo', priority: 'medium' } as never
     ]);
@@ -34,13 +34,13 @@ describe('Destructive actions ask through the in-app dialog', () => {
       value: { ...window.location, reload }
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Wipe all local data & Reset/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Clear data on this device/i }));
     await settle();
 
     // The branded dialog — not a browser prompt — is on screen.
     const dialog = await screen.findByRole('dialog');
     expect(dialog.getAttribute('data-nuqta-dialog')).toBe('confirm');
-    expect(dialog.textContent).toContain('Delete all NUQTA data?');
+    expect(dialog.textContent).toContain('Clear data on this device?');
 
     // Cancelling must leave the data untouched.
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -49,10 +49,10 @@ describe('Destructive actions ask through the in-app dialog', () => {
     expect(reload).not.toHaveBeenCalled();
 
     // Confirming wipes and reloads.
-    fireEvent.click(screen.getByRole('button', { name: /Wipe all local data & Reset/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Clear data on this device/i }));
     await settle();
     await screen.findByRole('dialog');
-    fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear this device' }));
     await waitFor(() => expect(NuqtaStorageEngine.getTasks()).toHaveLength(0));
     expect(reload).toHaveBeenCalled();
   });
