@@ -39,6 +39,7 @@ import { DrawingView } from './components/DrawingView';
 import { WalkingView } from './components/WalkingView';
 import { CoursesView } from './components/CoursesView';
 import { ArchiveHistoryView } from './components/ArchiveHistoryView';
+import { TimelineWorkspace } from './components/timeline/TimelineWorkspace';
 import { useNuqtaReminders } from './lib/useNuqtaReminders';
 import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
@@ -282,7 +283,8 @@ export default function App() {
     { id: 'habits', label: isAr ? 'العادات' : 'Habits', icon: 'repeat' },
     { id: 'goals', label: isAr ? 'الأهداف' : 'Goals', icon: 'target' },
     { id: 'focus', label: isAr ? 'التركيز' : 'Focus', icon: 'timer' },
-    { id: 'calendar', label: isAr ? 'التقويم' : 'Calendar', icon: 'calendar' }
+    { id: 'calendar', label: isAr ? 'التقويم' : 'Calendar', icon: 'calendar' },
+    { id: 'timeline', label: isAr ? 'الجدول الزمني' : 'Timeline', icon: 'history' }
   ];
 
   const studiosNav: NavDef[] = [
@@ -351,6 +353,7 @@ export default function App() {
       case 'goals': return isAr ? 'الأهداف' : 'Goals';
       case 'focus': return isAr ? 'التركيز' : 'Focus';
       case 'calendar': return isAr ? 'التقويم' : 'Calendar';
+      case 'timeline': return isAr ? 'مساحة الجدول الزمني' : 'Timeline Workspace';
       case 'finance': return isAr ? 'المال' : 'Money';
       case 'health': return isAr ? 'الصحة' : 'Health';
       case 'journal': return isAr ? 'اليوميات' : 'Journal';
@@ -739,7 +742,7 @@ export default function App() {
         </header>
 
         {/* Page Content */}
-        <main className={`page-content ${activeNavTab === 'today' ? 'dashboard-wide' : ''}`}>
+        <main className={`page-content ${activeNavTab === 'today' || activeNavTab === 'timeline' ? 'dashboard-wide' : ''}`}>
           {activeNavTab === 'today' && <DashboardView />}
           {activeNavTab === 'tasks' && <TasksView />}
           {activeNavTab === 'habits' && <HabitsView />}
@@ -756,6 +759,7 @@ export default function App() {
           {activeNavTab === 'health' && <HealthView />}
           {activeNavTab === 'journal' && <JournalView />}
           {activeNavTab === 'insights' && <InsightsView />}
+          {activeNavTab === 'timeline' && <TimelineWorkspace />}
           {activeNavTab === 'archive' && <ArchiveHistoryView />}
           {activeNavTab === 'profile' && <ProfileView />}
           {activeNavTab === 'simulator' && <WhatIfSimulator />}

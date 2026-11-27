@@ -4083,3 +4083,758 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
     padding: 0 14px;
   }
 }
+
+/* ============================================================
+   TIMELINE WORKSPACE
+   ------------------------------------------------------------
+   A canvas-first temporal workspace, not a card inside Calendar.
+   The canvas owns the horizontal space; the toolbar is compact and
+   the inspector is an optional column. Colours come only from the
+   semantic tokens so light mode follows for free.
+   ============================================================ */
+.tl-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: calc(100vh - 190px);
+  min-width: 0;
+}
+
+/* ---------- toolbar ---------- */
+.tl-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.tl-toolbar-lead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin-inline-end: auto;
+}
+
+.tl-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-heavy);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tone-accent);
+}
+
+.tl-eyebrow .line {
+  width: 18px;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.tl-range {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.tl-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-inline: 4px;
+  border-radius: var(--r-sm);
+}
+
+.tl-zoom {
+  border: 1px solid var(--border-soft);
+  background: var(--surface-inset);
+}
+
+.tl-zoom-label {
+  min-width: 62px;
+  text-align: center;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  color: var(--text-secondary);
+}
+
+.tl-search {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-inline: var(--sp-3);
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-inset);
+  color: var(--text-tertiary);
+  min-width: 180px;
+}
+
+.tl-search input {
+  border: 0;
+  background: transparent;
+  min-height: 32px;
+  padding: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+}
+
+.tl-count {
+  margin-inline-start: 2px;
+  min-width: 16px;
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--r-full);
+  background: var(--surface-active);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+}
+
+/* ---------- presets ---------- */
+.tl-presets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tl-preset {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--r-full);
+  padding: 6px 12px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.tl-preset:hover {
+  background: var(--surface-chip);
+  color: var(--text-primary);
+}
+
+.tl-preset.is-active {
+  background: var(--brand-soft);
+  border-color: var(--brand-soft-border);
+  color: var(--tone-accent);
+}
+
+.tl-preset-hint {
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
+  margin-inline-start: var(--sp-2);
+}
+
+/* ---------- lanes panel ---------- */
+.tl-lanes-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--border-soft);
+  background: var(--surface-inset);
+}
+
+.tl-lane-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-soft);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  transition: all var(--dur-fast);
+}
+
+.tl-lane-chip.is-on {
+  border-color: var(--border-default);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+/* ---------- body ---------- */
+.tl-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-3);
+  min-height: 0;
+  flex: 1;
+}
+
+.tl-body.has-inspector {
+  grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+.tl-canvas-wrap {
+  min-width: 0;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-raised) 92%, transparent),
+    color-mix(in srgb, var(--surface-sunken) 88%, transparent)
+  );
+  overflow: hidden;
+}
+
+.tl-canvas {
+  /* A time axis runs left-to-right in every locale. Only the labels are localised,
+     so the canvas stays LTR and `left`-positioned items always agree with the
+     sticky rail — under `dir="rtl"` an inline-start rail would sit on the right
+     while items measured from the left. */
+  direction: ltr;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-height: min(72vh, 720px);
+  scrollbar-gutter: stable;
+}
+
+.tl-canvas-inner {
+  position: relative;
+  padding-bottom: var(--sp-4);
+}
+
+/* ---------- ruler ---------- */
+.tl-ruler-row {
+  display: flex;
+  align-items: stretch;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.tl-ruler-rail {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  flex-shrink: 0;
+  background: inherit;
+  border-inline-end: 1px solid var(--border-soft);
+}
+
+.tl-ruler {
+  position: relative;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.tl-tick {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-inline-start: 1px solid color-mix(in srgb, var(--border-soft) 70%, transparent);
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 6px;
+  padding-inline-start: 5px;
+  overflow: hidden;
+}
+
+.tl-tick.is-major {
+  border-inline-start-color: var(--border-default);
+}
+
+.tl-tick-label {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.tl-tick.is-major .tl-tick-label {
+  color: var(--text-secondary);
+}
+
+/* ---------- lanes ---------- */
+.tl-lane {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-soft) 55%, transparent);
+}
+
+.tl-lane:last-child {
+  border-bottom: 0;
+}
+
+.tl-lane-rail {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: color-mix(in srgb, var(--surface-raised) 96%, transparent);
+  border-inline-end: 1px solid var(--border-soft);
+  color: var(--text-secondary);
+}
+
+.tl-lane-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl-lane-count {
+  margin-inline-start: auto;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tl-lane-track {
+  position: relative;
+  flex-shrink: 0;
+  padding-block: var(--sp-2);
+}
+
+.tl-gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--border-soft) 42%, transparent);
+  pointer-events: none;
+}
+
+.tl-gridline.is-major {
+  background: color-mix(in srgb, var(--border-default) 55%, transparent);
+}
+
+/* ---------- items ---------- */
+.tl-item {
+  position: absolute;
+  height: 22px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-default);
+  background: var(--surface-chip);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-inline: 7px;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  overflow: hidden;
+  transition: transform var(--dur-fast), box-shadow var(--dur-fast), border-color var(--dur-fast);
+  touch-action: none;
+}
+
+.tl-item.is-draggable {
+  cursor: grab;
+}
+
+.tl-item.is-draggable:active {
+  cursor: grabbing;
+}
+
+/* Actual = solid, recorded. Planned = hollow, intended. The fill is the
+   distinction, so the two never read as the same kind of fact. */
+.tl-item--actual {
+  background: color-mix(in srgb, var(--tone-success) 18%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--tone-success) 42%, transparent);
+}
+
+.tl-item--planned {
+  background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--text-tertiary) 45%, transparent);
+  color: var(--text-secondary);
+}
+
+.tl-item--milestone {
+  border-radius: var(--r-full);
+  width: 18px !important;
+  min-width: 18px !important;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.tl-item--milestone .tl-item-mark {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  background: var(--tone-warning);
+}
+
+.tl-item--point .tl-item-mark {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--text-tertiary);
+}
+
+.tl-item--actual.tl-item--point .tl-item-mark {
+  background: var(--tone-success);
+}
+
+.tl-item--range {
+  height: 24px;
+  border-radius: var(--r-sm);
+}
+
+.tl-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--elev-1);
+  z-index: 1;
+}
+
+.tl-item.is-selected {
+  border-color: var(--tone-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tone-accent) 30%, transparent);
+  z-index: 1;
+}
+
+.tl-item:focus-visible {
+  outline: 2px solid var(--ring-color);
+  outline-offset: 2px;
+}
+
+.tl-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl-item-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+  background: transparent;
+}
+
+.tl-item-handle--start {
+  inset-inline-start: 0;
+}
+
+.tl-item-handle--end {
+  inset-inline-end: 0;
+}
+
+/* ---------- now indicator ---------- */
+.tl-now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--tone-danger);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tl-now-dot {
+  position: absolute;
+  top: 34px;
+  inset-inline-start: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-full);
+  background: var(--tone-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone-danger) 22%, transparent);
+}
+
+/* ---------- inspector ---------- */
+.tl-inspector {
+  min-width: 0;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--surface-raised) 90%, transparent);
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  max-height: min(72vh, 720px);
+  overflow-y: auto;
+}
+
+.tl-inspector-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.tl-inspector-title {
+  margin: 0;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  line-height: var(--lh-snug);
+}
+
+.tl-inspector-sub {
+  margin: 0;
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
+}
+
+.tl-facts {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+}
+
+.tl-facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-soft) 60%, transparent);
+}
+
+.tl-facts dt {
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
+}
+
+.tl-facts dd {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  text-align: end;
+}
+
+.tl-readonly {
+  margin: 0;
+  font-size: var(--fs-micro);
+  line-height: var(--lh-normal);
+  color: var(--text-tertiary);
+  padding: var(--sp-2);
+  border-radius: var(--r-sm);
+  background: var(--surface-inset);
+}
+
+.tl-inspector-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-6) var(--sp-3);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-normal);
+}
+
+.tl-inspector-empty p {
+  margin: 0;
+}
+
+/* ---------- backlog ---------- */
+.tl-backlog {
+  margin-top: auto;
+  border-top: 1px dashed var(--border-soft);
+  padding-top: var(--sp-3);
+}
+
+.tl-backlog h3 {
+  margin: 0 0 var(--sp-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-heavy);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+.tl-backlog h3 span {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.tl-backlog ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.tl-backlog button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-micro);
+  text-align: start;
+}
+
+.tl-backlog button:hover {
+  background: var(--surface-chip);
+  color: var(--text-primary);
+}
+
+.tl-backlog button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+  .tl-body.has-inspector {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tl-inspector {
+    max-height: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .tl-toolbar {
+    padding: var(--sp-2);
+  }
+  .tl-toolbar-lead {
+    margin-inline-end: 0;
+    width: 100%;
+  }
+  .tl-range {
+    font-size: var(--fs-base);
+    white-space: normal;
+  }
+  .tl-search {
+    min-width: 0;
+    flex: 1;
+  }
+  .tl-preset-hint {
+    display: none;
+  }
+  .tl-canvas {
+    max-height: 62vh;
+  }
+  .tl-item {
+    height: 24px;
+  }
+}
+
+/* ---------- timeline: jump, display, drag ---------- */
+.tl-jump {
+  flex-shrink: 0;
+}
+
+.tl-jump button {
+  min-height: 34px;
+}
+
+.tl-display-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--border-soft);
+  background: var(--surface-inset);
+}
+
+.tl-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-semibold);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tl-switch input {
+  accent-color: var(--tone-accent);
+  width: 15px;
+  height: 15px;
+}
+
+.tl-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.tl-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
+}
+
+.tl-legend-swatch {
+  width: 14px;
+  height: 10px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-default);
+}
+
+.tl-legend-swatch--actual {
+  background: color-mix(in srgb, var(--tone-success) 18%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--tone-success) 42%, transparent);
+}
+
+.tl-legend-swatch--planned {
+  background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--text-tertiary) 45%, transparent);
+}
+
+.tl-legend-swatch--milestone {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  background: var(--tone-warning);
+  border-color: var(--tone-warning);
+}
+
+/* A drag must read as "moving", not as a hover lift. */
+.tl-item.is-dragging {
+  transform: none;
+  z-index: 5;
+  opacity: 0.92;
+  box-shadow: var(--elev-2);
+  cursor: grabbing;
+}
+
+.tl-item.is-dragging:hover {
+  transform: none;
+}
+
+/* Items are focusable buttons; the ring must not be clipped by the lane. */
+.tl-lane-track {
+  overflow: visible;
+}

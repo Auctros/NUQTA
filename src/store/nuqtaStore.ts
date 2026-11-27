@@ -213,7 +213,7 @@ interface NuqtaStoreState {
   isRescueModeOpen: boolean;
   isQuickCaptureOpen: boolean;
   isSundayRitualOpen: boolean;
-  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'walking' | 'courses' | 'archive';
+  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'walking' | 'courses' | 'timeline' | 'archive';
   searchQuery: string;
   selectedTagFilter: string | null;
 
