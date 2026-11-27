@@ -4,6 +4,7 @@ export const ALLOWED_STORES = new Set([
   'tasks',
   'habits',
   'goals',
+  'projects',
   'focus_sessions',
   'health_metrics',
   'expenses',

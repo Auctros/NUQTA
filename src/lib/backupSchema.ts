@@ -2,6 +2,7 @@ import type {
   Task,
   Habit,
   Goal,
+  Project,
   FocusSession,
   HealthMetric,
   ExpenseRecord,
@@ -12,14 +13,20 @@ import type {
   HistoryAuditLogEntry
 } from '../types';
 
-/** Current backup file format. Bump when the shape changes and keep old readers. */
-export const BACKUP_VERSION = 2;
+/**
+ * Current backup file format. Bump when the shape changes and keep old readers.
+ *
+ * v3 adds `projects`. An older file simply has no `projects` key, and a restore
+ * only replaces the sections a file actually carries, so v2 files still import.
+ */
+export const BACKUP_VERSION = 3;
 export const BACKUP_APP_ID = 'nuqta';
 
 export interface BackupData {
   tasks: Task[];
   habits: Habit[];
   goals: Goal[];
+  projects: Project[];
   focusSessions: FocusSession[];
   healthMetrics: Record<string, HealthMetric>;
   expenses: ExpenseRecord[];
@@ -109,6 +116,40 @@ const GOAL_CATEGORY = ['career', 'health', 'finance', 'personal', 'intellect'];
 const GOAL_PRIORITY = ['urgent', 'high', 'medium', 'low'];
 const GOAL_TIMEFRAME = ['quarterly', 'annual', 'life'];
 const GOAL_STATUS = ['active', 'completed', 'paused', 'archived'];
+
+const PROJECT_STATUS = ['planned', 'active', 'on_hold', 'completed', 'archived'];
+const PROJECT_CATEGORY = [
+  'personal',
+  'learning',
+  'creative',
+  'technical',
+  'financial',
+  'administrative',
+  'other'
+];
+const PROJECT_STEP_STATUS = ['open', 'done', 'blocked'];
+const PROJECT_NOTE_KIND = ['note', 'idea', 'decision', 'question', 'research', 'meeting', 'observation'];
+const PROJECT_RESOURCE_KIND = ['link', 'file', 'reference'];
+const PROJECT_ACTIVITY_TYPE = [
+  'project_created',
+  'status_changed',
+  'phase_added',
+  'phase_completed',
+  'phase_reopened',
+  'step_added',
+  'step_completed',
+  'step_reopened',
+  'step_blocked',
+  'task_linked',
+  'task_unlinked',
+  'task_completed',
+  'note_added',
+  'decision_recorded',
+  'goal_linked',
+  'goal_unlinked',
+  'project_completed',
+  'project_reopened'
+];
 const KEY_RESULT_DATA_SOURCE = [
   'manual',
   'tasks_completed',
@@ -298,6 +339,116 @@ function isGoal(v: unknown): boolean {
   // keyResults is required by the type; accept only a well-formed array.
   if (!Array.isArray(v.keyResults) || !v.keyResults.every(isKeyResult)) return false;
   if (!optional((x) => Array.isArray(x) && x.every(isGoalMilestone))(v.milestones)) return false;
+  return true;
+}
+// ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+function isProjectPhase(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    isString(v.title) &&
+    isNumber(v.order) &&
+    optional(isString)(v.description) &&
+    optional(isString)(v.startDate) &&
+    optional(isString)(v.targetDate) &&
+    optional(isString)(v.completedAt)
+  );
+}
+
+function isProjectStep(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    isString(v.title) &&
+    oneOf(PROJECT_STEP_STATUS)(v.status) &&
+    isNumber(v.order) &&
+    isStringArray(v.taskIds) &&
+    optional(isString)(v.description) &&
+    optional(isString)(v.phaseId) &&
+    optional(isString)(v.completedAt) &&
+    optional(isString)(v.blockedReason) &&
+    optional(isString)(v.createdAt) &&
+    optional(isString)(v.updatedAt)
+  );
+}
+
+function isProjectNote(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    oneOf(PROJECT_NOTE_KIND)(v.kind) &&
+    isString(v.body) &&
+    optional(isString)(v.title) &&
+    optional(isString)(v.convertedToStepId) &&
+    optional(isString)(v.convertedToTaskId) &&
+    optional(isString)(v.phaseId) &&
+    optional(isBoolean)(v.pinned) &&
+    optional(isString)(v.alternatives) &&
+    optional(isString)(v.openQuestions) &&
+    optional(isStringArray)(v.tags) &&
+    optional(isString)(v.createdAt) &&
+    optional(isString)(v.updatedAt)
+  );
+}
+
+function isProjectResource(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    oneOf(PROJECT_RESOURCE_KIND)(v.kind) &&
+    isString(v.title) &&
+    optional(isString)(v.url) &&
+    optional(isString)(v.dataUrl) &&
+    optional(isString)(v.mimeType) &&
+    optional(isNumber)(v.sizeBytes) &&
+    optional(isString)(v.notes) &&
+    optional(isString)(v.createdAt)
+  );
+}
+
+function isProjectActivity(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    isNonEmptyString(v.id) &&
+    oneOf(PROJECT_ACTIVITY_TYPE)(v.type) &&
+    isString(v.timestamp) &&
+    isString(v.summary) &&
+    optional(isString)(v.subjectId)
+  );
+}
+
+function isProject(v: unknown): boolean {
+  if (!isPlainObject(v)) return false;
+  if (!isNonEmptyString(v.id)) return false;
+  if (!isString(v.title)) return false;
+  if (!oneOf(PROJECT_STATUS)(v.status)) return false;
+  if (!isStringArray(v.goalIds)) return false;
+  if (!optional(oneOf(PROJECT_CATEGORY))(v.category)) return false;
+  if (!optional(isString)(v.description)) return false;
+  if (!optional(isString)(v.purpose)) return false;
+  if (!optional(isString)(v.desiredOutcome)) return false;
+  if (!optional(isString)(v.definitionOfDone)) return false;
+  if (!optional(isString)(v.startDate)) return false;
+  if (!optional(isString)(v.targetDate)) return false;
+  if (!optional(isString)(v.completedAt)) return false;
+  if (!optional(isString)(v.archivedAt)) return false;
+  if (!optional(isString)(v.blockers)) return false;
+  if (!optional(isString)(v.healthNote)) return false;
+  if (!optional(isNumber)(v.manualProgress)) return false;
+  if (!optional(isString)(v.createdAt)) return false;
+  if (!optional(isString)(v.updatedAt)) return false;
+  if (!optional(isString)(v.lastMeaningfulUpdateAt)) return false;
+  // The four collections and the activity log are required by the type; only a
+  // well-formed array is accepted, so a restore can never produce a project whose
+  // tabs would throw on first render.
+  if (!Array.isArray(v.phases) || !v.phases.every(isProjectPhase)) return false;
+  if (!Array.isArray(v.steps) || !v.steps.every(isProjectStep)) return false;
+  if (!Array.isArray(v.notes) || !v.notes.every(isProjectNote)) return false;
+  if (!Array.isArray(v.resources) || !v.resources.every(isProjectResource)) return false;
+  if (!Array.isArray(v.activity) || !v.activity.every(isProjectActivity)) return false;
   return true;
 }
 
@@ -886,6 +1037,7 @@ const LIST_VALIDATORS: Record<string, (v: unknown) => boolean> = {
   tasks: isTask,
   habits: isHabit,
   goals: isGoal,
+  projects: isProject,
   focusSessions: isFocusSession,
   expenses: isExpense,
   savingsGoals: isSavingsGoal,
@@ -941,6 +1093,30 @@ function findDanglingReference(data: BackupData, present: ReadonlySet<string>): 
     if (present.has('habits') && (goal.linkedHabitIds ?? []).some((id) => !habitIds.has(id))) return 'linkedHabitIds';
     if (hasHabits && (goal.linkedBookIds ?? []).some((id) => !bookIds.has(id))) return 'linkedBookIds';
     if (hasHabits && (goal.linkedArtProjectIds ?? []).some((id) => !artProjectIds.has(id))) return 'linkedArtProjectIds';
+  }
+
+  // Projects own their goal links, and steps reference tasks. Both must resolve inside
+  // the same file so a restore cannot leave a project pointing at a goal or task that
+  // does not exist.
+  const hasProjects = present.has('projects');
+  if (hasProjects) {
+    for (const project of data.projects ?? []) {
+      if (present.has('goals') && (project.goalIds ?? []).some((id) => !goalIds.has(id))) return 'goalIds';
+      if (present.has('tasks')) {
+        for (const step of project.steps ?? []) {
+          if ((step.taskIds ?? []).some((id) => !taskIds.has(id))) return 'taskIds';
+        }
+      }
+    }
+  }
+  if (present.has('tasks')) {
+    // A task names the project it executes for; that project must be in the file.
+    const projectIds = new Set((data.projects ?? []).map((p) => p.id));
+    if (hasProjects) {
+      for (const task of data.tasks ?? []) {
+        if (task.projectId !== undefined && !projectIds.has(task.projectId)) return 'projectId';
+      }
+    }
   }
 
   if (hasGoals) {
@@ -1029,6 +1205,7 @@ export function parseBackup(jsonString: string): ParseBackupResult {
     tasks: [],
     habits: [],
     goals: [],
+    projects: [],
     focusSessions: [],
     healthMetrics: {},
     expenses: [],

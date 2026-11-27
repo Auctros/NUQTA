@@ -74,7 +74,7 @@ describe('backup validation and atomic restore', () => {
   it('round-trips through the versioned envelope', () => {
     NuqtaStorageEngine.saveTasks([task('a'), task('b')]);
     const file = good();
-    expect(JSON.parse(file)).toMatchObject({ app: 'nuqta', version: 2 });
+    expect(JSON.parse(file)).toMatchObject({ app: 'nuqta', version: 3 });
     NuqtaStorageEngine.saveTasks([]);
     expect(NuqtaStorageEngine.importBackup(file).ok).toBe(true);
     expect(NuqtaStorageEngine.getTasks().map((t) => t.id)).toEqual(['a', 'b']);

@@ -29,6 +29,7 @@ export type NavTab =
   | 'tasks'
   | 'habits'
   | 'goals'
+  | 'projects'
   | 'focus'
   | 'calendar'
   | 'health'
@@ -51,6 +52,7 @@ export const NAV_TABS: readonly NavTab[] = [
   'tasks',
   'habits',
   'goals',
+  'projects',
   'focus',
   'calendar',
   'health',

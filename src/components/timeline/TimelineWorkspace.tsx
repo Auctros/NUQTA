@@ -47,11 +47,12 @@ const iconForDomain = (domain: TimelineDomain): IconName => domainMeta(domain).i
 
 const NAV_FOR_DOMAIN: Record<
   TimelineDomain,
-  'tasks' | 'habits' | 'goals' | 'focus' | 'quran' | 'reading' | 'workout' | 'walking' | 'drawing' | 'journal' | 'health'
+  'tasks' | 'habits' | 'goals' | 'projects' | 'focus' | 'quran' | 'reading' | 'workout' | 'walking' | 'drawing' | 'journal' | 'health'
 > = {
   tasks: 'tasks',
   habits: 'habits',
   goals: 'goals',
+  projects: 'projects',
   focus: 'focus',
   quran: 'quran',
   reading: 'reading',
@@ -66,6 +67,7 @@ export const TimelineWorkspace: React.FC = () => {
   const tasks = useNuqtaStore((s) => s.tasks);
   const habits = useNuqtaStore((s) => s.habits);
   const goals = useNuqtaStore((s) => s.goals);
+  const projects = useNuqtaStore((s) => s.projects);
   const focusSessions = useNuqtaStore((s) => s.focusSessions);
   const journalEntries = useNuqtaStore((s) => s.journalEntries);
   const healthMetrics = useNuqtaStore((s) => s.healthMetrics);
@@ -113,7 +115,7 @@ export const TimelineWorkspace: React.FC = () => {
   const dataset = useMemo(
     () =>
       buildTimelineDataset(
-        { tasks, habits, goals, focusSessions, journalEntries, healthMetrics },
+        { tasks, habits, goals, projects, focusSessions, journalEntries, healthMetrics },
         {
           isAr,
           recurrenceFrom: localDateKey(viewWindow.from),
@@ -122,7 +124,7 @@ export const TimelineWorkspace: React.FC = () => {
           includeExpectedHabits: zoom === 'hour' || zoom === 'day' || zoom === 'week'
         }
       ),
-    [tasks, habits, goals, focusSessions, journalEntries, healthMetrics, isAr, viewWindow, zoom]
+    [tasks, habits, goals, projects, focusSessions, journalEntries, healthMetrics, isAr, viewWindow, zoom]
   );
 
   // `hiddenDomains` is the only visibility rule. The preset seeds it (see

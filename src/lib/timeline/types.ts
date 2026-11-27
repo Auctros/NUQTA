@@ -26,6 +26,7 @@ export type TimelineDomain =
   | 'tasks'
   | 'habits'
   | 'goals'
+  | 'projects'
   | 'focus'
   | 'quran'
   | 'reading'

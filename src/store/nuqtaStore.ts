@@ -20,7 +20,16 @@ import {
   HistoryAuditLogEntry,
   AppNotification,
   NotificationPreferences,
-  YoutubeCourse
+  YoutubeCourse,
+  Project,
+  ProjectPhase,
+  ProjectStep,
+  ProjectNote,
+  ProjectResource,
+  ProjectStatus,
+  ProjectStepStatus,
+  ProjectActivity,
+  ProjectActivityType
 } from '../types';
 import { NuqtaStorageEngine } from '../lib/storage';
 import {
@@ -52,6 +61,29 @@ import {
   SERIES_HORIZON_DAYS
 } from '../lib/taskRecurrence';
 import { runLiquidThemeTransition } from '../lib/themeTransition';
+import {
+  addNote,
+  addPhase,
+  addResource,
+  addStep,
+  applyStatus,
+  attachTaskToStep,
+  deleteNote,
+  deletePhase,
+  deleteResource,
+  deleteStep,
+  detachTaskFromSteps,
+  linkGoal,
+  markNoteConvertedToStep,
+  markNoteConvertedToTask,
+  moveStep,
+  projectId,
+  projectStatusLabel,
+  recordActivity,
+  setStepStatus,
+  togglePhaseCompletion,
+  unlinkGoal
+} from '../lib/projectModel';
 import {
   generateEmptyQuranSurahs,
   mergeAyahRanges,
@@ -192,6 +224,7 @@ interface NuqtaStoreState {
   tasks: Task[];
   habits: Habit[];
   goals: Goal[];
+  projects: Project[];
   focusSessions: FocusSession[];
   healthMetrics: Record<string, HealthMetric>;
   expenses: ExpenseRecord[];
@@ -213,7 +246,7 @@ interface NuqtaStoreState {
   isRescueModeOpen: boolean;
   isQuickCaptureOpen: boolean;
   isSundayRitualOpen: boolean;
-  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'walking' | 'courses' | 'timeline' | 'archive';
+  activeNavTab: 'today' | 'tasks' | 'habits' | 'goals' | 'projects' | 'focus' | 'calendar' | 'health' | 'finance' | 'journal' | 'insights' | 'simulator' | 'profile' | 'quran' | 'reading' | 'workout' | 'drawing' | 'walking' | 'courses' | 'timeline' | 'archive';
   searchQuery: string;
   selectedTagFilter: string | null;
 
@@ -314,6 +347,48 @@ interface NuqtaStoreState {
   unlinkActivityFromGoal: (goalId: string, type: 'task' | 'habit' | 'book' | 'artProject', activityId: string) => void;
   deleteGoal: (id: string) => void;
 
+  // Project Actions
+  createProject: (draft: Partial<Project>) => Project;
+  updateProject: (id: string, updates: Partial<Project>) => void;
+  /** Move a project through its lifecycle. Completing stamps `completedAt`. */
+  setProjectStatus: (id: string, status: ProjectStatus) => void;
+  /** Delete a project. Tasks that executed it are detached, never deleted. */
+  deleteProject: (id: string) => void;
+  /** Set an explicit progress override, or clear it with null to go back to derived. */
+  setProjectManualProgress: (id: string, ratio: number | null) => void;
+
+  addProjectPhase: (projectId: string, phase: { title: string; description?: string; startDate?: string; targetDate?: string }) => void;
+  updateProjectPhase: (projectId: string, phaseId: string, updates: Partial<ProjectPhase>) => void;
+  deleteProjectPhase: (projectId: string, phaseId: string) => void;
+  /** Completing a phase stamps `completedAt`; reopening clears it. */
+  toggleProjectPhaseCompletion: (projectId: string, phaseId: string) => void;
+
+  addProjectStep: (projectId: string, step: { title: string; description?: string; phaseId?: string }) => void;
+  updateProjectStep: (projectId: string, stepId: string, updates: Partial<ProjectStep>) => void;
+  deleteProjectStep: (projectId: string, stepId: string) => void;
+  setProjectStepStatus: (projectId: string, stepId: string, status: ProjectStepStatus) => void;
+  /** Reorder a step within the project plan by moving it one place up or down. */
+  moveProjectStep: (projectId: string, stepId: string, direction: 'up' | 'down') => void;
+
+  addProjectNote: (projectId: string, note: Partial<ProjectNote> & { body: string }) => void;
+  updateProjectNote: (projectId: string, noteId: string, updates: Partial<ProjectNote>) => void;
+  deleteProjectNote: (projectId: string, noteId: string) => void;
+  /** Turn an idea into a planned step. The note is kept as the trace of the decision. */
+  convertProjectNoteToStep: (projectId: string, noteId: string) => void;
+  /** Turn an idea into a task in the Tasks module, linked back to this project. */
+  convertProjectNoteToTask: (projectId: string, noteId: string) => void;
+
+  addProjectResource: (projectId: string, resource: Omit<ProjectResource, 'id' | 'createdAt'>) => void;
+  deleteProjectResource: (projectId: string, resourceId: string) => void;
+
+  /** Link a goal to a project. The project owns the link. */
+  linkProjectToGoal: (projectId: string, goalId: string) => void;
+  unlinkProjectFromGoal: (projectId: string, goalId: string) => void;
+
+  /** Attach an existing task to a project, optionally naming the step it executes. */
+  linkTaskToProject: (taskId: string, projectId: string, stepId?: string) => void;
+  unlinkTaskFromProject: (taskId: string) => void;
+
   // Focus Actions
   logFocusSession: (session: Omit<FocusSession, 'id' | 'completedAt'>) => void;
 
@@ -375,6 +450,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
   tasks: [],
   habits: [],
   goals: [],
+  projects: [],
   focusSessions: [],
   healthMetrics: {},
   expenses: [],
@@ -403,6 +479,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const tasks = NuqtaStorageEngine.getTasks();
     const habits = NuqtaStorageEngine.getHabits();
     const goals = NuqtaStorageEngine.getGoals();
+    const projects = NuqtaStorageEngine.getProjects();
     const focusSessions = NuqtaStorageEngine.getFocusSessions();
     const healthMetrics = NuqtaStorageEngine.getHealthMetrics();
     const expenses = NuqtaStorageEngine.getExpenses();
@@ -430,6 +507,7 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
       tasks,
       habits,
       goals,
+      projects,
       focusSessions,
       healthMetrics,
       expenses,
@@ -2164,6 +2242,468 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     NuqtaStorageEngine.saveTasks(tasks);
     NuqtaStorageEngine.saveHabits(habits);
     set({ goals: updated, tasks, habits });
+  },
+
+  // PROJECT ACTIONS
+  createProject: (draft) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const project: Project = {
+      id: projectId('prj'),
+      title: draft.title?.trim() || (isAr ? 'مشروع جديد' : 'New project'),
+      description: draft.description,
+      status: draft.status || 'active',
+      category: draft.category,
+      purpose: draft.purpose,
+      desiredOutcome: draft.desiredOutcome,
+      definitionOfDone: draft.definitionOfDone,
+      goalIds: draft.goalIds || [],
+      startDate: draft.startDate,
+      targetDate: draft.targetDate,
+      phases: draft.phases || [],
+      steps: draft.steps || [],
+      notes: draft.notes || [],
+      resources: draft.resources || [],
+      manualProgress: draft.manualProgress,
+      blockers: draft.blockers,
+      healthNote: draft.healthNote,
+      activity: [
+        {
+          id: projectId('pa'),
+          type: 'project_created',
+          timestamp: now,
+          summary: isAr ? 'أُنشئ المشروع' : 'Project created'
+        }
+      ],
+      createdAt: now,
+      updatedAt: now,
+      lastMeaningfulUpdateAt: now
+    };
+    const updated = [...get().projects, project];
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+    return project;
+  },
+
+  updateProject: (id, updates) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === id ? { ...p, ...updates, id: p.id, updatedAt: now } : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  setProjectStatus: (id, status) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const updated = get().projects.map((p) => {
+      if (p.id !== id) return p;
+      const next = applyStatus(p, status, now);
+      const type: ProjectActivityType =
+        status === 'completed' ? 'project_completed' : p.status === 'completed' ? 'project_reopened' : 'status_changed';
+      return recordActivity(next, type, `${isAr ? 'الحالة' : 'Status'}: ${projectStatusLabel(status, isAr)}`, now);
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  deleteProject: (id) => {
+    const updated = get().projects.filter((p) => p.id !== id);
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+
+    // Tasks that executed the project are detached, never deleted: the work still
+    // happened, and destroying a record because its container was removed would lose
+    // history the user never asked to lose.
+    const tasks = get().tasks.map((t) =>
+      t.projectId === id ? { ...t, projectId: undefined, projectStepId: undefined } : t
+    );
+    NuqtaStorageEngine.saveTasks(tasks);
+    set({ tasks });
+  },
+
+  setProjectManualProgress: (id, ratio) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            manualProgress:
+              ratio === null || !Number.isFinite(ratio) ? undefined : Math.min(1, Math.max(0, ratio)),
+            updatedAt: now
+          }
+        : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  addProjectPhase: (projectIdValue, input) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const { project, phase } = addPhase(p, input, now);
+      return recordActivity(
+        project,
+        'phase_added',
+        isAr ? `أُضيفت مرحلة: ${phase.title}` : `Phase added: ${phase.title}`,
+        now,
+        phase.id
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  updateProjectPhase: (projectIdValue, phaseId, updates) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue
+        ? {
+            ...p,
+            phases: p.phases.map((ph) => (ph.id === phaseId ? { ...ph, ...updates, id: ph.id } : ph)),
+            updatedAt: now
+          }
+        : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  deleteProjectPhase: (projectIdValue, phaseId) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue ? deletePhase(p, phaseId, now) : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  toggleProjectPhaseCompletion: (projectIdValue, phaseId) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const target = p.phases.find((ph) => ph.id === phaseId);
+      if (!target) return p;
+      const completing = !target.completedAt;
+      const next = togglePhaseCompletion(p, phaseId, now);
+      return recordActivity(
+        next,
+        completing ? 'phase_completed' : 'phase_reopened',
+        completing
+          ? isAr
+            ? `اكتملت مرحلة: ${target.title}`
+            : `Phase completed: ${target.title}`
+          : isAr
+            ? `أُعيد فتح مرحلة: ${target.title}`
+            : `Phase reopened: ${target.title}`,
+        now,
+        phaseId
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  addProjectStep: (projectIdValue, input) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const { project, step } = addStep(p, input, now);
+      return recordActivity(
+        project,
+        'step_added',
+        isAr ? `أُضيفت خطوة: ${step.title}` : `Step added: ${step.title}`,
+        now,
+        step.id
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  updateProjectStep: (projectIdValue, stepId, updates) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue
+        ? {
+            ...p,
+            steps: p.steps.map((s) => (s.id === stepId ? { ...s, ...updates, id: s.id, updatedAt: now } : s)),
+            updatedAt: now
+          }
+        : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  deleteProjectStep: (projectIdValue, stepId) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue ? deleteStep(p, stepId, now) : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+
+    // A task that named this step keeps existing; only the step pointer is cleared.
+    const tasks = get().tasks.map((t) => (t.projectStepId === stepId ? { ...t, projectStepId: undefined } : t));
+    NuqtaStorageEngine.saveTasks(tasks);
+    set({ tasks });
+  },
+
+  setProjectStepStatus: (projectIdValue, stepId, status) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const target = p.steps.find((s) => s.id === stepId);
+      if (!target) return p;
+      const next = setStepStatus(p, stepId, status, now);
+      const type: ProjectActivityType =
+        status === 'done' ? 'step_completed' : status === 'blocked' ? 'step_blocked' : 'step_reopened';
+      return recordActivity(
+        next,
+        type,
+        status === 'done'
+          ? isAr
+            ? `أُنجزت خطوة: ${target.title}`
+            : `Step completed: ${target.title}`
+          : status === 'blocked'
+            ? isAr
+              ? `تعطّلت خطوة: ${target.title}`
+              : `Step blocked: ${target.title}`
+            : isAr
+              ? `أُعيد فتح خطوة: ${target.title}`
+              : `Step reopened: ${target.title}`,
+        now,
+        stepId
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  moveProjectStep: (projectIdValue, stepId, direction) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue ? moveStep(p, stepId, direction, now) : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  addProjectNote: (projectIdValue, input) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const { project, note } = addNote(p, input, now);
+      const isDecision = note.kind === 'decision';
+      return recordActivity(
+        project,
+        isDecision ? 'decision_recorded' : 'note_added',
+        isDecision ? (isAr ? 'سُجّل قرار' : 'Decision recorded') : isAr ? 'أُضيفت ملاحظة' : 'Note added',
+        now,
+        note.id
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  updateProjectNote: (projectIdValue, noteId, updates) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue
+        ? {
+            ...p,
+            notes: p.notes.map((n) => (n.id === noteId ? { ...n, ...updates, id: n.id, updatedAt: now } : n)),
+            updatedAt: now
+          }
+        : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  deleteProjectNote: (projectIdValue, noteId) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue ? deleteNote(p, noteId, now) : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  convertProjectNoteToStep: (projectIdValue, noteId) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const existing = get().projects.find((p) => p.id === projectIdValue);
+    const note = existing?.notes.find((n) => n.id === noteId);
+    if (!existing || !note || note.convertedToStepId) return;
+
+    const title = note.title?.trim() || note.body.slice(0, 80);
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const { project, step } = addStep(p, { title, description: note.body, phaseId: note.phaseId }, now);
+      const withTrace = markNoteConvertedToStep(project, noteId, step.id, now);
+      return recordActivity(
+        withTrace,
+        'step_added',
+        isAr ? `حُوّلت فكرة إلى خطوة: ${step.title}` : `Idea became a step: ${step.title}`,
+        now,
+        step.id
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  convertProjectNoteToTask: (projectIdValue, noteId) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const existing = get().projects.find((p) => p.id === projectIdValue);
+    const note = existing?.notes.find((n) => n.id === noteId);
+    if (!existing || !note || note.convertedToTaskId) return;
+
+    const task: Task = {
+      id: 't-' + crypto.randomUUID().slice(0, 8),
+      title: note.title?.trim() || note.body.slice(0, 80),
+      notes: note.body,
+      priority: 2,
+      isTopThree: false,
+      status: 'todo',
+      tags: [],
+      subtasks: [],
+      projectId: projectIdValue,
+      createdAt: now,
+      updatedAt: now
+    };
+    const tasks = [...get().tasks, task];
+    NuqtaStorageEngine.saveTasks(tasks);
+    set({ tasks });
+
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const withTrace = markNoteConvertedToTask(p, noteId, task.id, now);
+      return recordActivity(
+        withTrace,
+        'task_linked',
+        isAr ? `حُوّلت فكرة إلى مهمة: ${task.title}` : `Idea became a task: ${task.title}`,
+        now,
+        task.id
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  addProjectResource: (projectIdValue, input) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue ? addResource(p, input, now).project : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  deleteProjectResource: (projectIdValue, resourceId) => {
+    const now = new Date().toISOString();
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue ? deleteResource(p, resourceId, now) : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  linkProjectToGoal: (projectIdValue, goalId) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const goal = get().goals.find((g) => g.id === goalId);
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const next = linkGoal(p, goalId, now);
+      if (next === p) return p;
+      return recordActivity(
+        next,
+        'goal_linked',
+        isAr ? `رُبط بهدف: ${goal?.title ?? goalId}` : `Linked to goal: ${goal?.title ?? goalId}`,
+        now,
+        goalId
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  unlinkProjectFromGoal: (projectIdValue, goalId) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const goal = get().goals.find((g) => g.id === goalId);
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const next = unlinkGoal(p, goalId, now);
+      if (next === p) return p;
+      return recordActivity(
+        next,
+        'goal_unlinked',
+        isAr ? `فُصل عن هدف: ${goal?.title ?? goalId}` : `Unlinked from goal: ${goal?.title ?? goalId}`,
+        now,
+        goalId
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  linkTaskToProject: (taskId, projectIdValue, stepId) => {
+    const now = new Date().toISOString();
+    const isAr = get().profile.language === 'ar';
+    const task = get().tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const tasks = get().tasks.map((t) =>
+      t.id === taskId ? { ...t, projectId: projectIdValue, projectStepId: stepId, updatedAt: now } : t
+    );
+    NuqtaStorageEngine.saveTasks(tasks);
+    set({ tasks });
+
+    const updated = get().projects.map((p) => {
+      if (p.id !== projectIdValue) return p;
+      const next = stepId ? attachTaskToStep(p, stepId, taskId, now) : { ...p, updatedAt: now };
+      return recordActivity(
+        next,
+        'task_linked',
+        isAr ? `رُبطت مهمة: ${task.title}` : `Task linked: ${task.title}`,
+        now,
+        taskId
+      );
+    });
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
+  },
+
+  unlinkTaskFromProject: (taskId) => {
+    const now = new Date().toISOString();
+    const task = get().tasks.find((t) => t.id === taskId);
+    const projectIdValue = task?.projectId;
+    if (!projectIdValue) return;
+
+    const tasks = get().tasks.map((t) =>
+      t.id === taskId ? { ...t, projectId: undefined, projectStepId: undefined, updatedAt: now } : t
+    );
+    NuqtaStorageEngine.saveTasks(tasks);
+    set({ tasks });
+
+    const updated = get().projects.map((p) =>
+      p.id === projectIdValue ? detachTaskFromSteps(p, taskId, now) : p
+    );
+    NuqtaStorageEngine.saveProjects(updated);
+    set({ projects: updated });
   },
 
   // FOCUS ACTIONS

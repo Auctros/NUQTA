@@ -37,6 +37,8 @@ function readSectionForBaseline(section: SyncSectionName): unknown {
       return NuqtaStorageEngine.getHabits();
     case 'goals':
       return NuqtaStorageEngine.getGoals();
+    case 'projects':
+      return NuqtaStorageEngine.getProjects();
     case 'focus_sessions':
       return NuqtaStorageEngine.getFocusSessions();
     case 'health_metrics':

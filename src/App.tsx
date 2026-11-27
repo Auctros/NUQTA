@@ -24,6 +24,7 @@ import { DashboardView } from './components/DashboardView';
 import { TasksView } from './components/TasksView';
 import { HabitsView } from './components/HabitsView';
 import { GoalsView } from './components/GoalsView';
+import { ProjectsView } from './components/ProjectsView';
 import { FocusView } from './components/FocusView';
 import { CalendarView } from './components/CalendarView';
 import { HealthView } from './components/HealthView';
@@ -282,6 +283,7 @@ export default function App() {
     { id: 'tasks', label: isAr ? 'المهام' : 'Tasks', icon: 'check-square' },
     { id: 'habits', label: isAr ? 'العادات' : 'Habits', icon: 'repeat' },
     { id: 'goals', label: isAr ? 'الأهداف' : 'Goals', icon: 'target' },
+    { id: 'projects', label: isAr ? 'المشاريع' : 'Projects', icon: 'blocks' },
     { id: 'focus', label: isAr ? 'التركيز' : 'Focus', icon: 'timer' },
     { id: 'calendar', label: isAr ? 'التقويم' : 'Calendar', icon: 'calendar' },
     { id: 'timeline', label: isAr ? 'الجدول الزمني' : 'Timeline', icon: 'history' }
@@ -753,6 +755,7 @@ export default function App() {
           {activeNavTab === 'walking' && <WalkingView />}
           {activeNavTab === 'courses' && <CoursesView isAr={isAr} />}
           {activeNavTab === 'goals' && <GoalsView />}
+          {activeNavTab === 'projects' && <ProjectsView />}
           {activeNavTab === 'focus' && <FocusView />}
           {activeNavTab === 'calendar' && <CalendarView />}
           {activeNavTab === 'finance' && <FinanceView />}

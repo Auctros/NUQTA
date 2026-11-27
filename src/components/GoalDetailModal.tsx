@@ -29,8 +29,13 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
     createTask,
     createHabit,
     archiveGoal,
-    restoreGoal
+    restoreGoal,
+    projects
   } = useNuqtaStore();
+
+  // A goal's projects are derived, never stored on the goal: the project owns the
+  // link, so the reverse index is computed here. Two stored copies would drift.
+  const contributingProjects = projects.filter((p) => p.goalIds.includes(goal.id));
 
   const isAr = profile.language === 'ar';
   const [activeTab, setActiveTab] = useState<'krs' | 'milestones' | 'links' | 'timeline'>('krs');
@@ -770,6 +775,47 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                 ℹ️ {isAr
                   ? 'إلغاء ربط أي نشاط يزيل صلته الإحصائية بالهدف فقط، ولا يحذف المهمة أو العادة أو بياناتها الأصلية إطلاقاً.'
                   : 'Unlinking an activity safely removes its statistical reference without deleting original tasks, habits, books, or art projects.'}
+              </div>
+
+              {/* 0. Contributing Projects */}
+              <div className="space-y-3 panel p-4 border border-[var(--border-subtle)] bg-[var(--surface-raised)] rounded-xl">
+                <div>
+                  <h4 className="font-bold text-[var(--text-primary)] text-sm flex items-center gap-2">
+                    <NuqtaIcon name="blocks" className="w-3.5 h-3.5" />
+                    <span>{isAr ? 'المشاريع المساهمة' : 'Contributing Projects'}</span>
+                    <span className="text-xs text-muted font-mono">({contributingProjects.length})</span>
+                  </h4>
+                  <p className="text-[11px] text-muted">
+                    {isAr
+                      ? 'أعمال محدودة المدة تخدم هذا الهدف. الارتباط يُدار من المشروع نفسه.'
+                      : 'Time-bound bodies of work serving this goal. The link is owned by the project.'}
+                  </p>
+                </div>
+                {contributingProjects.length === 0 ? (
+                  <span className="text-xs text-muted block italic py-1">
+                    {isAr ? 'لا توجد مشاريع مرتبطة بهذا الهدف بعد.' : 'No projects linked to this goal yet.'}
+                  </span>
+                ) : (
+                  <ul className="divide-y divide-[var(--border-subtle)]">
+                    {contributingProjects.map((p) => (
+                      <li key={p.id} className="py-2 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs text-[var(--text-primary)] truncate">{p.title}</p>
+                          <span className="text-[10px] text-muted">
+                            {p.steps.length > 0
+                              ? `${p.steps.filter((s) => s.status === 'done').length}/${p.steps.length} ${isAr ? 'خطوة' : 'steps'}`
+                              : isAr
+                                ? 'بلا خطوات بعد'
+                                : 'No steps yet'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--surface-chip)] text-muted border border-[var(--border-subtle)] shrink-0">
+                          {p.status}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {/* 1. Linked Tasks */}

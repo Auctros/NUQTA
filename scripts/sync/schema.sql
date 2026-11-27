@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS changes (
   device_id TEXT NOT NULL,
   client_change_id TEXT NOT NULL,
   store_name TEXT NOT NULL CHECK (store_name IN (
-    'tasks', 'habits', 'goals', 'focus_sessions', 'health_metrics',
+    'tasks', 'habits', 'goals', 'projects', 'focus_sessions', 'health_metrics',
     'expenses', 'savings_goals', 'journal_entries', 'profile',
     'sunday_reviews', 'history_audit'
   )),
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS tombstones (
   tombstone_id INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id TEXT NOT NULL,
   store_name TEXT NOT NULL CHECK (store_name IN (
-    'tasks', 'habits', 'goals', 'focus_sessions', 'health_metrics',
+    'tasks', 'habits', 'goals', 'projects', 'focus_sessions', 'health_metrics',
     'expenses', 'savings_goals', 'journal_entries', 'profile',
     'sunday_reviews', 'history_audit'
   )),
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS server_meta (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-INSERT OR IGNORE INTO server_meta (key, value) VALUES ('schema_version', '2');
+INSERT OR IGNORE INTO server_meta (key, value) VALUES ('schema_version', '3');
 INSERT OR IGNORE INTO server_meta (key, value) VALUES ('created_at', datetime('now'));
 -- Workspace generation. Bumped by a global reset; a device that presents an older
 -- generation is told to adopt the new one instead of uploading its stale data.

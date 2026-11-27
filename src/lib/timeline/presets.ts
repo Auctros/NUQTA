@@ -81,6 +81,7 @@ export function presetById(id: TimelinePresetId): TimelinePreset {
 /** Every domain the timeline can draw, in lane order. */
 export const ALL_TIMELINE_DOMAINS: readonly TimelineDomain[] = [
   'goals',
+  'projects',
   'tasks',
   'habits',
   'focus',

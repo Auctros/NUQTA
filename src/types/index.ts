@@ -1,6 +1,7 @@
 import type { PrebuiltExercise } from '../lib/exerciseTypes';
 
 export type { PrebuiltExercise } from '../lib/exerciseTypes';
+export * from './projects';
 
 export type PriorityLevel = 1 | 2 | 3 | 4; // 1: Urgent & Important, 2: Important, 3: Urgent, 4: Neither (Eisenhower)
 
@@ -50,6 +51,16 @@ export interface Task {
   subtasks: Subtask[];
   blockedBy?: string[]; // IDs of tasks this depends on
   linkedGoalId?: string;
+  /**
+   * The project this task executes for, if any.
+   *
+   * A task lives in exactly one list (`nuqta_tasks_v1`) and is *referenced* from a
+   * project; this field is the reference, not a copy. `projectStepId` optionally
+   * names the step the task executes, which is how step and phase progress are
+   * computed without duplicating the task anywhere.
+   */
+  projectId?: string;
+  projectStepId?: string;
   energyLevelRequired?: 'low' | 'medium' | 'high';
   completedAt?: string;
   isArchived?: boolean;
@@ -723,6 +734,7 @@ export type UniversalHistoryDomain =
   | 'drawing'
   | 'walking'
   | 'goals'
+  | 'projects'
   | 'focus'
   | 'health'
   | 'finance'
@@ -749,7 +761,19 @@ export interface UniversalHistoryItem {
   title: string;
   description?: string;
   entityId: string;
-  entityType: 'task' | 'habit' | 'book' | 'workout_routine' | 'art_project' | 'goal' | 'focus_session' | 'journal' | 'finance' | 'quran_session' | 'walk_session';
+  entityType:
+    | 'task'
+    | 'habit'
+    | 'book'
+    | 'workout_routine'
+    | 'art_project'
+    | 'goal'
+    | 'project'
+    | 'focus_session'
+    | 'journal'
+    | 'finance'
+    | 'quran_session'
+    | 'walk_session';
   badge?: string;
   metricsSummary?: string;
   iconName?: string;

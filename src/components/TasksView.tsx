@@ -89,6 +89,7 @@ export const TasksView: React.FC = () => {
     smartBatchReschedule,
     profile,
     goals,
+    projects,
     archiveTask,
     restoreTask,
     setActiveNavTab,
@@ -131,6 +132,9 @@ export const TasksView: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest]);
   const [searchQuery, setSearchQuery] = usePersistedWorkflowState('tasks', 'search', '', isString);
+  // '' means "every task". A project filter is a working position, not a destination,
+  // so it is remembered per section like the other filters and kept out of the URL.
+  const [projectFilter, setProjectFilter] = usePersistedWorkflowState('tasks', 'project', '', isString);
   /*
    * The default view is `today`, not "everything".
    *
@@ -165,6 +169,7 @@ export const TasksView: React.FC = () => {
   const [formIsTopThree, setFormIsTopThree] = useState(false);
   const [formTags, setFormTags] = useState('');
   const [formLinkedGoalId, setFormLinkedGoalId] = useState<string>('');
+  const [formProjectId, setFormProjectId] = useState<string>('');
   const [formRepeat, setFormRepeat] = useState<'none' | RecurrenceFrequency>('none');
   const [formRepeatDays, setFormRepeatDays] = useState<number[]>([]);
   // When editing a recurring task: rewrite only this occurrence, or the whole series.
@@ -194,6 +199,7 @@ export const TasksView: React.FC = () => {
     setFormIsTopThree(false);
     setFormTags('');
     setFormLinkedGoalId('');
+    setFormProjectId('');
     setFormRepeat('none');
     setFormRepeatDays([]);
     setIsModalOpen(true);
@@ -210,6 +216,7 @@ export const TasksView: React.FC = () => {
     setFormIsTopThree(task.isTopThree);
     setFormTags((task.tags || []).join(', '));
     setFormLinkedGoalId(task.linkedGoalId || '');
+    setFormProjectId(task.projectId || '');
     const seeded = ruleToForm(task.recurrence);
     setFormRepeat(seeded.repeat);
     setFormRepeatDays(seeded.days);
@@ -232,7 +239,11 @@ export const TasksView: React.FC = () => {
       estimatedMinutes: formMinutes,
       isTopThree: formIsTopThree,
       tags: tagsArray,
-      linkedGoalId: formLinkedGoalId || undefined
+      linkedGoalId: formLinkedGoalId || undefined,
+      projectId: formProjectId || undefined,
+      // Detaching from the project also drops the step pointer: a step only means
+      // something inside its project.
+      ...(formProjectId ? {} : { projectStepId: undefined })
     };
 
     if (editingTask) {
@@ -257,6 +268,7 @@ export const TasksView: React.FC = () => {
   const viewTasks = selectTasksForView(tasks, taskView, todayStr);
   const viewCounts = countTasksForViews(tasks, todayStr);
   const filtered = viewTasks.filter((t) => {
+    if (projectFilter && t.projectId !== projectFilter) return false;
     if (!searchQuery.trim()) return true;
     const matchText = `${t.title} ${t.notes || ''} ${(t.tags || []).join(' ')}`.toLowerCase();
     return matchText.includes(searchQuery.toLowerCase());
@@ -416,6 +428,22 @@ export const TasksView: React.FC = () => {
           <span>{isAr ? 'الذاكرة والأرشيف' : 'Archive'}</span>
         </button>
 
+        {projects.length > 0 && (
+          <NuqtaSelect
+            style={{ width: 'auto' }}
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            aria-label={isAr ? 'تصفية حسب المشروع' : 'Filter by project'}
+          >
+            <option value="">{isAr ? 'كل المشاريع' : 'All projects'}</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </NuqtaSelect>
+        )}
+
         <NuqtaSelect style={{ width: 'auto' }} value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
           <option value="due">{isAr ? 'حسب التاريخ' : 'Sort by Due'}</option>
           <option value="priority">{isAr ? 'حسب الأولوية' : 'Sort by Priority'}</option>
@@ -532,6 +560,17 @@ export const TasksView: React.FC = () => {
                       </div>
 
                       <div className="task-meta">
+                        {task.projectId && (() => {
+                          const linkedProject = projects.find((p) => p.id === task.projectId);
+                          return linkedProject ? (
+                            <span
+                              className="tag text-[10px] bg-[var(--tone-info-wash)] text-[var(--tone-info)] border border-[var(--tone-info-line)] truncate max-w-[140px] inline-flex items-center gap-1"
+                              title={linkedProject.title}
+                            >
+                              <NuqtaIcon name="blocks" className="w-3 h-3" /> {linkedProject.title}
+                            </span>
+                          ) : null;
+                        })()}
                         {task.linkedGoalId && (() => {
                           const linkedG = goals.find((g) => g.id === task.linkedGoalId);
                           return linkedG ? (
@@ -924,6 +963,20 @@ export const TasksView: React.FC = () => {
                   ))}
                 </NuqtaSelect>
               </div>
+
+              {projects.length > 0 && (
+                <div className="field">
+                  <label>{isAr ? 'المشروع' : 'Project'}</label>
+                  <NuqtaSelect value={formProjectId} onChange={(e) => setFormProjectId(e.target.value)}>
+                    <option value="">{isAr ? 'بدون مشروع' : 'No project'}</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title}
+                      </option>
+                    ))}
+                  </NuqtaSelect>
+                </div>
+              )}
 
               <div className="field">
                 <label>{isAr ? 'الوسوم (مفصولة بفواصل)' : 'Tags (comma separated)'}</label>

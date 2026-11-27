@@ -6,16 +6,17 @@
 
 const DB_NAME = 'nuqta_local_db';
 /**
- * v3 adds `notifications`; v4 adds `courses`. Bumping the version is what runs
- * `onupgradeneeded` so an existing install gains the new store instead of silently
- * mirroring nothing.
+ * v3 adds `notifications`; v4 adds `courses`; v5 adds `projects`. Bumping the version is
+ * what runs `onupgradeneeded` so an existing install gains the new store instead of
+ * silently mirroring nothing.
  */
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 export const STORES = {
   TASKS: 'tasks',
   HABITS: 'habits',
   GOALS: 'goals',
+  PROJECTS: 'projects',
   FOCUS: 'focus_sessions',
   HEALTH: 'health_metrics',
   EXPENSES: 'expenses',
@@ -64,6 +65,10 @@ export function openNuqtaDB(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(STORES.GOALS)) {
         db.createObjectStore(STORES.GOALS, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(STORES.PROJECTS)) {
+        db.createObjectStore(STORES.PROJECTS, { keyPath: 'id' });
       }
 
       if (!db.objectStoreNames.contains(STORES.FOCUS)) {

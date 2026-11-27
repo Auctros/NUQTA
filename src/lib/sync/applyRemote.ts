@@ -220,6 +220,8 @@ function readSection(section: SyncSectionName): unknown {
       return NuqtaStorageEngine.getHabits();
     case 'goals':
       return NuqtaStorageEngine.getGoals();
+    case 'projects':
+      return NuqtaStorageEngine.getProjects();
     case 'focus_sessions':
       return NuqtaStorageEngine.getFocusSessions();
     case 'health_metrics':
@@ -249,6 +251,8 @@ function writeSection(section: SyncSectionName, value: unknown): boolean {
       return NuqtaStorageEngine.saveHabits(value as never);
     case 'goals':
       return NuqtaStorageEngine.saveGoals(value as never);
+    case 'projects':
+      return NuqtaStorageEngine.saveProjects(value as never);
     case 'focus_sessions':
       return NuqtaStorageEngine.saveFocusSessions(value as never);
     case 'health_metrics':

@@ -18,13 +18,15 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { WebSocket } from 'ws';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createSyncServer } from '../scripts/sync-server.mjs';
 import { createDistServer } from '../scripts/serve-dist.mjs';
 import { resolveDbPath } from '../scripts/sync/config.mjs';
+
+const SCHEMA_PATH = join(process.cwd(), 'scripts/sync/schema.sql');
 
 const TEST_ORIGIN = 'https://nuqta-host.tailnet.ts.net';
 const TEST_TOKEN = 'test-sync-secret-token-32bytes';
@@ -239,8 +241,9 @@ describe('NUQTA Sync Server (Stage 1)', () => {
       const meta = server.db
         .prepare("SELECT value FROM server_meta WHERE key = 'schema_version'")
         .get();
-      // 2 adds the authoritative-tombstone and workspace-generation protocol.
-      expect(meta.value).toBe('2');
+      // 2 adds the authoritative-tombstone and workspace-generation protocol;
+      // 3 adds the `projects` store.
+      expect(meta.value).toBe('3');
 
       const generation = server.db
         .prepare("SELECT value FROM server_meta WHERE key = 'workspace_generation'")
@@ -251,6 +254,122 @@ describe('NUQTA Sync Server (Stage 1)', () => {
     it('rejects database paths located inside dist/ or public/', () => {
       expect(() => resolveDbPath('dist/sync.sqlite')).toThrow(/outside dist\/ and public\//);
       expect(() => resolveDbPath('public/sync.sqlite')).toThrow(/outside dist\/ and public\//);
+    });
+
+    it('migrates a v2 database in place, keeping its change log and tombstones', async () => {
+      // A v2 file has no `projects` in the store_name CHECK, and SQLite cannot alter a
+      // CHECK in place. Build a real v2 database rather than trusting the SQL by eye.
+      // Imported through a variable so TypeScript does not need types for the driver:
+      // it ships none, and this is the only place a test touches SQLite directly.
+      const driver = 'better-sqlite3';
+      const Database = (await import(driver)).default as new (path: string) => any;
+      const v2Schema = readFileSync(SCHEMA_PATH, 'utf8')
+        .replace(/,\s*'projects'/g, '')
+        .replace(/'projects', /g, '')
+        .replace(/VALUES \('schema_version', '3'\)/, "VALUES ('schema_version', '2')");
+
+      const v2 = new Database(temp.dbPath);
+      v2.pragma('journal_mode = WAL');
+      v2.exec(v2Schema);
+      v2.prepare(
+        "INSERT INTO devices (device_id, auth_subject, auth_method) VALUES ('dev-old','sub','token')"
+      ).run();
+      v2.prepare(
+        `INSERT INTO changes (device_id, client_change_id, store_name, record_id, operation, payload, client_timestamp)
+         VALUES ('dev-old','c1','tasks','t1','create','{"title":"kept"}','2026-01-01T00:00:00Z')`
+      ).run();
+      v2.prepare(
+        `INSERT INTO tombstones (device_id, store_name, record_id, server_change_id, deleted_at, expires_at)
+         VALUES ('dev-old','goals','g1',1,'2026-01-01T00:00:00Z','2099-01-01T00:00:00Z')`
+      ).run();
+      // The old CHECK must genuinely reject project rows, or this test proves nothing.
+      expect(() =>
+        v2
+          .prepare(
+            `INSERT INTO changes (device_id, client_change_id, store_name, record_id, operation, payload, client_timestamp)
+             VALUES ('dev-old','c2','projects','p1','create','{}','2026-01-01T00:00:00Z')`
+          )
+          .run()
+      ).toThrow();
+      v2.close();
+
+      server = await createSyncServer({
+        port: 0,
+        dbPath: temp.dbPath,
+        allowedOrigins: [TEST_ORIGIN],
+        authToken: TEST_TOKEN,
+      });
+
+      const version = server.db
+        .prepare("SELECT value FROM server_meta WHERE key = 'schema_version'")
+        .get();
+      expect(version.value).toBe('3');
+
+      // Existing history survives the table rebuild.
+      const changes = server.db.prepare('SELECT * FROM changes').all();
+      expect(changes).toHaveLength(1);
+      expect(JSON.parse(changes[0].payload).title).toBe('kept');
+      expect(server.db.prepare('SELECT COUNT(*) c FROM tombstones').get().c).toBe(1);
+
+      // Project rows are accepted, and the FK constraint survived the rebuild.
+      expect(() =>
+        server.db
+          .prepare(
+            `INSERT INTO changes (device_id, client_change_id, store_name, record_id, operation, payload, client_timestamp)
+             VALUES ('dev-old','c3','projects','p1','create','{}','2026-01-01T00:00:00Z')`
+          )
+          .run()
+      ).not.toThrow();
+      expect(() =>
+        server.db
+          .prepare(
+            `INSERT INTO changes (device_id, client_change_id, store_name, record_id, operation, payload, client_timestamp)
+             VALUES ('ghost-device','c4','tasks','t2','create','{}','2026-01-01T00:00:00Z')`
+          )
+          .run()
+      ).toThrow();
+      expect(server.db.pragma('foreign_key_check')).toEqual([]);
+      expect(server.db.pragma('foreign_keys', { simple: true })).toBe(1);
+
+      const indexes = server.db
+        .prepare("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
+        .all()
+        .map((r: any) => r.name);
+      expect(indexes).toEqual(
+        expect.arrayContaining([
+          'idx_changes_device_client',
+          'idx_changes_store_seq',
+          'idx_changes_store_record',
+          'idx_tombstones_expires',
+        ])
+      );
+    });
+
+    it('treats the migration as a no-op when the database is already v3', async () => {
+      server = await createSyncServer({
+        port: 0,
+        dbPath: temp.dbPath,
+        allowedOrigins: [TEST_ORIGIN],
+        authToken: TEST_TOKEN,
+      });
+      await server.close();
+      server = null as unknown as SyncServer;
+
+      // Re-opening must not rebuild the tables or duplicate anything.
+      server = await createSyncServer({
+        port: 0,
+        dbPath: temp.dbPath,
+        allowedOrigins: [TEST_ORIGIN],
+        authToken: TEST_TOKEN,
+      });
+      const version = server.db
+        .prepare("SELECT value FROM server_meta WHERE key = 'schema_version'")
+        .get();
+      expect(version.value).toBe('3');
+      const leftovers = server.db
+        .prepare("SELECT name FROM sqlite_master WHERE name LIKE '%_v2'")
+        .all();
+      expect(leftovers).toEqual([]);
     });
   });
 
@@ -359,6 +478,74 @@ describe('NUQTA Sync Server (Stage 1)', () => {
       const errResp = await inbox.next();
       expect(errResp.type).toBe('error');
       expect(errResp.error).toBe('batch_rejected');
+
+      ws.close();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 3b. Projects as a synchronised store
+  // -------------------------------------------------------------------------
+
+  describe('Projects store', () => {
+    it('accepts project changes and records tombstones for them', async () => {
+      server = await createSyncServer({
+        port: 0,
+        dbPath: temp.dbPath,
+        allowedOrigins: [TEST_ORIGIN],
+        authToken: TEST_TOKEN,
+      });
+
+      const deviceId = randomUUID();
+      const { ws, inbox } = await openAuthenticatedClient(server.port, deviceId);
+
+      const create = makeChange(deviceId, 'projects', 'prj-1', 'create', {
+        title: 'Launch',
+        status: 'active'
+      });
+      const remove = makeChange(deviceId, 'projects', 'prj-1', 'delete', { deleted: true });
+
+      ws.send(JSON.stringify({ type: 'sync', clientCursor: 0, changes: [create, remove] }));
+      const ack = await inbox.next();
+
+      expect(ack.type).toBe('sync_ack');
+      expect(ack.acknowledged.map((a: { status: string }) => a.status)).toEqual(['applied', 'applied']);
+
+      const stored = server.db
+        .prepare("SELECT payload FROM changes WHERE store_name = 'projects' ORDER BY server_change_id")
+        .all() as Array<{ payload: string }>;
+      expect(stored).toHaveLength(2);
+      expect(JSON.parse(stored[0].payload).title).toBe('Launch');
+
+      const tombstone = server.db
+        .prepare("SELECT * FROM tombstones WHERE store_name = 'projects' AND record_id = 'prj-1'")
+        .get();
+      expect(tombstone).toBeDefined();
+
+      ws.close();
+    });
+
+    it('still rejects a store that is not part of the sync contract', async () => {
+      server = await createSyncServer({
+        port: 0,
+        dbPath: temp.dbPath,
+        allowedOrigins: [TEST_ORIGIN],
+        authToken: TEST_TOKEN,
+      });
+
+      const deviceId = randomUUID();
+      const { ws, inbox } = await openAuthenticatedClient(server.port, deviceId);
+
+      ws.send(
+        JSON.stringify({
+          type: 'sync',
+          clientCursor: 0,
+          changes: [makeChange(deviceId, 'invoices', 'inv-1', 'create', { total: 10 })]
+        })
+      );
+      const response = await inbox.next();
+      expect(response.type).toBe('error');
+      expect(response.error).toBe('batch_rejected');
 
       ws.close();
     });

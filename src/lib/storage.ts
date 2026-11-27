@@ -2,6 +2,7 @@ import {
   Task,
   Habit,
   Goal,
+  Project,
   FocusSession,
   HealthMetric,
   ExpenseRecord,
@@ -36,6 +37,16 @@ const STORAGE_KEYS = {
   TASKS: 'nuqta_tasks_v1',
   HABITS: 'nuqta_habits_v1',
   GOALS: 'nuqta_goals_v1',
+  /**
+   * Projects, phases, steps, notes, resources and activity.
+   *
+   * Projects are a synchronized section like goals, so a project created on one device
+   * appears on the other. What is NOT stored here: tasks. A task linked to a project
+   * keeps living in `nuqta_tasks_v1` and the project references it by id — storing a
+   * task copy inside the project would create two records to keep in step, and the sync
+   * layer would then have two independently-editable versions of one commitment.
+   */
+  PROJECTS: 'nuqta_projects_v1',
   FOCUS: 'nuqta_focus_sessions_v1',
   HEALTH: 'nuqta_health_v1',
   EXPENSES: 'nuqta_expenses_v1',
@@ -74,6 +85,7 @@ export type SyncSectionName =
   | 'tasks'
   | 'habits'
   | 'goals'
+  | 'projects'
   | 'focus_sessions'
   | 'health_metrics'
   | 'expenses'
@@ -87,6 +99,7 @@ export const SYNC_SECTION_KEYS: Record<SyncSectionName, string> = {
   tasks: STORAGE_KEYS.TASKS,
   habits: STORAGE_KEYS.HABITS,
   goals: STORAGE_KEYS.GOALS,
+  projects: STORAGE_KEYS.PROJECTS,
   focus_sessions: STORAGE_KEYS.FOCUS,
   health_metrics: STORAGE_KEYS.HEALTH,
   expenses: STORAGE_KEYS.EXPENSES,
@@ -453,6 +466,16 @@ export class NuqtaStorageEngine {
     return persist(STORAGE_KEYS.GOALS, goals, () => NuqtaIndexedDB.replaceAll(STORES.GOALS, goals));
   }
 
+  // Projects (phases, steps, notes, resources and activity live inside the record)
+  static getProjects(): Project[] {
+    return readValue(STORAGE_KEYS.PROJECTS, asList<Project>, isRecordList);
+  }
+  static saveProjects(projects: Project[]): boolean {
+    return persist(STORAGE_KEYS.PROJECTS, projects, () =>
+      NuqtaIndexedDB.replaceAll(STORES.PROJECTS, projects)
+    );
+  }
+
   // Focus sessions
   static getFocusSessions(): FocusSession[] {
     return readValue(STORAGE_KEYS.FOCUS, asList<FocusSession>, isRecordList);
@@ -563,6 +586,7 @@ export class NuqtaStorageEngine {
       tasks: this.getTasks(),
       habits: this.getHabits(),
       goals: this.getGoals(),
+      projects: this.getProjects(),
       focusSessions: this.getFocusSessions(),
       healthMetrics: this.getHealthMetrics(),
       expenses: this.getExpenses(),
@@ -616,6 +640,7 @@ export class NuqtaStorageEngine {
       [STORAGE_KEYS.TASKS, data.tasks],
       [STORAGE_KEYS.HABITS, data.habits],
       [STORAGE_KEYS.GOALS, data.goals],
+      [STORAGE_KEYS.PROJECTS, data.projects],
       [STORAGE_KEYS.FOCUS, data.focusSessions],
       [STORAGE_KEYS.HEALTH, data.healthMetrics],
       [STORAGE_KEYS.EXPENSES, data.expenses],
@@ -660,6 +685,7 @@ export class NuqtaStorageEngine {
       NuqtaIndexedDB.replaceAll(STORES.TASKS, data.tasks),
       NuqtaIndexedDB.replaceAll(STORES.HABITS, data.habits),
       NuqtaIndexedDB.replaceAll(STORES.GOALS, data.goals),
+      NuqtaIndexedDB.replaceAll(STORES.PROJECTS, data.projects),
       NuqtaIndexedDB.replaceAll(STORES.FOCUS, data.focusSessions),
       NuqtaIndexedDB.replaceAll(STORES.HEALTH, Object.values(data.healthMetrics)),
       NuqtaIndexedDB.replaceAll(STORES.EXPENSES, data.expenses),
@@ -707,11 +733,12 @@ export class NuqtaStorageEngine {
     const metaRows = await NuqtaIndexedDB.getAll<StorageMeta & { id: string }>(STORES.META);
     if (metaRows.length === 0) return false;
 
-    const [tasks, habits, goals, focusSessions, health, expenses, savingsGoals, journalEntries, profiles, sundayReviews, historyAuditLogs] =
+    const [tasks, habits, goals, projects, focusSessions, health, expenses, savingsGoals, journalEntries, profiles, sundayReviews, historyAuditLogs] =
       await Promise.all([
         NuqtaIndexedDB.getAll<Task>(STORES.TASKS),
         NuqtaIndexedDB.getAll<Habit>(STORES.HABITS),
         NuqtaIndexedDB.getAll<Goal>(STORES.GOALS),
+        NuqtaIndexedDB.getAll<Project>(STORES.PROJECTS),
         NuqtaIndexedDB.getAll<FocusSession>(STORES.FOCUS),
         NuqtaIndexedDB.getAll<HealthMetric>(STORES.HEALTH),
         NuqtaIndexedDB.getAll<ExpenseRecord>(STORES.EXPENSES),
@@ -726,6 +753,7 @@ export class NuqtaStorageEngine {
       tasks.length > 0 ||
       habits.length > 0 ||
       goals.length > 0 ||
+      projects.length > 0 ||
       focusSessions.length > 0 ||
       health.length > 0 ||
       expenses.length > 0 ||
@@ -750,6 +778,7 @@ export class NuqtaStorageEngine {
       tasks,
       habits,
       goals,
+      projects,
       focusSessions,
       healthMetrics,
       expenses,

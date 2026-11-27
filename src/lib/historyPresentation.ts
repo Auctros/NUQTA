@@ -86,6 +86,14 @@ const DOMAIN_META: Record<UniversalHistoryDomain, DomainMeta> = {
     toneWash: 'var(--tone-warning-wash)',
     toneLine: 'var(--tone-warning-line)'
   },
+  projects: {
+    ar: 'المشاريع',
+    en: 'Projects',
+    icon: 'grid',
+    tone: 'var(--tone-info)',
+    toneWash: 'var(--tone-info-wash)',
+    toneLine: 'var(--tone-info-line)'
+  },
   focus: {
     ar: 'التركيز',
     en: 'Focus',
@@ -142,6 +150,7 @@ export const TIMELINE_DOMAINS: readonly UniversalHistoryDomain[] = [
   'tasks',
   'habits',
   'goals',
+  'projects',
   'focus',
   'quran',
   'reading',

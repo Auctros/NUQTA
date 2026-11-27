@@ -28,6 +28,77 @@ export class BatchValidationError extends Error {
   }
 }
 
+/**
+ * v3 adds the `projects` store.
+ *
+ * `store_name` is constrained by a CHECK, and SQLite cannot alter one in place, so an
+ * existing database would keep rejecting project rows even after the schema file
+ * changed. The two affected tables are therefore rebuilt using SQLite's documented
+ * procedure: foreign keys off, `legacy_alter_table` on so the rename does NOT rewrite
+ * the `processed_changes` foreign key, copy, drop, recreate, copy back, then verify
+ * with `foreign_key_check` before committing.
+ *
+ * The old indexes must be dropped explicitly: `CREATE INDEX IF NOT EXISTS` in the
+ * schema would otherwise see the surviving index names and skip, leaving the new
+ * tables unindexed once the renamed tables are dropped.
+ *
+ * Runs only when the recorded version is older, so a fresh database never pays for it.
+ */
+function migrateToV3(db) {
+  const row = db.prepare("SELECT value FROM server_meta WHERE key = 'schema_version'").get();
+  if (row && Number(row.value) >= 3) return;
+
+  const schemaSql = readFileSync(SCHEMA_PATH, 'utf8');
+
+  db.pragma('foreign_keys = OFF');
+  db.pragma('legacy_alter_table = ON');
+  try {
+    const tx = db.transaction(() => {
+      db.exec(`
+        ALTER TABLE changes RENAME TO changes_v2;
+        ALTER TABLE tombstones RENAME TO tombstones_v2;
+
+        DROP INDEX IF EXISTS idx_changes_device_client;
+        DROP INDEX IF EXISTS idx_changes_store_seq;
+        DROP INDEX IF EXISTS idx_changes_store_record;
+        DROP INDEX IF EXISTS idx_tombstones_expires;
+      `);
+      db.exec(schemaSql);
+      db.exec(`
+        INSERT INTO changes (server_change_id, device_id, client_change_id, store_name,
+                             record_id, operation, payload, client_timestamp,
+                             base_version, created_at)
+        SELECT server_change_id, device_id, client_change_id, store_name,
+               record_id, operation, payload, client_timestamp,
+               base_version, created_at
+        FROM changes_v2;
+
+        INSERT INTO tombstones (tombstone_id, device_id, store_name, record_id,
+                                server_change_id, deleted_at, expires_at)
+        SELECT tombstone_id, device_id, store_name, record_id,
+               server_change_id, deleted_at, expires_at
+        FROM tombstones_v2;
+
+        DROP TABLE changes_v2;
+        DROP TABLE tombstones_v2;
+
+        INSERT INTO server_meta (key, value, updated_at)
+        VALUES ('schema_version', '3', datetime('now'))
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now');
+      `);
+
+      const violations = db.pragma('foreign_key_check');
+      if (Array.isArray(violations) && violations.length > 0) {
+        throw new Error('sync schema migration left foreign key violations');
+      }
+    });
+    tx();
+  } finally {
+    db.pragma('legacy_alter_table = OFF');
+    db.pragma('foreign_keys = ON');
+  }
+}
+
 export function openSyncDatabase(dbPath, schemaPath = SCHEMA_PATH) {
   if (dbPath !== ':memory:') {
     mkdirSync(dirname(dbPath), { recursive: true });
@@ -41,6 +112,7 @@ export function openSyncDatabase(dbPath, schemaPath = SCHEMA_PATH) {
 
   const schemaSql = readFileSync(schemaPath, 'utf8');
   db.exec(schemaSql);
+  migrateToV3(db);
 
   return db;
 }

@@ -22,6 +22,7 @@ import type {
   Task,
   Habit,
   Goal,
+  Project,
   FocusSession,
   JournalEntry,
   HealthMetric
@@ -36,6 +37,8 @@ export interface TimelineSources {
   tasks: Task[];
   habits: Habit[];
   goals: Goal[];
+  /** Optional: a caller that has no projects simply draws no project lane. */
+  projects?: Project[];
   focusSessions: FocusSession[];
   journalEntries: JournalEntry[];
   healthMetrics: Record<string, HealthMetric>;
@@ -116,6 +119,8 @@ export function buildTimelineDataset(sources: TimelineSources, options: Timeline
     walk: isAr ? 'مشية' : 'Walk',
     art: isAr ? 'عمل فني' : 'Artwork',
     project: isAr ? 'مشروع فني' : 'Art project',
+    proj: isAr ? 'مشروع' : 'Project',
+    phase: isAr ? 'مرحلة' : 'Phase',
     unknownChannel: isAr ? 'غير معروف' : 'Unknown'
   };
 
@@ -248,6 +253,71 @@ export function buildTimelineDataset(sources: TimelineSources, options: Timeline
         entityId: g.id,
         source: 'goals',
         status: m.isCompleted ? L.completed : undefined
+      });
+    }
+  }
+
+  // ── Projects ─────────────────────────────────────────────────────────────
+  // A project spans a window, so it is a range, never a point. Phases are drawn as
+  // their own ranges inside that window. Anything undated is simply skipped: the
+  // timeline never guesses a day the record does not name.
+  for (const project of sources.projects ?? []) {
+    const from = project.startDate && isDateKey(project.startDate) ? project.startDate : null;
+    const to = project.targetDate && isDateKey(project.targetDate) ? project.targetDate : null;
+
+    if (from || to) {
+      const start = dayStart(from ?? to!);
+      const end = dayEnd(to ?? from!);
+      if (start && end) {
+        const done = project.steps.filter((s) => s.status === 'done').length;
+        const total = project.steps.length;
+        push({
+          id: `projects:${project.id}:range`,
+          domain: 'projects',
+          reality: 'planned',
+          kind: 'range',
+          title: project.title,
+          subtitle: L.proj,
+          start,
+          end,
+          allDay: true,
+          entityId: project.id,
+          source: 'projects',
+          status: project.status,
+          progress: total ? done / total : undefined,
+          facts: [
+            { label: isAr ? 'الحالة' : 'Status', value: project.status },
+            ...(total ? [{ label: isAr ? 'الخطوات' : 'Steps', value: `${done}/${total}` }] : []),
+            ...(project.phases.length
+              ? [{ label: isAr ? 'المراحل' : 'Phases', value: String(project.phases.length) }]
+              : [])
+          ]
+        });
+      }
+    }
+
+    for (const phase of project.phases ?? []) {
+      const pFrom = phase.startDate && isDateKey(phase.startDate) ? phase.startDate : null;
+      const pTo = phase.targetDate && isDateKey(phase.targetDate) ? phase.targetDate : null;
+      if (!pFrom && !pTo) continue;
+      const start = dayStart(pFrom ?? pTo!);
+      const end = dayEnd(pTo ?? pFrom!);
+      if (!start || !end) continue;
+      push({
+        id: `projects:${project.id}:phase:${phase.id}`,
+        domain: 'projects',
+        // A phase with a completion stamp is something that happened; otherwise it is
+        // still a plan.
+        reality: phase.completedAt ? 'actual' : 'planned',
+        kind: 'range',
+        title: phase.title,
+        subtitle: `${L.phase} · ${project.title}`,
+        start,
+        end,
+        allDay: true,
+        entityId: project.id,
+        source: 'projects',
+        status: phase.completedAt ? L.completed : undefined
       });
     }
   }
@@ -537,6 +607,7 @@ function fallbackRule(habit: Habit) {
 
 const LANE_ORDER: TimelineDomain[] = [
   'goals',
+  'projects',
   'tasks',
   'habits',
   'focus',
@@ -551,6 +622,7 @@ const LANE_ORDER: TimelineDomain[] = [
 
 const LANE_LABELS: Record<TimelineDomain, { ar: string; en: string }> = {
   goals: { ar: 'الأهداف والمحطات', en: 'Goals & milestones' },
+  projects: { ar: 'المشاريع ومراحلها', en: 'Projects & phases' },
   tasks: { ar: 'المهام', en: 'Tasks' },
   habits: { ar: 'العادات', en: 'Habits' },
   focus: { ar: 'جلسات التركيز', en: 'Focus sessions' },
