@@ -1,8 +1,11 @@
 import { localDateKey, parseDateKey, addDaysToKey } from '../lib/dateKey';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { usePersistedViewTab } from '../lib/useNavigation';
-import { BookItem, BookCategory } from '../types';
+import { BookItem, BookCategory, BookCatalogMeta } from '../types';
+import { BookSearchField } from './reading/BookSearchField';
+import { fetchCoverAsDataUrl, readCoverFile, spineColorFor, type CoverResult } from '../lib/bookCover';
+import { resultToCatalogMeta, type BookSearchResult } from '../lib/bookCatalog';
 import { Button, Field, Input, Modal, NuqtaSelect, Textarea } from './ui';
 import { dialogs, feedback } from './ui/dialogController';
 import { NuqtaIcon } from './NuqtaIcon';
@@ -103,6 +106,18 @@ export const ReadingView: React.FC = () => {
   const [bookColor, setBookColor] = useState(COVER_PALETTE[0]);
   const [bookNotes, setBookNotes] = useState('');
   const [bookError, setBookError] = useState<string | null>(null);
+  /** Bibliographic metadata imported from a catalogue, kept apart from reader data. */
+  const [bookCatalog, setBookCatalog] = useState<BookCatalogMeta | null>(null);
+  /** Local copy of the cover image; `undefined` means "not fetched yet". */
+  const [bookCover, setBookCover] = useState<string | undefined>(undefined);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [coverNotice, setCoverNotice] = useState<string | null>(null);
+  /**
+   * Cover fetches outlive the form: a reader can pick a cover, cancel, and open another
+   * book before the image arrives. Bumping this on every form open and every new cover
+   * request makes a late result a no-op instead of writing one book's cover onto another.
+   */
+  const coverRequestRef = useRef(0);
 
   // session logger
   const [sessionBookId, setSessionBookId] = useState<string>('');
@@ -147,6 +162,10 @@ export const ReadingView: React.FC = () => {
     setBookColor(COVER_PALETTE[Math.floor(Math.random() * COVER_PALETTE.length)]);
     setBookNotes('');
     setBookError(null);
+    setBookCatalog(null);
+    setBookCover(undefined);
+    setCoverNotice(null);
+    coverRequestRef.current += 1;
   };
 
   const openEditBook = (b: BookItem) => {
@@ -161,6 +180,77 @@ export const ReadingView: React.FC = () => {
     setBookColor(b.coverColor || COVER_PALETTE[0]);
     setBookNotes(b.notes || '');
     setBookError(null);
+    setBookCatalog(b.catalog ?? null);
+    setBookCover(b.coverDataUrl);
+    setCoverNotice(null);
+    coverRequestRef.current += 1;
+  };
+
+  /**
+   * Apply a catalogue hit to the form.
+   *
+   * Only bibliographic fields are written. Status, progress, rating, notes and dates
+   * are the reader's own record and are deliberately left exactly as they are — the
+   * catalogue has no opinion about how far through the book someone is.
+   *
+   * A field the provider did not supply is left blank rather than guessed at.
+   */
+  const applyCatalogResult = async (result: BookSearchResult) => {
+    setBookTitle(result.title);
+    setBookAuthor(result.authors[0] ?? '');
+    setBookCatalog(resultToCatalogMeta(result));
+    setBookError(null);
+    setCoverNotice(null);
+
+    // A page count is a real convenience, but only when the catalogue actually has one.
+    if (result.pageCount && result.pageCount > 0) setBookTotalPages(result.pageCount);
+
+    // A stable spine colour, so an imported book still reads as a book without a cover.
+    setBookColor(spineColorFor(`${result.title}${result.authors[0] ?? ''}`));
+
+    if (!result.coverUrl) {
+      setBookCover(undefined);
+      setCoverNotice(isAr ? 'لا يوجد غلاف في الفهرس — يمكنك رفع غلاف يدوياً.' : 'No cover in the catalogue — you can upload one.');
+      return;
+    }
+
+    const request = (coverRequestRef.current += 1);
+    setCoverBusy(true);
+    const cover = await fetchCoverAsDataUrl(result.coverUrl);
+    // The form moved on (cancelled, or a different book opened) while this was in flight.
+    if (request !== coverRequestRef.current) return;
+    setCoverBusy(false);
+    if (cover.ok) {
+      setBookCover(cover.dataUrl);
+    } else {
+      setBookCover(undefined);
+      setCoverNotice(
+        isAr ? 'تعذّر تحميل الغلاف — يمكنك رفع غلاف يدوياً.' : 'Could not load the cover — you can upload one.'
+      );
+    }
+  };
+
+  const onPickCoverFile = async (file: File | null) => {
+    if (!file) return;
+    const request = (coverRequestRef.current += 1);
+    setCoverBusy(true);
+    const cover: CoverResult = await readCoverFile(file);
+    if (request !== coverRequestRef.current) return;
+    setCoverBusy(false);
+    if (cover.ok) {
+      setBookCover(cover.dataUrl);
+      setCoverNotice(null);
+    } else {
+      setCoverNotice(
+        cover.reason === 'too_large'
+          ? isAr
+            ? 'الغلاف كبير جداً. اختر صورة أصغر.'
+            : 'That cover is too large. Choose a smaller image.'
+          : isAr
+          ? 'تعذّرت قراءة الصورة. جرّب صورة أخرى.'
+          : 'That image could not be read. Try another one.'
+      );
+    }
   };
 
   const saveBook = (e: React.FormEvent) => {
@@ -183,10 +273,16 @@ export const ReadingView: React.FC = () => {
       totalPages: total,
       currentPage: current,
       status: bookStatus,
-      rating: editing?.rating || 5,
       notes: bookNotes.trim() || undefined,
       coverColor: bookColor,
-      startDate: editing?.startDate || (bookStatus === 'reading' ? todayStr : undefined)
+      // Personal reading data is carried over from the existing record untouched.
+      rating: editing?.rating ?? 5,
+      startDate: editing?.startDate || (bookStatus === 'reading' ? todayStr : undefined),
+      completedDate: editing?.completedDate,
+      linkedGoalId: editing?.linkedGoalId,
+      archivedAt: editing?.archivedAt,
+      catalog: bookCatalog ?? undefined,
+      coverDataUrl: bookCover
     });
     setEditing(null);
     setIsNewBook(false);
@@ -394,20 +490,28 @@ export const ReadingView: React.FC = () => {
                     onClick={() => setOpenBookId(b.id)}
                   >
                     <span className="book-spine" style={{ background: b.coverColor || COVER_PALETTE[0] }}>
-                      <span className="book-spine-title">{b.title}</span>
-                      <span>
-                        <span className="book-spine-author block">{b.author}</span>
-                        <span className="text-[var(--fs-micro)] opacity-90 font-mono">
-                          {b.status === 'completed' ? (
-                            <span className="inline-flex items-center gap-1">
-                              <NuqtaIcon name="check" className="w-3 h-3" />
-                              {isAr ? 'مكتمل' : 'Completed'}
+                      {b.coverDataUrl ? (
+                        // A real cover already carries the title and author, so the
+                        // spine prints the image instead of repeating them as text.
+                        <img className="book-spine-cover" src={b.coverDataUrl} alt="" />
+                      ) : (
+                        <>
+                          <span className="book-spine-title">{b.title}</span>
+                          <span>
+                            <span className="book-spine-author block">{b.author}</span>
+                            <span className="text-[var(--fs-micro)] opacity-90 font-mono">
+                              {b.status === 'completed' ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <NuqtaIcon name="check" className="w-3 h-3" />
+                                  {isAr ? 'مكتمل' : 'Completed'}
+                                </span>
+                              ) : (
+                                `${b.currentPage}/${b.totalPages}`
+                              )}
                             </span>
-                          ) : (
-                            `${b.currentPage}/${b.totalPages}`
-                          )}
-                        </span>
-                      </span>
+                          </span>
+                        </>
+                      )}
                     </span>
                     <span className="book-progress-track">
                       <span className="book-progress-fill" style={{ width: `${progress}%` }} />
@@ -796,12 +900,75 @@ export const ReadingView: React.FC = () => {
         }
       >
         <form onSubmit={saveBook} className="space-y-3">
-          <Field label={isAr ? 'عنوان الكتاب' : 'Title'} htmlFor="bk-title" required>
-            <Input id="bk-title" value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} invalid={!bookTitle.trim() && !!bookError} autoFocus />
-          </Field>
+          <BookSearchField
+            value={bookTitle}
+            onChange={(next) => {
+              setBookTitle(next);
+              // Editing the title by hand detaches the record from the catalogue hit,
+              // so the saved metadata cannot claim to describe a different book.
+              if (bookCatalog && next.trim() !== bookTitle.trim()) setBookCatalog(null);
+            }}
+            onSelect={(result) => void applyCatalogResult(result)}
+            isAr={isAr}
+            inputId="bk-title"
+            invalid={!bookTitle.trim() && !!bookError}
+            autoFocus
+          />
           <Field label={isAr ? 'المؤلف' : 'Author'} htmlFor="bk-author">
             <Input id="bk-author" value={bookAuthor} onChange={(e) => setBookAuthor(e.target.value)} />
           </Field>
+
+          {bookCatalog && (
+            <div className="flex flex-wrap items-center gap-2 rounded-[var(--r-sm)] border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-2.5 py-2">
+              <NuqtaIcon name="book" className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+              <span className="text-[var(--fs-micro)] text-[var(--text-secondary)]">
+                {isAr ? 'بيانات من' : 'Metadata from'}{' '}
+                <strong className="font-[var(--fw-semibold)] text-[var(--text-primary)]">
+                  {bookCatalog.source === 'google_books' ? 'Google Books' : 'Open Library'}
+                </strong>
+                {bookCatalog.publishedDate ? ` · ${bookCatalog.publishedDate}` : ''}
+                {bookCatalog.language ? ` · ${bookCatalog.language.toUpperCase()}` : ''}
+              </span>
+              <button
+                type="button"
+                onClick={() => setBookCatalog(null)}
+                className="ms-auto text-[var(--fs-micro)] text-[var(--text-tertiary)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline"
+              >
+                {isAr ? 'إزالة' : 'Remove'}
+              </button>
+            </div>
+          )}
+
+          {bookCatalog && (bookCatalog.subtitle || bookCatalog.publisher || bookCatalog.isbn13 || bookCatalog.isbn10) && (
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-[var(--r-sm)] border border-[var(--border-subtle)] px-2.5 py-2 text-[var(--fs-micro)]">
+              {bookCatalog.subtitle && (
+                <>
+                  <dt className="text-[var(--text-tertiary)]">{isAr ? 'العنوان الفرعي' : 'Subtitle'}</dt>
+                  <dd className="text-[var(--text-secondary)]">{bookCatalog.subtitle}</dd>
+                </>
+              )}
+              {bookCatalog.publisher && (
+                <>
+                  <dt className="text-[var(--text-tertiary)]">{isAr ? 'الناشر' : 'Publisher'}</dt>
+                  <dd className="text-[var(--text-secondary)]">{bookCatalog.publisher}</dd>
+                </>
+              )}
+              {(bookCatalog.isbn13 || bookCatalog.isbn10) && (
+                <>
+                  <dt className="text-[var(--text-tertiary)]">ISBN</dt>
+                  <dd className="tabular-nums text-[var(--text-secondary)]">
+                    {bookCatalog.isbn13 || bookCatalog.isbn10}
+                  </dd>
+                </>
+              )}
+              {bookCatalog.authors && bookCatalog.authors.length > 1 && (
+                <>
+                  <dt className="text-[var(--text-tertiary)]">{isAr ? 'المؤلفون' : 'Authors'}</dt>
+                  <dd className="text-[var(--text-secondary)]">{bookCatalog.authors.join(', ')}</dd>
+                </>
+              )}
+            </dl>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Field label={isAr ? 'إجمالي الصفحات' : 'Total pages'} htmlFor="bk-total" required>
               <Input id="bk-total" type="number" min={1} value={bookTotalPages} onChange={(e) => setBookTotalPages(Number(e.target.value))} className="tabular-nums" />
@@ -828,6 +995,65 @@ export const ReadingView: React.FC = () => {
               </NuqtaSelect>
             </Field>
           </div>
+          <Field label={isAr ? 'الغلاف' : 'Cover'} htmlFor="bk-cover-file">
+            <div className="flex items-start gap-3">
+              <div className="bk-cover-preview" aria-hidden="true">
+                {bookCover ? (
+                  <img src={bookCover} alt="" />
+                ) : (
+                  <span className="text-[var(--fs-micro)] text-[var(--text-tertiary)]">
+                    {isAr ? 'بلا غلاف' : 'No cover'}
+                  </span>
+                )}
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label
+                    htmlFor="bk-cover-file"
+                    className="cursor-pointer rounded-[var(--r-sm)] border border-[var(--border-strong)] px-2.5 py-1.5 text-[var(--fs-micro)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  >
+                    {coverBusy
+                      ? isAr
+                        ? 'جارٍ التحميل…'
+                        : 'Loading…'
+                      : bookCover
+                      ? isAr
+                        ? 'تغيير الغلاف'
+                        : 'Change cover'
+                      : isAr
+                      ? 'رفع غلاف'
+                      : 'Upload cover'}
+                  </label>
+                  <input
+                    id="bk-cover-file"
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) => {
+                      void onPickCoverFile(event.target.files?.[0] ?? null);
+                      event.target.value = '';
+                    }}
+                  />
+                  {bookCover && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBookCover(undefined);
+                        setCoverNotice(null);
+                      }}
+                      className="text-[var(--fs-micro)] text-[var(--text-tertiary)] hover:text-[var(--state-danger)]"
+                    >
+                      {isAr ? 'إزالة' : 'Remove'}
+                    </button>
+                  )}
+                </div>
+                {coverNotice && (
+                  <p className="text-[var(--fs-micro)] text-[var(--text-tertiary)]">{coverNotice}</p>
+                )}
+              </div>
+            </div>
+          </Field>
+
           <Field label={isAr ? 'لون الغلاف' : 'Cover colour'} htmlFor="bk-color">
             <div className="flex flex-wrap gap-2">
               {COVER_PALETTE.map((c) => (

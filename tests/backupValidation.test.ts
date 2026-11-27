@@ -454,3 +454,95 @@ describe('rollback: a rejected file is never partially applied', () => {
     expect(JSON.stringify(Object.entries(localStorage).sort())).toBe(before);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Imported book catalogue metadata
+// ---------------------------------------------------------------------------
+
+describe('book catalogue metadata in a backup', () => {
+  const withCatalog = (catalog: unknown) => ({
+    ...readingHabit(),
+    readingData: {
+      ...readingHabit().readingData,
+      books: [{ ...readingHabit().readingData.books[0], catalog }]
+    }
+  });
+
+  const withCover = (coverDataUrl: unknown) => ({
+    ...readingHabit(),
+    readingData: {
+      ...readingHabit().readingData,
+      books: [{ ...readingHabit().readingData.books[0], coverDataUrl }]
+    }
+  });
+
+  it('accepts a fully populated catalogue record', () => {
+    const parsed = parseBackup(
+      wrap({
+        habits: [
+          withCatalog({
+            source: 'google_books',
+            sourceId: 'vol1',
+            subtitle: 'A subtitle',
+            authors: ['A', 'B'],
+            publisher: 'Harper',
+            publishedDate: '2015-02-10',
+            language: 'en',
+            isbn10: '0062316095',
+            isbn13: '9780062316097',
+            description: 'Desc',
+            categories: ['History'],
+            pageCount: 464,
+            edition: '1st',
+            coverUrl: 'https://books.google.com/x.jpg',
+            infoUrl: 'https://books.google.com/books?id=vol1',
+            fetchedAt: '2026-11-11T00:00:00.000Z'
+          })
+        ]
+      })
+    );
+    expect(parsed.ok).toBe(true);
+  });
+
+  it('accepts a catalogue record with only its required identity', () => {
+    // A provider may legitimately return nothing but a title and an id.
+    const parsed = parseBackup(
+      wrap({ habits: [withCatalog({ source: 'open_library', sourceId: 'works/OL1W' })] })
+    );
+    expect(parsed.ok).toBe(true);
+  });
+
+  it('accepts a book with no catalogue record at all', () => {
+    const parsed = parseBackup(wrap({ habits: [readingHabit()] }));
+    expect(parsed.ok).toBe(true);
+  });
+
+  it('accepts a stored local cover', () => {
+    const parsed = parseBackup(wrap({ habits: [withCover('data:image/jpeg;base64,AAAA')] }));
+    expect(parsed.ok).toBe(true);
+  });
+
+  it('rejects an unknown provider, so the record cannot claim a source it lacks', () => {
+    const parsed = parseBackup(
+      wrap({ habits: [withCatalog({ source: 'somewhere_else', sourceId: 'x' })] })
+    );
+    expect(parsed.ok).toBe(false);
+  });
+
+  it('rejects a catalogue record with no sourceId', () => {
+    const parsed = parseBackup(wrap({ habits: [withCatalog({ source: 'google_books' })] }));
+    expect(parsed.ok).toBe(false);
+  });
+
+  it('rejects a malformed author list', () => {
+    const parsed = parseBackup(
+      wrap({ habits: [withCatalog({ source: 'google_books', sourceId: 'v', authors: 'not-an-array' })] })
+    );
+    expect(parsed.ok).toBe(false);
+  });
+
+  it('rejects a non-string cover', () => {
+    const parsed = parseBackup(wrap({ habits: [withCover(42)] }));
+    expect(parsed.ok).toBe(false);
+  });
+});

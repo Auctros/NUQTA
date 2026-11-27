@@ -11,6 +11,7 @@ import { join, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { attachSyncToServer } from './sync/attach.mjs';
 import { attachYoutubeProxy } from './youtube-proxy.mjs';
+import { attachBooksProxy } from './books-proxy.mjs';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const DIST_DIR = resolve(__dirname, '..', 'dist');
@@ -122,6 +123,7 @@ export async function createDistServer(options = {}) {
   const distDir = options.distDir ? resolve(options.distDir) : DIST_DIR;
   let sync = null;
   const youtube = attachYoutubeProxy(options);
+  const books = attachBooksProxy(options);
 
   async function handleRequest(req, res) {
     if (sync && sync.handleHttpRequest(req, res)) {
@@ -130,6 +132,11 @@ export async function createDistServer(options = {}) {
 
     // Same-origin YouTube proxy. Handles `/api/youtube/*` and returns false otherwise.
     if (youtube && (await youtube.handle(req, res))) {
+      return;
+    }
+
+    // Same-origin book-catalogue proxy. Handles `/api/books/*`.
+    if (books && (await books.handle(req, res))) {
       return;
     }
 

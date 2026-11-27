@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 import { attachYoutubeProxy } from './scripts/youtube-proxy.mjs';
+import { attachBooksProxy } from './scripts/books-proxy.mjs';
 
 export default defineConfig(() => {
   return {
@@ -20,6 +21,19 @@ export default defineConfig(() => {
           const proxy = attachYoutubeProxy();
           server.middlewares.use(async (req, res, next) => {
             if (!(req.url || '').startsWith('/api/youtube/')) return next();
+            const handled = await proxy.handle(req, res);
+            if (!handled) next();
+          });
+        }
+      },
+      {
+        // The book-catalogue proxy follows the same rule: the key stays on the
+        // server and the page only ever calls `/api/books/*` on its own origin.
+        name: 'nuqta-books-proxy',
+        configureServer(server) {
+          const proxy = attachBooksProxy();
+          server.middlewares.use(async (req, res, next) => {
+            if (!(req.url || '').startsWith('/api/books/')) return next();
             const handled = await proxy.handle(req, res);
             if (!handled) next();
           });

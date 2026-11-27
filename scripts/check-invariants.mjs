@@ -197,10 +197,15 @@ const grep = (re, { except = [] } = {}) =>
 //     previously had: the sync client reached both primitives through `globalThis`,
 //     so the rule reported "clean" for code that opens sockets.
 //
-//     The YouTube course client is the second and only other such module: it talks to
-//     this app's OWN origin (`/api/youtube/*`), which proxies to YouTube server-side so
-//     no API key ever reaches the browser. It is listed explicitly, reviewed by hand,
-//     and must never be widened to an arbitrary third-party URL.
+//     The YouTube course client is the second such module: it talks to this app's OWN
+//     origin (`/api/youtube/*`), which proxies to YouTube server-side so no API key
+//     ever reaches the browser. It is listed explicitly, reviewed by hand, and must
+//     never be widened to an arbitrary third-party URL.
+//
+//     The book-catalogue client is the third: it talks to `/api/books/*` on this same
+//     origin, which proxies Google Books and Open Library server-side so the Google
+//     key never reaches the browser. The same rule applies — it may only ever address
+//     this origin, never a provider host directly.
 //
 //     What it guarantees: outside `NETWORK_MODULES`, no fetch/WebSocket/XHR/beacon/
 //     EventSource/geolocation primitive appears in first-party `.ts`/`.tsx` source,
@@ -211,7 +216,11 @@ const grep = (re, { except = [] } = {}) =>
 //     see a URL handed to an <img>/<a>/<script> src or a request made inside a
 //     dependency. The allow-listed module is reviewed by hand instead.
 {
-  const NETWORK_MODULES = new Set(['src/lib/sync/client.ts', 'src/lib/youtubeClient.ts']);
+  const NETWORK_MODULES = new Set([
+    'src/lib/sync/client.ts',
+    'src/lib/youtubeClient.ts',
+    'src/lib/booksClient.ts'
+  ]);
 
   // `fetch(` / `.fetch(` / `globalThis.fetch` / `globalThis["fetch"]` all match, as do
   // bare references passed around (e.g. `const f = globalThis.fetch`).

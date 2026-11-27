@@ -4838,3 +4838,83 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .tl-lane-track {
   overflow: visible;
 }
+
+/* ============================================================
+   Book catalogue search (Add / Edit book)
+   The dropdown is portal-rendered, so it is positioned inline and only
+   the rows and the small cover thumbnail need styling here.
+   ============================================================ */
+
+.bk-search-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  border-top-color: var(--brand);
+  animation: bk-spin 0.7s linear infinite;
+}
+
+@keyframes bk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A fixed 2:3 box keeps every result row the same height whether or not the
+   catalogue supplied a cover, so the list never jumps while it fills in. */
+.bk-result-cover {
+  width: 34px;
+  height: 51px;
+  border-radius: var(--r-xs);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-chip);
+  color: var(--text-tertiary);
+}
+
+.bk-result-cover img {
+  width: 100%;
+  height: 100%;
+  /* The box is 2:3, the same proportion as a printed cover, so `cover`
+     fills it without distortion and crops only a stray edge. */
+  object-fit: cover;
+  display: block;
+}
+
+.bk-result-chip {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-inset);
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* The selected-cover preview in the form. */
+.bk-cover-preview {
+  width: 72px;
+  height: 108px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-default);
+  flex-shrink: 0;
+}
+
+.bk-cover-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A catalogue cover fills the spine box exactly: the box is already 2:3, the
+   printed-cover ratio, so nothing is stretched or cropped away. */
+.book-spine-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }

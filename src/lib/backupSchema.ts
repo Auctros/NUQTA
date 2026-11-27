@@ -330,7 +330,41 @@ function isBook(v: unknown): boolean {
     optional(isString)(v.startDate) &&
     optional(isString)(v.completedDate) &&
     optional(isString)(v.linkedGoalId) &&
-    optional(isString)(v.archivedAt)
+    optional(isString)(v.archivedAt) &&
+    optional(isBookCatalogMeta)(v.catalog) &&
+    // A local cover is a `data:` image the reader owns; keep the check shape-only
+    // (a string) rather than policing the payload, so a re-encoded image still restores.
+    optional(isString)(v.coverDataUrl)
+  );
+}
+
+/**
+ * Imported catalogue metadata.
+ *
+ * `source` and `sourceId` identify where the record came from, so they are required
+ * together. Everything else is optional: a provider may legitimately return a book
+ * with no publisher, no description and no page count, and a restore must accept
+ * exactly what was saved rather than demanding fields the catalogue never had.
+ */
+function isBookCatalogMeta(v: unknown): boolean {
+  return (
+    isPlainObject(v) &&
+    oneOf(['google_books', 'open_library'])(v.source) &&
+    isNonEmptyString(v.sourceId) &&
+    optional(isString)(v.subtitle) &&
+    optional((x) => Array.isArray(x) && x.every(isString))(v.authors) &&
+    optional(isString)(v.publisher) &&
+    optional(isString)(v.publishedDate) &&
+    optional(isString)(v.language) &&
+    optional(isString)(v.isbn10) &&
+    optional(isString)(v.isbn13) &&
+    optional(isString)(v.description) &&
+    optional((x) => Array.isArray(x) && x.every(isString))(v.categories) &&
+    optional(isNumber)(v.pageCount) &&
+    optional(isString)(v.edition) &&
+    optional(isString)(v.coverUrl) &&
+    optional(isString)(v.infoUrl) &&
+    optional(isString)(v.fetchedAt)
   );
 }
 

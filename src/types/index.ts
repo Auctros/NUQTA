@@ -229,6 +229,48 @@ export interface BookQuote {
   date: string;
 }
 
+/**
+ * Bibliographic metadata imported from an external catalogue.
+ *
+ * This is deliberately a nested record rather than a pile of loose fields: it marks
+ * the boundary between what a provider may populate and what only the reader may
+ * write. Nothing in here is ever personal (no status, no progress, no rating), so a
+ * refresh from the catalogue can replace the whole object without touching the
+ * reader's own data.
+ */
+export interface BookCatalogMeta {
+  /** Which provider the metadata came from. */
+  source: 'google_books' | 'open_library';
+  /** The provider's own id, kept so the same edition can be re-fetched. */
+  sourceId: string;
+  subtitle?: string;
+  /** Every author the catalogue lists, in its own order. */
+  authors?: string[];
+  publisher?: string;
+  /** As published by the provider: may be `2020`, `2020-05`, or `2020-05-01`. */
+  publishedDate?: string;
+  language?: string;
+  isbn10?: string;
+  isbn13?: string;
+  description?: string;
+  /** Catalogue subject labels, not NUQTA's own `BookCategory`. */
+  categories?: string[];
+  pageCount?: number;
+  /** Edition/printing statement when the provider supplies one. */
+  edition?: string;
+  /**
+   * Remote cover URL as returned by the provider.
+   *
+   * Kept as a *reference*, never as the rendered image: the app's CSP allows no
+   * third-party image host, and a remote URL can rot. `coverDataUrl` is the offline
+   * copy that the UI actually paints.
+   */
+  coverUrl?: string;
+  /** The provider's canonical page for this edition, shown as the source credit. */
+  infoUrl?: string;
+  fetchedAt: string;
+}
+
 export interface BookItem {
   id: string;
   title: string;
@@ -244,6 +286,13 @@ export interface BookItem {
   completedDate?: string;
   linkedGoalId?: string;
   archivedAt?: string;
+  /** Imported bibliographic metadata. Absent on manually entered books. */
+  catalog?: BookCatalogMeta;
+  /**
+   * The cover as a local `data:` image, so the book still shows its cover offline
+   * and under a CSP that permits no remote image host.
+   */
+  coverDataUrl?: string;
 }
 
 export interface ReadingSessionLog {
