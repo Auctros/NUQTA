@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { localDateKey } from '../lib/dateKey';
+import { useNavigation } from '../lib/useNavigation';
+import { writeViewTab } from '../lib/navigation';
 import { NuqtaIcon } from './NuqtaIcon';
 import { EmptyState, PageHeader, TabBar } from './ui';
 import { dialogs, feedback } from './ui/dialogController';
@@ -13,20 +15,53 @@ const t = (label: { ar: string; en: string }, isAr: boolean) => (isAr ? label.ar
 type StatusFilter = 'all' | 'open' | 'completed' | 'archived';
 
 export const ProjectsView: React.FC = () => {
-  const { projects, tasks, goals, profile, createProject, deleteProject } = useNuqtaStore();
+  const { projects, tasks, goals, profile, createProject, deleteProject, focusRequest, consumeFocus } = useNuqtaStore();
   const isAr = profile.language === 'ar';
   const today = localDateKey();
+  const { route, navigate } = useNavigation();
 
-  const [openProjectId, setOpenProjectId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftGoalId, setDraftGoalId] = useState('');
 
-  // The workspace is a place, not a modal: opening a project should survive a refresh
-  // and be linkable, so it renders as its own screen with a back affordance.
+  /*
+   * The open project is the route's second segment, not component state.
+   *
+   * Holding it in `useState` made the workspace a modal in disguise: a refresh threw
+   * the reader back to the hub, Back skipped the hub entirely, and nothing else in the
+   * app could link to a project. Deriving it from the URL makes `#/projects/<id>` a real
+   * destination — linkable, restorable, and walkable with Back/Forward.
+   */
+  const openProjectId = route.tab === 'projects' ? route.view : null;
   const openProject = openProjectId ? projects.find((p) => p.id === openProjectId) : null;
+
+  const openProjectView = (id: string) => navigate('projects', id);
+  const backToHub = () => {
+    // Clearing the remembered view tab keeps a plain `#/projects` load from reopening
+    // the project the reader just left.
+    writeViewTab('projects', null);
+    navigate('projects', null);
+  };
+
+  // A link to a project that no longer exists is corrected in place: a missing record
+  // must land on the hub, never on an empty workspace that looks broken.
+  useEffect(() => {
+    if (!openProjectId || openProject) return;
+    writeViewTab('projects', null);
+    navigate('projects', null, { replace: true });
+  }, [openProjectId, openProject, navigate]);
+
+  // The Timeline, the command palette and notifications hand a record to its owning
+  // module through this channel. Projects ignored it, so "open this project" from the
+  // Timeline landed on the hub and stopped there.
+  useEffect(() => {
+    if (!focusRequest || focusRequest.domain !== 'projects') return;
+    const target = projects.find((p) => p.id === focusRequest.entityId);
+    if (target) navigate('projects', target.id);
+    consumeFocus();
+  }, [focusRequest, projects, navigate, consumeFocus]);
 
   const counts = useMemo(() => {
     const open = projects.filter((p) => p.status === 'active' || p.status === 'planned' || p.status === 'on_hold');
@@ -72,7 +107,7 @@ export const ProjectsView: React.FC = () => {
   // Every hook above runs on both screens; only the returned tree differs. Returning
   // early before the memos would change the hook count between renders.
   if (openProject) {
-    return <ProjectWorkspace project={openProject} onBack={() => setOpenProjectId(null)} />;
+    return <ProjectWorkspace project={openProject} onBack={backToHub} />;
   }
 
   const submitNew = () => {
@@ -83,7 +118,7 @@ export const ProjectsView: React.FC = () => {
     setDraftGoalId('');
     setCreating(false);
     feedback.success(isAr ? 'أُنشئ المشروع' : 'Project created');
-    setOpenProjectId(created.id);
+    openProjectView(created.id);
   };
 
   const confirmDelete = async (id: string, title: string) => {
@@ -230,7 +265,7 @@ export const ProjectsView: React.FC = () => {
                 className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-4 hover:border-accent/40 transition-all shadow-lg hover:shadow-xl group"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <button className="text-start min-w-0 flex-1" onClick={() => setOpenProjectId(project.id)}>
+                  <button className="text-start min-w-0 flex-1" onClick={() => openProjectView(project.id)}>
                     <div className="flex flex-wrap items-center gap-1.5 mb-2">
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded border font-semibold flex items-center gap-1 bg-[var(--tone-${statusTone[project.status]}-wash)] text-[var(--tone-${statusTone[project.status]})] border-[var(--tone-${statusTone[project.status]}-line)]`}
@@ -345,7 +380,7 @@ export const ProjectsView: React.FC = () => {
                   )}
                 </div>
 
-                <button className="btn subtle text-xs w-full" onClick={() => setOpenProjectId(project.id)}>
+                <button className="btn subtle text-xs w-full" onClick={() => openProjectView(project.id)}>
                   {isAr ? 'فتح مساحة العمل' : 'Open workspace'}
                   <NuqtaIcon name="chevronRight" className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />
                 </button>

@@ -389,3 +389,135 @@ describe('provider query building', () => {
     expect(result.code).toBe('network');
   });
 });
+
+describe('proxy — cover redirects cannot escape the allow-list', () => {
+  it('refuses a redirect that leaves the allow-list instead of following it', async () => {
+    const calls: string[] = [];
+    const fetchImpl: FetchLike = async (url) => {
+      calls.push(String(url));
+      return {
+        ok: false,
+        status: 302,
+        json: async () => ({}),
+        headers: { get: (k: string) => (k.toLowerCase() === 'location' ? 'http://127.0.0.1:9000/secret' : null) }
+      };
+    };
+    const proxy = proxyWith(KEY, fetchImpl);
+    const { res, state } = fakeResponse();
+    await proxy.handle(request('/api/books/cover?url=https://covers.openlibrary.org/b/id/1-L.jpg'), res);
+
+    // The hop to the internal host was never fetched: the chain is re-validated.
+    expect(calls).toHaveLength(1);
+    expect(state.status).toBe(400);
+  });
+
+  it('follows an allow-listed redirect and returns the final image', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    let hop = 0;
+    const fetchImpl: FetchLike = async () => {
+      hop += 1;
+      if (hop === 1) {
+        return {
+          ok: false,
+          status: 301,
+          json: async () => ({}),
+          headers: {
+            get: (k: string) =>
+              k.toLowerCase() === 'location' ? 'https://books.google.com/books/content?id=x' : null
+          }
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+        arrayBuffer: async () => png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength),
+        headers: { get: () => 'image/png' }
+      };
+    };
+    const proxy = proxyWith(KEY, fetchImpl);
+    const { res, state } = fakeResponse();
+    await proxy.handle(request('/api/books/cover?url=https://covers.openlibrary.org/b/id/1-L.jpg'), res);
+
+    expect(state.status).toBe(200);
+    expect(state.headers['Content-Type']).toBe('image/png');
+  });
+
+  it('stops after the redirect budget instead of chasing a loop', async () => {
+    let hop = 0;
+    const fetchImpl: FetchLike = async () => {
+      hop += 1;
+      return {
+        ok: false,
+        status: 302,
+        json: async () => ({}),
+        headers: {
+          get: (k: string) =>
+            k.toLowerCase() === 'location' ? 'https://covers.openlibrary.org/b/id/1-L.jpg' : null
+        }
+      };
+    };
+    const proxy = proxyWith(KEY, fetchImpl);
+    const { res, state, json } = fakeResponse();
+    await proxy.handle(request('/api/books/cover?url=https://covers.openlibrary.org/b/id/1-L.jpg'), res);
+
+    expect(hop).toBeLessThanOrEqual(4);
+    expect(state.status).toBe(502);
+    expect(json().error).toBe('too_many_redirects');
+  });
+});
+
+describe('proxy — a cover body is bounded while it is read', () => {
+  it('refuses an oversized declared body before downloading it', async () => {
+    const fetchImpl: FetchLike = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+      arrayBuffer: async () => new ArrayBuffer(8),
+      headers: {
+        get: (k: string) => (k.toLowerCase() === 'content-length' ? String(64 * 1024 * 1024) : 'image/jpeg')
+      }
+    });
+    const proxy = proxyWith(KEY, fetchImpl);
+    const { res, state, json } = fakeResponse();
+    await proxy.handle(request('/api/books/cover?url=https://covers.openlibrary.org/b/id/1-L.jpg'), res);
+
+    expect(state.status).toBe(413);
+    expect(json().error).toBe('cover_too_large');
+  });
+
+  it('aborts an unannounced (chunked) body once it passes the ceiling', async () => {
+    // 64 chunks of 128 KiB is 8 MiB — twice the 4 MiB limit, and no Content-Length.
+    const chunk = new Uint8Array(128 * 1024);
+    let sent = 0;
+    let cancelled = false;
+    const fetchImpl: FetchLike = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+      headers: { get: () => 'image/jpeg' },
+      body: {
+        getReader: () => ({
+          read: async () => {
+            if (sent >= 64) return { done: true, value: undefined };
+            sent += 1;
+            return { done: false, value: chunk };
+          },
+          cancel: async () => {
+            cancelled = true;
+          },
+          releaseLock: () => {}
+        })
+      }
+    } as unknown as Fetched);
+    const proxy = proxyWith(KEY, fetchImpl);
+    const { res, state, json } = fakeResponse();
+    await proxy.handle(request('/api/books/cover?url=https://covers.openlibrary.org/b/id/1-L.jpg'), res);
+
+    expect(state.status).toBe(413);
+    expect(json().error).toBe('cover_too_large');
+    // The read stopped early rather than draining 8 MiB first.
+    expect(cancelled).toBe(true);
+    expect(sent).toBeLessThan(64);
+  });
+});

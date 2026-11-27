@@ -9,6 +9,8 @@
  * What is editable, and why:
  *   task (planned)        → scheduledDate / scheduledTime   [updateTask]
  *   goal (range)          → startDate / deadline            [updateGoal]
+ *   project (range)       → startDate / targetDate          [updateProject]
+ *   project phase (range) → startDate / targetDate          [updateProjectPhase]
  *   art project (range)   → startedDate / completedDate     [addOrUpdateArtProject]
  *
  * What is deliberately NOT editable:
@@ -17,7 +19,7 @@
  *   would rewrite what happened, so the Timeline refuses rather than pretending.
  */
 import type { TimelineItem } from './types';
-import type { ArtProject, Goal, Task } from '../../types';
+import type { ArtProject, Goal, Project, ProjectPhase, Task } from '../../types';
 import { localDateKey } from '../dateKey';
 
 export type EditableAxis = 'move' | 'resize-start' | 'resize-end';
@@ -71,6 +73,13 @@ export function editCapability(item: TimelineItem): EditCapability {
       return item.kind === 'range'
         ? { move: true, resizeStart: true, resizeEnd: true }
         : { move: false, resizeStart: false, resizeEnd: false, ...READ_ONLY_HISTORY };
+    case 'projects':
+      // A project and a phase are both drawn as ranges from their plan dates. Recorded
+      // history never reaches here: the `reality === 'actual'` guard above already
+      // refused it, so this branch only ever handles an intention.
+      return item.kind === 'range'
+        ? { move: true, resizeStart: true, resizeEnd: true }
+        : { move: false, resizeStart: false, resizeEnd: false, ...READ_ONLY_HISTORY };
     default:
       return { move: false, resizeStart: false, resizeEnd: false, ...READ_ONLY_HISTORY };
   }
@@ -79,10 +88,15 @@ export function editCapability(item: TimelineItem): EditCapability {
 export interface TimelineEditContext {
   updateTask: (id: string, updates: Partial<Task>) => void;
   updateGoal: (id: string, updates: Partial<Goal>) => void;
+  /** Project window edits. `Project` carries startDate/targetDate directly. */
+  updateProject: (id: string, updates: Partial<Project>) => void;
+  /** Phase window edits, routed to the owning project. */
+  updateProjectPhase: (projectId: string, phaseId: string, updates: Partial<ProjectPhase>) => void;
   /** Needs the owning habit id; resolved by the view from the habit list. */
   updateArtProject: (habitId: string, project: ArtProject) => void;
   tasks: Task[];
   goals: Goal[];
+  projects: Project[];
   habits: { id: string; drawingData?: { projects?: ArtProject[] } }[];
 }
 
@@ -158,6 +172,57 @@ export function applyTimelineEdit(
         return true;
       }
       return false;
+    }
+    case 'projects': {
+      const project = ctx.projects.find((p) => p.id === item.entityId);
+      if (!project) return false;
+
+      /*
+       * A phase item carries the phase id in `subEntityId`, so the write targets the
+       * phase's own window instead of flattening it onto the project. Re-deriving the
+       * target from the item id would couple this module to the adapter's id format.
+       */
+      const phase = item.subEntityId
+        ? project.phases.find((ph) => ph.id === item.subEntityId)
+        : undefined;
+      if (item.subEntityId && !phase) return false;
+
+      const currentStart = phase ? phase.startDate : project.startDate;
+      const currentEnd = phase ? phase.targetDate : project.targetDate;
+      const spanDays =
+        item.end && item.start
+          ? wholeDaysBetween(item.start, item.end)
+          : currentStart && currentEnd
+            ? Math.round(
+                (Date.parse(`${currentEnd}T00:00:00`) - Date.parse(`${currentStart}T00:00:00`)) /
+                  86_400_000
+              )
+            : 0;
+
+      let start = currentStart;
+      let end = currentEnd;
+      if (axis === 'resize-start') {
+        start = localDateKey(newStart);
+      } else if (axis === 'resize-end') {
+        end = localDateKey(newEnd ?? newStart);
+      } else {
+        // Move the whole window: keep its length rather than collapsing it.
+        start = localDateKey(newStart);
+        if (currentStart && currentEnd) {
+          end = localDateKey(new Date(newStart.getTime() + spanDays * 86_400_000));
+        }
+      }
+
+      /*
+       * A window whose end precedes its start is not a plan, it is a bug the reader
+       * would have to undo by hand. Reject the edit so the item snaps back instead of
+       * persisting an impossible range.
+       */
+      if (start && end && Date.parse(`${end}T00:00:00`) < Date.parse(`${start}T00:00:00`)) return false;
+
+      if (phase) ctx.updateProjectPhase(project.id, phase.id, { startDate: start, targetDate: end });
+      else ctx.updateProject(project.id, { startDate: start, targetDate: end });
+      return true;
     }
     default:
       return false;

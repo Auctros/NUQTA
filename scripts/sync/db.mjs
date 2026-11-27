@@ -12,12 +12,16 @@ export class DeviceIdentityConflictError extends Error {
 }
 
 /**
- * How long a tombstone is retained.
+ * How long a tombstone is retained, at minimum.
  *
  * A tombstone is the only thing preventing a device that was offline when a record was
  * deleted from re-uploading it, so it must outlive every realistic offline period.
  * 30 days is the product's stated retention; the value is centralised so the cleanup
  * job and the documentation cannot drift apart.
+ *
+ * This is a FLOOR, not the safety boundary: `pruneExpiredTombstones` additionally
+ * requires every device that predates the deletion to have acknowledged it, so a device
+ * offline for longer than 30 days still cannot resurrect the record.
  */
 export const TOMBSTONE_RETENTION_DAYS = 30;
 
@@ -499,17 +503,57 @@ export function createSyncRepository(db) {
   });
 
   /**
-   * Remove tombstones past their retention window.
+   * Remove tombstones that are both past retention AND provably seen by every device.
    *
-   * Safe only because retention (30 days) exceeds any realistic offline period: after
-   * expiry the deleted record is simply forgotten, and a device that returns later is
-   * treated as a brand-new writer rather than being refused forever.
+   * Time alone is not a safe boundary. A device that stayed offline for longer than the
+   * retention window still holds the record locally and still has it queued in its
+   * outbox; once the tombstone is gone, the server accepts that stale write and the
+   * deleted record comes back on every device. Retention is therefore only a floor:
+   * a tombstone is also required to have been acknowledged — every device that existed
+   * when the deletion happened must have a cursor at or past the deletion's
+   * `server_change_id`, which means it has already pulled the delete and can no longer
+   * legitimately re-send the record.
+   *
+   * A device registered after the deletion is not a resurrection risk: it has never
+   * held the record, and it pulls the delete change during its first sync.
    */
   function pruneExpiredTombstones() {
     const result = db
-      .prepare("DELETE FROM tombstones WHERE expires_at <= datetime('now')")
+      .prepare(
+        `DELETE FROM tombstones
+          WHERE expires_at <= datetime('now')
+            AND NOT EXISTS (
+              SELECT 1
+                FROM devices d
+                LEFT JOIN device_cursors c ON c.device_id = d.device_id
+               WHERE d.created_at <= tombstones.deleted_at
+                 AND d.is_active = 1
+                 AND COALESCE(c.last_processed_change_id, 0) < tombstones.server_change_id
+            )`
+      )
       .run();
     return result.changes;
+  }
+
+  /** Tombstones held back only because a device has not acknowledged the deletion yet. */
+  function countUnacknowledgedTombstones() {
+    return Number(
+      db
+        .prepare(
+          `SELECT COUNT(*) AS n
+             FROM tombstones
+            WHERE expires_at <= datetime('now')
+              AND EXISTS (
+                SELECT 1
+                  FROM devices d
+                  LEFT JOIN device_cursors c ON c.device_id = d.device_id
+                 WHERE d.created_at <= tombstones.deleted_at
+                   AND d.is_active = 1
+                   AND COALESCE(c.last_processed_change_id, 0) < tombstones.server_change_id
+              )`
+        )
+        .get()?.n ?? 0
+    );
   }
 
   return {
@@ -517,6 +561,7 @@ export function createSyncRepository(db) {
     getWorkspaceGeneration,
     resetWorkspace: () => resetWorkspaceTx(),
     pruneExpiredTombstones,
+    countUnacknowledgedTombstones,
     isTombstoned: (storeName, recordId) =>
       stmtFindTombstone.get({ store_name: storeName, record_id: recordId }) ?? null,
     clearTombstone: (storeName, recordId) =>

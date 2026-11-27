@@ -178,5 +178,16 @@ export const ui = {
   overdue: { ar: 'متأخر', en: 'Overdue' },
   dueToday: { ar: 'اليوم', en: 'Today' },
   manualOverride: { ar: 'تقدير يدوي', en: 'Manual' },
-  clearOverride: { ar: 'رجوع إلى الحساب التلقائي', en: 'Use derived value' }
+  clearOverride: { ar: 'رجوع إلى الحساب التلقائي', en: 'Use derived value' },
+  schedule: { ar: 'الجدولة', en: 'Schedule' },
+  projectStart: { ar: 'تاريخ البداية', en: 'Start date' },
+  projectTarget: { ar: 'التاريخ المستهدف', en: 'Target date' },
+  phaseDates: { ar: 'تواريخ المرحلة', en: 'Phase dates' },
+  noDate: { ar: 'بلا تاريخ', en: 'No date' },
+  invalidRange: { ar: 'التاريخ المستهدف يسبق تاريخ البداية', en: 'Target date precedes the start date' },
+  linkTask: { ar: 'ربط مهمة بالمشروع', en: 'Link a task to this project' },
+  linkTaskToStep: { ar: 'ربط بخطوة (اختياري)', en: 'Attach to a step (optional)' },
+  noTaskToLink: { ar: 'لا توجد مهام غير مرتبطة', en: 'No unlinked tasks' },
+  unlinkTask: { ar: 'فصل المهمة عن المشروع', en: 'Unlink task' },
+  tasksSection: { ar: 'قسم المهام', en: 'Tasks section' }
 } as const;

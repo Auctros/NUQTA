@@ -19,7 +19,7 @@ import {
   itemsInWindow
 } from '../src/lib/timeline/scale';
 import { editCapability, applyTimelineEdit } from '../src/lib/timeline/edit';
-import type { Task, Habit, Goal, FocusSession, JournalEntry } from '../src/types';
+import type { Task, Habit, Goal, FocusSession, JournalEntry, Project, ProjectPhase } from '../src/types';
 import type { TimelineItem } from '../src/lib/timeline/types';
 
 const OPTS = {
@@ -447,8 +447,11 @@ describe('only real, persistable edits are allowed', () => {
       tasks: [task({ id: 't1', scheduledDate: '2026-11-10', scheduledTime: '09:30' })],
       goals: [],
       habits: [],
+      projects: [],
       updateTask: (_id, u) => updates.push(u),
       updateGoal: () => {},
+      updateProject: () => {},
+      updateProjectPhase: () => {},
       updateArtProject: () => {}
     });
     expect(ok).toBe(true);
@@ -461,8 +464,11 @@ describe('only real, persistable edits are allowed', () => {
       tasks: [task({ id: 't1', scheduledDate: '2026-11-10' })],
       goals: [],
       habits: [],
+      projects: [],
       updateTask: (_id, u) => updates.push(u),
       updateGoal: () => {},
+      updateProject: () => {},
+      updateProjectPhase: () => {},
       updateArtProject: () => {}
     });
     expect(updates[0]).toEqual({ scheduledDate: '2026-11-14' });
@@ -487,8 +493,11 @@ describe('only real, persistable edits are allowed', () => {
       tasks: [],
       goals: [goal({ id: 'g1', startDate: '2026-11-01', deadline: '2026-11-30' })],
       habits: [],
+      projects: [],
       updateTask: () => {},
       updateGoal: (_id, u) => updates.push(u),
+      updateProject: () => {},
+      updateProjectPhase: () => {},
       updateArtProject: () => {}
     });
     expect(updates[0].startDate).toBe('2026-12-01');
@@ -500,8 +509,151 @@ describe('only real, persistable edits are allowed', () => {
       tasks: [],
       goals: [],
       habits: [],
+      projects: [],
       updateTask: () => {},
       updateGoal: () => {},
+      updateProject: () => {},
+      updateProjectPhase: () => {},
+      updateArtProject: () => {}
+    });
+    expect(ok).toBe(false);
+  });
+});
+
+describe('timeline — a project window is editable, a completed phase is not', () => {
+  const projectRecord = (overrides: Partial<Project> = {}): Project =>
+    ({
+      id: 'p1',
+      title: 'Launch',
+      status: 'active',
+      goalIds: [],
+      phases: [],
+      steps: [],
+      notes: [],
+      resources: [],
+      activity: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      ...overrides
+    }) as Project;
+
+  const projectRange = (overrides: Partial<TimelineItem> = {}): TimelineItem => ({
+    id: 'projects:p1:range',
+    domain: 'projects',
+    reality: 'planned',
+    kind: 'range',
+    title: 'Launch',
+    start: new Date(2026, 10, 1),
+    end: new Date(2026, 10, 10),
+    allDay: true,
+    entityId: 'p1',
+    source: 'projects',
+    ...overrides
+  });
+
+  it('offers move and both resize handles on a project window', () => {
+    expect(editCapability(projectRange())).toMatchObject({
+      move: true,
+      resizeStart: true,
+      resizeEnd: true
+    });
+  });
+
+  it('moves a project window without collapsing its length', () => {
+    const updates: Partial<Project>[] = [];
+    const ok = applyTimelineEdit(projectRange(), 'move', new Date(2026, 11, 1), undefined, {
+      tasks: [],
+      goals: [],
+      habits: [],
+      projects: [projectRecord({ startDate: '2026-11-01', targetDate: '2026-11-10' })],
+      updateTask: () => {},
+      updateGoal: () => {},
+      updateProject: (_id, u) => updates.push(u),
+      updateProjectPhase: () => {},
+      updateArtProject: () => {}
+    });
+
+    expect(ok).toBe(true);
+    expect(updates[0]).toEqual({ startDate: '2026-12-01', targetDate: '2026-12-10' });
+  });
+
+  it('routes a phase window to the phase, not to the whole project', () => {
+    const projectUpdates: Partial<Project>[] = [];
+    const phaseUpdates: Array<{ projectId: string; phaseId: string; updates: Partial<ProjectPhase> }> = [];
+    const record = projectRecord({
+      startDate: '2026-11-01',
+      targetDate: '2026-12-01',
+      phases: [
+        {
+          id: 'ph1',
+          title: 'Research',
+          order: 0,
+          startDate: '2026-11-01',
+          targetDate: '2026-11-10',
+          taskIds: []
+        } as ProjectPhase
+      ]
+    });
+
+    const ok = applyTimelineEdit(
+      projectRange({ id: 'projects:p1:phase:ph1', subEntityId: 'ph1', title: 'Research' }),
+      'resize-end',
+      new Date(2026, 10, 1),
+      new Date(2026, 10, 15),
+      {
+        tasks: [],
+        goals: [],
+        habits: [],
+        projects: [record],
+        updateTask: () => {},
+        updateGoal: () => {},
+        updateProject: (_id, u) => projectUpdates.push(u),
+        updateProjectPhase: (projectId, phaseId, updates) => phaseUpdates.push({ projectId, phaseId, updates }),
+        updateArtProject: () => {}
+      }
+    );
+
+    expect(ok).toBe(true);
+    expect(projectUpdates).toHaveLength(0);
+    expect(phaseUpdates).toEqual([{ projectId: 'p1', phaseId: 'ph1', updates: { startDate: '2026-11-01', targetDate: '2026-11-15' } }]);
+  });
+
+  it('refuses an edit that would put the end before the start', () => {
+    let called = false;
+    const ok = applyTimelineEdit(
+      projectRange(),
+      'resize-start',
+      new Date(2026, 11, 1),
+      undefined,
+      {
+        tasks: [],
+        goals: [],
+        habits: [],
+        projects: [projectRecord({ startDate: '2026-11-01', targetDate: '2026-11-10' })],
+        updateTask: () => {},
+        updateGoal: () => {},
+        updateProject: () => {
+          called = true;
+        },
+        updateProjectPhase: () => {},
+        updateArtProject: () => {}
+      }
+    );
+
+    expect(ok).toBe(false);
+    expect(called).toBe(false);
+  });
+
+  it('returns false when the project is gone rather than inventing one', () => {
+    const ok = applyTimelineEdit(projectRange(), 'move', new Date(2026, 11, 1), undefined, {
+      tasks: [],
+      goals: [],
+      habits: [],
+      projects: [],
+      updateTask: () => {},
+      updateGoal: () => {},
+      updateProject: () => {},
+      updateProjectPhase: () => {},
       updateArtProject: () => {}
     });
     expect(ok).toBe(false);

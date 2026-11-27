@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ProjectsView } from '../src/components/ProjectsView';
+import { applyRoute } from '../src/lib/navigation';
 import { useNuqtaStore } from '../src/store/nuqtaStore';
 import { getActiveDialog, settleDialog } from '../src/components/ui/dialogController';
 import type { Project, Task } from '../src/types';
@@ -48,6 +49,10 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-03-10T10:00:00Z'));
   localStorage.clear();
+  // The open project now lives in the URL, so the route is part of the fixture: without
+  // this reset a test that opened a workspace would leak that destination into the next.
+  window.location.hash = '';
+  applyRoute({ tab: 'projects', view: null }, { updateHistory: false });
   let pending = getActiveDialog();
   while (pending) {
     settleDialog(pending.id, false);
@@ -303,5 +308,102 @@ describe('ProjectWorkspace — writing through to the store', () => {
     });
     expect(screen.getByText('Launch the site')).toBeTruthy();
     expect(S().projects).toHaveLength(1);
+  });
+});
+
+describe('ProjectWorkspace — the project is a destination, not component state', () => {
+  it('restores the open workspace from the URL after a reload', async () => {
+    await seedProjects([project()], []);
+    // A deep link, exactly as a refresh or a shared link would arrive.
+    window.location.hash = '#/projects/prj-1';
+    applyRoute({ tab: 'projects', view: 'prj-1' }, { updateHistory: false });
+
+    await act(async () => {
+      render(<ProjectsView />);
+    });
+
+    expect(screen.getByRole('tab', { name: /Overview/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Open workspace/i })).toBeNull();
+  });
+
+  it('lands on the hub when the linked project no longer exists', async () => {
+    await seedProjects([], []);
+    window.location.hash = '#/projects/gone';
+    applyRoute({ tab: 'projects', view: 'gone' }, { updateHistory: false });
+
+    await act(async () => {
+      render(<ProjectsView />);
+    });
+
+    expect(screen.getByText(/No projects yet/i)).toBeTruthy();
+    expect(window.location.hash).toBe('#/projects');
+  });
+
+  it('opens the project a focus request names, instead of stopping at the hub', async () => {
+    await seedProjects([project()], []);
+    await act(async () => {
+      render(<ProjectsView />);
+    });
+
+    await act(async () => {
+      S().requestFocus('projects', 'prj-1');
+    });
+
+    expect(window.location.hash).toBe('#/projects/prj-1');
+    expect(screen.getByRole('tab', { name: /Overview/i })).toBeTruthy();
+    // The request is consumed, so it cannot re-open the project on every later render.
+    expect(S().focusRequest).toBeNull();
+  });
+});
+
+describe('ProjectWorkspace — dates and task links', () => {
+  const openWorkspace = async (p: Project, tasks: Task[] = []) => {
+    await seedProjects([p], tasks);
+    await act(async () => {
+      render(<ProjectsView />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Open workspace/i }));
+    });
+  };
+
+  it('writes the project start and target dates to the record', async () => {
+    await openWorkspace(project());
+
+    // The pickers are the branded control, so the date is chosen the way a person
+    // chooses it: open the calendar, then press the day.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('combobox', { name: /^Start date$/i }));
+    });
+    await act(async () => {
+      fireEvent.mouseDown(screen.getByRole('button', { name: '2026-03-01' }));
+    });
+    expect(S().projects[0].startDate).toBe('2026-03-01');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('combobox', { name: /^Target date$/i }));
+    });
+    await act(async () => {
+      fireEvent.mouseDown(screen.getByRole('button', { name: '2026-03-20' }));
+    });
+    expect(S().projects[0].targetDate).toBe('2026-03-20');
+  });
+
+  it('links an existing task without moving it out of the Tasks module', async () => {
+    await openWorkspace(project(), [task('t1')]);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('combobox', { name: /Link a task to this project/i }));
+    });
+    await act(async () => {
+      fireEvent.mouseDown(screen.getByRole('option', { name: 't1' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Link$/i }));
+    });
+
+    const linked = S().tasks.find((x) => x.id === 't1');
+    expect(linked?.projectId).toBe('prj-1');
+    expect(S().tasks).toHaveLength(1);
   });
 });

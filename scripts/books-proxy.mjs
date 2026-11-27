@@ -48,6 +48,16 @@ const COVER_HOSTS = new Set([
 /** A cover larger than this is not a cover; refuse rather than stream it. */
 const MAX_COVER_BYTES = 4 * 1024 * 1024;
 
+/**
+ * How many redirects a cover fetch may follow.
+ *
+ * Redirects are followed BY HAND rather than with `redirect: 'follow'`, because the
+ * allow-list can only be enforced on a URL we actually see. With automatic following
+ * the runtime resolves the chain internally and an allowed host could bounce the
+ * request to `127.0.0.1` or a cloud metadata endpoint — the classic SSRF bypass.
+ */
+const MAX_COVER_REDIRECTS = 3;
+
 function isAllowedCoverUrl(raw) {
   let url;
   try {
@@ -65,34 +75,96 @@ function isAllowedCoverUrl(raw) {
  * The page cannot load a third-party image directly (its CSP allows no remote image
  * host), and a remote URL is not a durable reference anyway. The client turns this
  * response into a local data URL, so the cover survives offline once saved.
+ *
+ * Two hard limits protect the server:
+ *   - every hop of a redirect chain is re-validated against `COVER_HOSTS`, so the
+ *     allow-list cannot be escaped;
+ *   - the body is read with a running byte counter and the read is aborted the moment
+ *     it exceeds `MAX_COVER_BYTES`. A `Content-Length` check alone is not a limit: the
+ *     header is advisory and a chunked response can stream for ever.
  */
 async function proxyCover(rawUrl, res, fetchImpl, allowOrigin) {
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS) : null;
   try {
-    const upstream = await fetchImpl(rawUrl, {
-      method: 'GET',
-      headers: { Accept: 'image/*' },
-      redirect: 'follow',
-      signal: controller?.signal
-    });
-    if (!upstream.ok) {
-      res.writeHead(upstream.status === 404 ? 404 : 502, { 'Content-Type': 'application/json' });
+    let currentUrl = rawUrl;
+    let upstream = null;
+    for (let hop = 0; hop <= MAX_COVER_REDIRECTS; hop += 1) {
+      if (!isAllowedCoverUrl(currentUrl)) {
+        // The original URL was checked by the route; this catches a redirect that left
+        // the allow-list, which is the only way this branch can be reached.
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'bad_request' }));
+        return;
+      }
+      upstream = await fetchImpl(currentUrl, {
+        method: 'GET',
+        headers: { Accept: 'image/*' },
+        redirect: 'manual',
+        signal: controller?.signal
+      });
+
+      const status = Number(upstream.status);
+      if (status >= 300 && status < 400) {
+        const location = upstream.headers?.get?.('location');
+        if (!location) {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'bad_redirect' }));
+          return;
+        }
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
+      }
+      break;
+    }
+
+    if (!upstream) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'network' }));
+      return;
+    }
+
+    const finalStatus = Number(upstream.status);
+    if (finalStatus >= 300 && finalStatus < 400) {
+      // The loop exhausted its hop budget while still being redirected.
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'too_many_redirects' }));
+      return;
+    }
+    if (finalStatus === 404) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'cover_unavailable' }));
       return;
     }
+    if (!upstream.ok) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'cover_unavailable' }));
+      return;
+    }
+
     const type = upstream.headers?.get?.('content-type') ?? '';
     if (!type.startsWith('image/')) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'not_an_image' }));
       return;
     }
-    const buffer = Buffer.from(await upstream.arrayBuffer());
-    if (buffer.byteLength > MAX_COVER_BYTES) {
+
+    // Reject an oversized declared body before downloading it. This is an optimisation,
+    // not the guarantee — the streaming counter below is what actually bounds the read.
+    const declared = Number(upstream.headers?.get?.('content-length'));
+    if (Number.isFinite(declared) && declared > MAX_COVER_BYTES) {
       res.writeHead(413, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'cover_too_large' }));
       return;
     }
+
+    const buffer = await readCappedBody(upstream, MAX_COVER_BYTES);
+    if (buffer === null) {
+      res.writeHead(413, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'cover_too_large' }));
+      return;
+    }
+
     res.writeHead(200, {
       'Content-Type': type,
       'Content-Length': buffer.byteLength,
@@ -106,6 +178,42 @@ async function proxyCover(rawUrl, res, fetchImpl, allowOrigin) {
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+/**
+ * Read a response body while enforcing a hard byte ceiling.
+ *
+ * Returns `null` as soon as the accumulated size would exceed `limit`, so an
+ * unannounced (chunked) response cannot make the process buffer gigabytes. A body with
+ * no readable stream falls back to `arrayBuffer()` and is measured after the fact.
+ */
+async function readCappedBody(response, limit) {
+  const body = response.body;
+  if (!body || typeof body.getReader !== 'function') {
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return buffer.byteLength > limit ? null : buffer;
+  }
+
+  const reader = body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > limit) {
+        // Stop the transfer instead of draining the rest of an oversized body.
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock?.();
+  }
+  return Buffer.concat(chunks, total);
 }
 
 /** Providers report failure as a value, never as a thrown error the route must guess at. */
@@ -340,4 +448,11 @@ export function attachBooksProxy(options = {}) {
   return { handle, googleBooksConfigured: Boolean(apiKey), cache };
 }
 
-export { createCache, isAllowedCoverUrl, MAX_QUERY_LENGTH, COVER_HOSTS };
+export {
+  createCache,
+  isAllowedCoverUrl,
+  MAX_QUERY_LENGTH,
+  MAX_COVER_BYTES,
+  MAX_COVER_REDIRECTS,
+  COVER_HOSTS
+};

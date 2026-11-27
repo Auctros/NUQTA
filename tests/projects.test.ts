@@ -433,3 +433,30 @@ describe('projects persist and round-trip through backup', () => {
     expect(NuqtaStorageEngine.getProjects()).toEqual([]);
   });
 });
+
+describe('deleting a task cannot leave a step pointing at nothing', () => {
+  /*
+   * A project step keeps a `taskIds` list, and progress is derived from it. Deleting a
+   * task used to clear its goal links but leave the step reference behind, so the step
+   * counted a record no view could resolve. This exercises the real store action.
+   */
+  it('detaches the deleted task from every step that referenced it', async () => {
+    const { useNuqtaStore } = await import('../src/store/nuqtaStore');
+    const S = () => useNuqtaStore.getState();
+    S().initializeStore();
+
+    const base = project();
+    const { project: withStep, step } = addStep(base, { title: 'Interview' }, NOW);
+    const attached = attachTaskToStep(withStep, step.id, 'task-1', NOW);
+
+    useNuqtaStore.setState({
+      projects: [attached],
+      tasks: [{ id: 'task-1', title: 'Interview users', status: 'todo' } as Task]
+    });
+
+    S().deleteTask('task-1');
+
+    expect(S().tasks).toHaveLength(0);
+    expect(S().projects[0].steps[0].taskIds).toEqual([]);
+  });
+});

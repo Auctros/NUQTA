@@ -316,6 +316,7 @@ export function buildTimelineDataset(sources: TimelineSources, options: Timeline
         end,
         allDay: true,
         entityId: project.id,
+        subEntityId: phase.id,
         source: 'projects',
         status: phase.completedAt ? L.completed : undefined
       });

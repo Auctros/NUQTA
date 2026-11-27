@@ -61,6 +61,12 @@ export interface TimelineItem {
 
   /** Owning record, so interactions can be routed back to the module that owns it. */
   entityId: string;
+  /**
+   * The child record inside the owning entity, when the item is not the entity
+   * itself. A project's phase is the only case today: `entityId` stays the project
+   * (so "open" still works) while the edit must target one phase, not the project.
+   */
+  subEntityId?: string;
   /** The module to open for this item. */
   source: TimelineDomain;
 

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { localDateKey } from '../lib/dateKey';
 import { NuqtaIcon } from './NuqtaIcon';
-import { EmptyState, PageHeader, TabBar } from './ui';
+import { EmptyState, NuqtaDatePicker, NuqtaSelect, PageHeader, TabBar } from './ui';
 import { dialogs, feedback } from './ui/dialogController';
 import {
   assessProjectHealth,
@@ -11,7 +11,7 @@ import {
   projectTasks,
   summarizeProject
 } from '../lib/projectProgress';
-import { isTaskDone } from '../lib/taskStatus';
+import { isTaskDone, isTaskClosed } from '../lib/taskStatus';
 import {
   categoryLabel,
   healthLabel,
@@ -58,6 +58,7 @@ export const ProjectWorkspace: React.FC<Props> = ({ project, onBack }) => {
     deleteProjectResource,
     linkProjectToGoal,
     unlinkProjectFromGoal,
+    linkTaskToProject,
     unlinkTaskFromProject,
     setActiveNavTab
   } = useNuqtaStore();
@@ -73,6 +74,8 @@ export const ProjectWorkspace: React.FC<Props> = ({ project, onBack }) => {
   const [noteKind, setNoteKind] = useState<ProjectNoteKind>('note');
   const [resourceTitle, setResourceTitle] = useState('');
   const [resourceUrl, setResourceUrl] = useState('');
+  const [linkTaskId, setLinkTaskId] = useState('');
+  const [linkStepId, setLinkStepId] = useState('');
 
   const progress = deriveProjectProgress(project, tasks);
   const health = assessProjectHealth(project, tasks, today);
@@ -85,6 +88,35 @@ export const ProjectWorkspace: React.FC<Props> = ({ project, onBack }) => {
   const orderedSteps = useMemo(() => [...project.steps].sort((a, b) => a.order - b.order), [project.steps]);
   const orderedPhases = useMemo(() => [...project.phases].sort((a, b) => a.order - b.order), [project.phases]);
   const unphasedSteps = orderedSteps.filter((s) => !s.phaseId || !project.phases.some((p) => p.id === s.phaseId));
+
+  /*
+   * Tasks that can be attached: everything not already in this project and not closed.
+   * A closed task is finished work; offering it would attach a record that can never
+   * contribute progress. The step dropdown is limited to this project's steps, so a
+   * task cannot be pointed at a step the project does not own.
+   */
+  const linkableTasks = useMemo(
+    () => tasks.filter((t) => t.projectId !== project.id && !isTaskClosed(t)),
+    [tasks, project.id]
+  );
+
+  const submitTaskLink = () => {
+    if (!linkTaskId) return;
+    linkTaskToProject(linkTaskId, project.id, linkStepId || undefined);
+    setLinkTaskId('');
+    setLinkStepId('');
+    feedback.success(isAr ? 'رُبطت المهمة بالمشروع' : 'Task linked to project');
+  };
+
+  const projectRangeInvalid = Boolean(
+    project.startDate &&
+      project.targetDate &&
+      Date.parse(`${project.targetDate}T00:00:00`) < Date.parse(`${project.startDate}T00:00:00`)
+  );
+
+  const setProjectDates = (updates: { startDate?: string; targetDate?: string }) => {
+    updateProject(project.id, updates);
+  };
 
   const statusPillClass = `bg-[var(--tone-${statusTone[project.status]}-wash)] text-[var(--tone-${statusTone[project.status]})] border-[var(--tone-${statusTone[project.status]}-line)]`;
 
@@ -371,12 +403,89 @@ export const ProjectWorkspace: React.FC<Props> = ({ project, onBack }) => {
           </div>
 
           <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
+            <h3 className="text-sm font-bold text-[var(--text-primary)]">{t(ui.schedule, isAr)}</h3>
+            {/* Dates were already part of the project record but had no way in, so the
+                project's own Timeline tab could never draw anything. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted block">
+                  {t(ui.projectStart, isAr)}
+                </span>
+                <NuqtaDatePicker
+                  value={project.startDate ?? ''}
+                  onChange={(e) => setProjectDates({ startDate: e.target.value || undefined })}
+                  isAr={isAr}
+                  clearable
+                  max={project.targetDate}
+                  ariaLabel={t(ui.projectStart, isAr)}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted block">
+                  {t(ui.projectTarget, isAr)}
+                </span>
+                <NuqtaDatePicker
+                  value={project.targetDate ?? ''}
+                  onChange={(e) => setProjectDates({ targetDate: e.target.value || undefined })}
+                  isAr={isAr}
+                  clearable
+                  min={project.startDate}
+                  invalid={projectRangeInvalid}
+                  ariaLabel={t(ui.projectTarget, isAr)}
+                />
+              </label>
+            </div>
+            {projectRangeInvalid && (
+              <p className="text-[11px] text-[var(--tone-danger)]">{t(ui.invalidRange, isAr)}</p>
+            )}
+          </section>
+
+          <section className="panel p-5 border border-[var(--border-default)] bg-[var(--surface-raised)] rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-[var(--text-primary)]">{t(ui.tasks, isAr)}</h3>
               <button className="btn subtle text-[10px] py-1 px-2" onClick={() => setActiveNavTab('tasks')}>
-                {isAr ? 'قسم المهام' : 'Tasks section'}
+                {t(ui.tasksSection, isAr)}
               </button>
             </div>
+
+            {/* Attaching an existing task keeps one record in one place: the task stays
+                in the Tasks module and only its project/step pointers change. */}
+            {linkableTasks.length > 0 && (
+              <div className="flex flex-col sm:flex-row gap-2 border-b border-[var(--border-subtle)] pb-3">
+                <NuqtaSelect
+                  className="input flex-1 text-xs"
+                  value={linkTaskId}
+                  onChange={(e) => setLinkTaskId(e.target.value)}
+                  ariaLabel={t(ui.linkTask, isAr)}
+                >
+                  <option value="">{t(ui.linkTask, isAr)}</option>
+                  {linkableTasks.map((task) => (
+                    <option key={task.id} value={task.id}>
+                      {task.title}
+                    </option>
+                  ))}
+                </NuqtaSelect>
+                {orderedSteps.length > 0 && (
+                  <NuqtaSelect
+                    className="input text-xs sm:w-48"
+                    value={linkStepId}
+                    onChange={(e) => setLinkStepId(e.target.value)}
+                    ariaLabel={t(ui.linkTaskToStep, isAr)}
+                  >
+                    <option value="">{isAr ? 'بلا خطوة' : 'No step'}</option>
+                    {orderedSteps.map((step) => (
+                      <option key={step.id} value={step.id}>
+                        {step.title}
+                      </option>
+                    ))}
+                  </NuqtaSelect>
+                )}
+                <button className="btn primary text-xs" onClick={submitTaskLink} disabled={!linkTaskId}>
+                  {isAr ? 'ربط' : 'Link'}
+                </button>
+              </div>
+            )}
+
             {linkedTasks.length === 0 ? (
               <EmptyState icon="check-square" title={t(ui.emptyTasks, isAr)} description={t(ui.emptyTasksBody, isAr)} />
             ) : (
@@ -394,7 +503,7 @@ export const ProjectWorkspace: React.FC<Props> = ({ project, onBack }) => {
                     </div>
                     <button
                       className="text-muted hover:text-[var(--tone-danger)] shrink-0"
-                      title={isAr ? 'فصل المهمة عن المشروع' : 'Unlink task'}
+                      title={t(ui.unlinkTask, isAr)}
                       onClick={() => unlinkTaskFromProject(task.id)}
                     >
                       <NuqtaIcon name="close" className="w-3.5 h-3.5" />
@@ -492,6 +601,38 @@ export const ProjectWorkspace: React.FC<Props> = ({ project, onBack }) => {
                         <span className="text-[10px] text-muted ms-6 font-mono">
                           {done}/{phaseSteps.length} {isAr ? 'خطوة' : 'steps'}
                         </span>
+                        <div className="flex flex-wrap items-center gap-2 mt-2 ms-6">
+                          <NuqtaDatePicker
+                            value={phase.startDate ?? ''}
+                            onChange={(e) =>
+                              updateProjectPhase(project.id, phase.id, { startDate: e.target.value || undefined })
+                            }
+                            isAr={isAr}
+                            clearable
+                            size="sm"
+                            max={phase.targetDate}
+                            placeholder={t(ui.projectStart, isAr)}
+                            ariaLabel={`${phase.title} — ${t(ui.projectStart, isAr)}`}
+                          />
+                          <NuqtaDatePicker
+                            value={phase.targetDate ?? ''}
+                            onChange={(e) =>
+                              updateProjectPhase(project.id, phase.id, { targetDate: e.target.value || undefined })
+                            }
+                            isAr={isAr}
+                            clearable
+                            size="sm"
+                            min={phase.startDate}
+                            invalid={Boolean(
+                              phase.startDate &&
+                                phase.targetDate &&
+                                Date.parse(`${phase.targetDate}T00:00:00`) <
+                                  Date.parse(`${phase.startDate}T00:00:00`)
+                            )}
+                            placeholder={t(ui.projectTarget, isAr)}
+                            ariaLabel={`${phase.title} — ${t(ui.projectTarget, isAr)}`}
+                          />
+                        </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <input

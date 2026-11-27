@@ -74,6 +74,8 @@ export const TimelineWorkspace: React.FC = () => {
   const profile = useNuqtaStore((s) => s.profile);
   const updateTask = useNuqtaStore((s) => s.updateTask);
   const updateGoal = useNuqtaStore((s) => s.updateGoal);
+  const updateProject = useNuqtaStore((s) => s.updateProject);
+  const updateProjectPhase = useNuqtaStore((s) => s.updateProjectPhase);
   const addOrUpdateArtProject = useNuqtaStore((s) => s.addOrUpdateArtProject);
   const setActiveNavTab = useNuqtaStore((s) => s.setActiveNavTab);
   const requestFocus = useNuqtaStore((s) => s.requestFocus);
@@ -283,8 +285,11 @@ export const TimelineWorkspace: React.FC = () => {
         tasks,
         goals,
         habits,
+        projects,
         updateTask,
         updateGoal,
+        updateProject,
+        updateProjectPhase,
         updateArtProject: addOrUpdateArtProject
       };
 
@@ -305,7 +310,18 @@ export const TimelineWorkspace: React.FC = () => {
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
     };
-  }, [pxPerDay, tasks, goals, habits, updateTask, updateGoal, addOrUpdateArtProject]);
+  }, [
+    pxPerDay,
+    tasks,
+    goals,
+    habits,
+    projects,
+    updateTask,
+    updateGoal,
+    updateProject,
+    updateProjectPhase,
+    addOrUpdateArtProject
+  ]);
 
   // Shift/trackpad-horizontal over the canvas pans time. A plain vertical wheel
   // keeps scrolling the page, so the canvas never traps the user.
@@ -352,13 +368,26 @@ export const TimelineWorkspace: React.FC = () => {
         tasks,
         goals,
         habits,
+        projects,
         updateTask,
         updateGoal,
+        updateProject,
+        updateProjectPhase,
         updateArtProject: addOrUpdateArtProject
       });
       setSelectedId(item.id);
     },
-    [tasks, goals, habits, updateTask, updateGoal, addOrUpdateArtProject]
+    [
+      tasks,
+      goals,
+      habits,
+      projects,
+      updateTask,
+      updateGoal,
+      updateProject,
+      updateProjectPhase,
+      addOrUpdateArtProject
+    ]
   );
 
   // Escape clears the selection, so the inspector never traps the user in a detail view.

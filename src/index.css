@@ -172,12 +172,14 @@
   --tone-danger-wash: color-mix(in srgb, var(--tone-danger) 15%, transparent);
   --tone-info-wash: color-mix(in srgb, var(--tone-info) 15%, transparent);
   --tone-purple-wash: color-mix(in srgb, var(--tone-purple) 15%, transparent);
+  --tone-neutral-wash: color-mix(in srgb, var(--tone-neutral) 15%, transparent);
 
   --tone-success-line: color-mix(in srgb, var(--tone-success) 40%, transparent);
   --tone-warning-line: color-mix(in srgb, var(--tone-warning) 40%, transparent);
   --tone-danger-line: color-mix(in srgb, var(--tone-danger) 40%, transparent);
   --tone-info-line: color-mix(in srgb, var(--tone-info) 40%, transparent);
   --tone-purple-line: color-mix(in srgb, var(--tone-purple) 40%, transparent);
+  --tone-neutral-line: color-mix(in srgb, var(--tone-neutral) 40%, transparent);
 
   /* Intensity ramp for heatmaps / calendars — five steps from the
      neutral surface up to full accent saturation. Declared once so

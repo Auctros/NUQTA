@@ -767,6 +767,17 @@ export const useNuqtaStore = create<NuqtaStoreState>((set, get) => ({
     const updatedGoals = pruneGoalRelationIds(get().goals, { taskIds: [id] });
     NuqtaStorageEngine.saveGoals(updatedGoals);
     set({ goals: updatedGoals });
+
+    // A project step keeps a `taskIds` list. Deleting the task without clearing that
+    // reference would leave a step pointing at a record no view can resolve, so the
+    // step would count a task that no longer exists. Detach it here, exactly as
+    // `unlinkTaskFromProject` does for an explicit unlink.
+    if (get().projects.some((p) => p.steps.some((s) => s.taskIds.includes(id)))) {
+      const now = new Date().toISOString();
+      const updatedProjects = get().projects.map((p) => detachTaskFromSteps(p, id, now));
+      NuqtaStorageEngine.saveProjects(updatedProjects);
+      set({ projects: updatedProjects });
+    }
   },
 
   updateTaskSeries: (seriesId, anchorId, updates) => {
