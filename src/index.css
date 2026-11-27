@@ -3530,3 +3530,556 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
     transition: none;
   }
 }
+
+/* ===========================================================================
+   Courses — library covers and the opened playlist
+   ---------------------------------------------------------------------------
+   A course card is the playlist's own artwork. The title and channel sit on the
+   image over an upward glass gradient that dissolves into the picture, so the
+   cover stays the subject and the text never needs a solid panel behind it.
+
+   The same gradient language is reused by the playlist hero, so opening a card
+   feels like the cover expanding rather than a different screen.
+   =========================================================================== */
+
+/* Covers carry the whole card, so the grid gives them room: one column on a
+   phone, two from the small breakpoint, three when the studio has the width. */
+.course-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-3);
+}
+
+@media (min-width: 640px) {
+  .course-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .course-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-4);
+  }
+}
+
+.course-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  isolation: isolate;
+  overflow: hidden;
+  text-align: start;
+  border: 1px solid var(--studio-line, var(--border-default));
+  /* One step rounder than a studio tile: these are artwork, not panels. */
+  border-radius: var(--r-xl);
+  background: var(--studio-rail-bg, var(--surface-raised));
+  box-shadow: var(--elev-1);
+  cursor: pointer;
+  transition:
+    transform var(--dur-base) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-standard),
+    border-color var(--dur-base) var(--ease-standard);
+}
+
+.course-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--studio-accent-line, var(--border-strong));
+  box-shadow: var(--elev-2);
+}
+
+.course-card:focus-visible {
+  outline: 2px solid var(--ring-color, var(--studio-accent, var(--brand)));
+  outline-offset: 2px;
+}
+
+.course-card-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--studio-rail-bg, var(--surface-raised));
+}
+
+.course-card-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--dur-slow) var(--ease-standard);
+}
+
+.course-card:hover .course-card-cover {
+  transform: scale(1.03);
+}
+
+/* The fallback is deliberately a designed surface, not a broken-image icon.
+   It is a dark plate in both themes because it stands in for a photograph and
+   carries white text; a theme-following light surface would leave the title
+   unreadable. */
+.course-card-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--studio-accent-strong, #7dd3fc);
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(56, 189, 248, 0.22), transparent 62%),
+    radial-gradient(100% 80% at 100% 100%, rgba(56, 189, 248, 0.1), transparent 60%),
+    linear-gradient(155deg, #16222b, #0a1114 70%);
+}
+
+.course-card-fallback svg {
+  width: 30px;
+  height: 30px;
+  opacity: 0.55;
+}
+
+/* Bottom-anchored text over a gradient that fades to nothing well above the
+   title, so the image reads as continuous rather than sitting under a band.
+   The height is a fixed share of the cover, not of the text, so every card in
+   the grid has identical gradient geometry however long its title is. */
+.course-card-scrim {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 62%;
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  background: linear-gradient(
+    to top,
+    rgba(4, 8, 12, 0.95) 0%,
+    rgba(4, 8, 12, 0.9) 22%,
+    rgba(4, 8, 12, 0.72) 42%,
+    rgba(4, 8, 12, 0.44) 60%,
+    rgba(4, 8, 12, 0.16) 80%,
+    rgba(4, 8, 12, 0) 100%
+  );
+  /* A light blur dissolves the cover into the text. The mask fades the blur
+     itself out, so its top edge is never a visible line. */
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  -webkit-mask-image: linear-gradient(to top, #000 45%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 45%, transparent 100%);
+}
+
+.course-card-title {
+  color: #fff;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  letter-spacing: -0.005em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.course-card-channel {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Cover text stays white in both themes: it sits on artwork, not on a surface.
+   The legacy light-mode `p { color: … !important }` rule would otherwise
+   repaint it dark against a dark scrim. Hero and row text sit on real surfaces,
+   so they keep following the theme. */
+.light-mode .course-card-title {
+  color: #fff !important;
+}
+
+.light-mode .course-card-channel {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+/* Progress reads as a thin rule on the cover, so it never competes with text. */
+.course-card-progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.course-card-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--studio-accent, var(--brand));
+  transition: width var(--dur-slow) var(--ease-standard);
+}
+
+.course-card-done {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 10px;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--tone-success) 90%, black);
+  color: var(--text-on-state);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* --------------------------- opened playlist --------------------------- */
+
+/* Hero + list. On wide screens the hero is a side panel beside the list, which
+   is the YouTube playlist composition at a width NUQTA actually has. */
+.course-layout {
+  display: grid;
+  gap: var(--sp-5);
+  align-items: start;
+  min-width: 0;
+}
+
+@media (min-width: 1080px) {
+  .course-layout {
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+    gap: var(--sp-5);
+  }
+  .course-hero {
+    position: sticky;
+    top: var(--sp-4);
+  }
+}
+
+.course-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.course-hero-art {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1px solid var(--studio-line, var(--border-default));
+  background: var(--studio-rail-bg, var(--surface-raised));
+  box-shadow: var(--elev-2);
+}
+
+.course-hero-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.course-hero-art .course-card-fallback svg {
+  width: 38px;
+  height: 38px;
+}
+
+.course-hero-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-heavy);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.course-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+}
+
+.course-hero-meta .dot-sep::before {
+  content: '·';
+  margin-inline: 2px;
+}
+
+.course-hero-desc {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-relaxed, 1.7);
+  color: var(--text-secondary);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-line;
+}
+
+.course-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.course-hero-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--r-full);
+  background: var(--studio-accent, var(--brand));
+  color: var(--text-on-accent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+  transition: filter var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+}
+
+.course-hero-play:hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.course-hero-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.course-hero-progress-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.course-hero-progress-label strong {
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+}
+
+/* ------------------------------ video list ------------------------------ */
+
+.course-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.course-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-2);
+  margin-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--studio-line, var(--border-default));
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.course-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--sp-3);
+  padding: 8px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.course-row:hover {
+  background: var(--studio-rail-bg, var(--surface-raised));
+  border-color: var(--studio-line, var(--border-default));
+}
+
+/* The first unwatched lesson is the one to press next; it is marked, not loud. */
+.course-row[data-active='true'] {
+  background: var(--studio-accent-soft, var(--surface-active));
+  border-color: var(--studio-accent-line, var(--border-strong));
+}
+
+.course-row-thumb {
+  position: relative;
+  width: 132px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--studio-rail-bg, var(--surface-raised));
+  flex-shrink: 0;
+}
+
+.course-row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.course-row-thumb .course-card-fallback svg {
+  width: 18px;
+  height: 18px;
+}
+
+.course-row-duration {
+  position: absolute;
+  inset-inline-end: 4px;
+  bottom: 4px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(4, 8, 12, 0.82);
+  color: #fff;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+.course-row-body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.course-row-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.course-row-title {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  color: var(--text-primary);
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.course-row-title:hover {
+  color: var(--studio-accent-ink, var(--brand-strong));
+}
+
+.course-row[data-done='true'] .course-row-title {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.course-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
+  min-width: 0;
+}
+
+.course-row-meta > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.course-row-unavailable {
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
+/* Playback indicator: the lesson the "continue" action will open. */
+.course-row-now {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: var(--studio-accent-soft, var(--surface-active));
+  color: var(--studio-accent-ink, var(--brand-strong));
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.course-row-now .bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 9px;
+}
+
+.course-row-now .bars i {
+  width: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  animation: course-bars 1s var(--ease-standard) infinite alternate;
+}
+
+.course-row-now .bars i:nth-child(1) { height: 4px; animation-delay: 0ms; }
+.course-row-now .bars i:nth-child(2) { height: 8px; animation-delay: 160ms; }
+.course-row-now .bars i:nth-child(3) { height: 6px; animation-delay: 320ms; }
+
+@keyframes course-bars {
+  from { transform: scaleY(0.45); }
+  to { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .course-card,
+  .course-card-cover,
+  .course-card-progress > span,
+  .course-hero-play,
+  .course-row {
+    transition: none;
+  }
+  .course-card:hover {
+    transform: none;
+  }
+  .course-card:hover .course-card-cover {
+    transform: none;
+  }
+  .course-row-now .bars i {
+    animation: none;
+  }
+}
+
+/* Below the side-panel breakpoint the hero stacks above the list and stops
+   sticking. The row thumbnail shrinks first, since the title is the content. */
+@media (max-width: 720px) {
+  .course-layout {
+    gap: var(--sp-4);
+  }
+  .course-row {
+    gap: var(--sp-2);
+    padding: 6px;
+  }
+  .course-row-thumb {
+    width: 104px;
+  }
+  .course-hero-title {
+    font-size: var(--fs-base);
+  }
+  .course-hero-play {
+    height: 38px;
+    padding: 0 14px;
+  }
+}

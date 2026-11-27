@@ -58,8 +58,32 @@ const grep = (re, { except = [] } = {}) =>
 {
   const hits = grep(/fonts\.googleapis|fonts\.gstatic|images\.unsplash/);
   const idx = readFileSync(join(root, 'index.html'), 'utf8');
-  if (/https?:\/\/(?!www\.w3\.org)/.test(idx.replace(/<!--[\s\S]*?-->/g, ''))) hits.push('index.html references an external URL (CSP included)');
-  if (!/http-equiv="Content-Security-Policy"/.test(idx)) hits.push('index.html has no Content-Security-Policy');
+  const stripped = idx.replace(/<!--[\s\S]*?-->/g, '');
+  const csp = /http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(stripped);
+  if (!csp) hits.push('index.html has no Content-Security-Policy');
+
+  // Everything outside the CSP line must stay origin-free: no <script>, <link> or
+  // <img> may point at another host.
+  const withoutCsp = stripped.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/g, '');
+  if (/https?:\/\/(?!www\.w3\.org)/.test(withoutCsp)) {
+    hits.push('index.html references an external URL outside the CSP');
+  }
+
+  // The CSP itself is reviewed, not blanket-permitted. The one accepted exception is
+  // YouTube thumbnails for imported courses: images only, exactly one host. Keeping
+  // the allow-list explicit means a future edit cannot quietly widen it.
+  const allow = /img-src([^;]*)/.exec(csp?.[1] ?? '')?.[1] ?? '';
+  const externalImgHosts = [...allow.matchAll(/https?:\/\/([^\s;'"]+)/g)].map((m) => m[1]);
+  const unreviewedHosts = externalImgHosts.filter((host) => host !== 'i.ytimg.com');
+  if (unreviewedHosts.length) {
+    hits.push(`img-src allows an unreviewed host: ${unreviewedHosts.join(', ')}`);
+  }
+  // A thumbnail host must never be reachable from script or XHR.
+  for (const directive of ['script-src', 'connect-src', 'default-src']) {
+    const value = new RegExp(`${directive}([^;]*)`).exec(csp?.[1] ?? '')?.[1] ?? '';
+    if (/https?:\/\//.test(value)) hits.push(`${directive} allows an external origin`);
+  }
+
   if (hits.length) fail('No third-party requests: fonts and images must be self-hosted', hits.join('\n    '));
 }
 // 7. Do not claim encryption that the app does not perform.

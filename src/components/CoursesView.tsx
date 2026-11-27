@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CourseVideo, YoutubeCourse } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { Badge, Button, EmptyState, Field, Input, Modal, ProgressBar, Surface } from './ui';
+import { Badge, Button, Field, Input, Modal, ProgressBar, Surface } from './ui';
 import { dialogs, feedback } from './ui/dialogController';
-import { StudioEmpty, StudioFrame, StudioSection, StudioStat } from './studios/StudioKit';
+import { StudioEmpty, StudioFrame, StudioStat } from './studios/StudioKit';
 import { usePersistedViewTab } from '../lib/useNavigation';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import {
@@ -303,7 +303,7 @@ export const CoursesView: React.FC<{ isAr: boolean }> = ({ isAr }) => {
               />
             </Surface>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="course-grid">
               {sortedCourses.map((course) => {
                 const p = progressFor(course);
                 return (
@@ -386,8 +386,46 @@ export const CoursesView: React.FC<{ isAr: boolean }> = ({ isAr }) => {
 };
 
 /* ============================================================
-   Library card
+   Shared cover
    ============================================================ */
+
+/**
+ * Playlist or lesson artwork, with a designed fallback.
+ *
+ * Thumbnails come from i.ytimg.com, the one external origin the CSP allows for
+ * images. When YouTube gave no cover, or it fails to load, this draws a dark
+ * accent plate instead of a broken-image glyph — never an invented picture.
+ */
+const Cover: React.FC<{
+  src?: string;
+  alt?: string;
+  className?: string;
+  icon?: 'play' | 'layers';
+}> = ({ src, alt = '', className = 'course-card-cover', icon = 'layers' }) => {
+  const [failed, setFailed] = useState(false);
+  const showImage = Boolean(src) && !failed;
+
+  return (
+    <>
+      {showImage && (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className={className}
+          onError={() => setFailed(true)}
+        />
+      )}
+      {!showImage && (
+        <span className="course-card-fallback" aria-hidden="true">
+          <NuqtaIcon name={icon} />
+        </span>
+      )}
+    </>
+  );
+};
 
 const CourseCard: React.FC<{
   course: YoutubeCourse;
@@ -395,50 +433,37 @@ const CourseCard: React.FC<{
   progress: { done: number; total: number; pct: number };
   onOpen: () => void;
 }> = ({ course, isAr, progress, onOpen }) => (
-  <button
-    type="button"
-    onClick={onOpen}
-    className="text-start rounded-[var(--r-sm)] border border-[var(--studio-line)] bg-[var(--studio-panel)] overflow-hidden hover:border-[var(--studio-accent-line)] transition-colors duration-[var(--dur-fast)]"
-  >
-    <div className="aspect-video bg-[var(--studio-rail-bg)] relative overflow-hidden">
-      {course.thumbnailUrl ? (
-        // Thumbnails are served by i.ytimg.com; the CSP allows img-src https: for
-        // images only. A failed load leaves the neutral block, never a broken icon.
-        <img
-          src={course.thumbnailUrl}
-          alt=""
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover"
-          onError={(event) => {
-            event.currentTarget.style.visibility = 'hidden';
-          }}
-        />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center text-[var(--studio-accent-ink)]">
-          <NuqtaIcon name="play" className="w-6 h-6" />
-        </div>
-      )}
+  <button type="button" onClick={onOpen} className="course-card">
+    <div className="course-card-media">
+      <Cover src={course.thumbnailUrl} alt="" />
+
+      {/* Title and channel ride on the artwork; the scrim fades into the cover so
+          there is no hard panel edge. */}
+      <div className="course-card-scrim">
+        <p className="course-card-title">{course.title}</p>
+        <p className="course-card-channel">
+          {course.channelTitle || (isAr ? 'قناة غير معروفة' : 'Unknown channel')}
+        </p>
+      </div>
+
       {progress.pct === 100 && (
-        <span className="absolute top-1.5 end-1.5 rounded-full bg-[var(--tone-success)] text-[var(--text-on-state)] p-1">
+        <span className="course-card-done" title={isAr ? 'مكتملة' : 'Completed'}>
           <NuqtaIcon name="check" className="w-3 h-3" />
         </span>
       )}
+
+      {/* Decorative: a progressbar nested in a button is invalid ARIA, and the
+          same count is already in the card's accessible name below. */}
+      <span className="course-card-progress" aria-hidden="true">
+        <span style={{ width: `${progress.pct}%` }} />
+      </span>
     </div>
-    <div className="p-3 space-y-2">
-      <p className="text-[var(--fs-sm)] font-semibold text-[var(--text-primary)] line-clamp-2 leading-snug">
-        {course.title}
-      </p>
-      <p className="text-[var(--fs-xs)] text-[var(--text-tertiary)] truncate">
-        {course.channelTitle || (isAr ? 'قناة غير معروفة' : 'Unknown channel')}
-      </p>
-      <ProgressBar value={progress.pct} />
-      <p className="text-[10px] text-[var(--text-tertiary)] tabular-nums">
-        {isAr
-          ? `${progress.done} من ${progress.total} درساً`
-          : `${progress.done} of ${progress.total} lessons`}
-      </p>
-    </div>
+
+    {/* The count stays in the accessible name of the card, so the button still
+        announces progress to a screen reader without a second visible panel. */}
+    <span className="sr-only">
+      {isAr ? `${progress.done} من ${progress.total} درساً` : `${progress.done} of ${progress.total} lessons`}
+    </span>
   </button>
 );
 
@@ -459,6 +484,17 @@ const CourseDetail: React.FC<{
 }> = ({ course, isAr, progress, completedIds, onToggleVideo, onRefresh, onRemove, onBack, onOpenGoal }) => {
   // "Resume" means the first lesson not yet marked done — not merely the first lesson.
   const nextVideo = course.videos.find((v) => !v.unavailable && !completedIds.includes(v.videoId));
+  const available = course.videos.filter((v) => !v.unavailable);
+
+  // Total runtime is only shown when YouTube reported a duration for every
+  // playable lesson; a partial sum would understate the course.
+  const timed = available.filter((v) => typeof v.durationSeconds === 'number');
+  const totalSeconds =
+    available.length > 0 && timed.length === available.length
+      ? timed.reduce((sum, v) => sum + (v.durationSeconds ?? 0), 0)
+      : null;
+
+  const totalLabel = totalSeconds === null ? null : formatTotalDuration(totalSeconds, isAr);
 
   return (
     <div className="space-y-4">
@@ -478,161 +514,246 @@ const CourseDetail: React.FC<{
         </Button>
       </div>
 
-      <StudioSection>
-        <div className="flex flex-wrap items-start gap-3">
-          <div className="min-w-0 grow space-y-1">
-            <h2 className="text-[var(--fs-lg)] font-semibold text-[var(--text-primary)]">
-              {course.title}
-            </h2>
-            <p className="text-[var(--fs-xs)] text-[var(--text-tertiary)]">
-              {course.channelTitle}
-              {course.itemCount > course.videos.length &&
-                ` · ${isAr ? `${course.itemCount} عنصراً في يوتيوب` : `${course.itemCount} items on YouTube`}`}
-            </p>
-            {course.description && (
-              <p className="text-[var(--fs-xs)] text-[var(--text-secondary)] leading-relaxed line-clamp-3">
-                {course.description}
-              </p>
+      <div className="course-layout">
+        <section className="course-hero">
+          <div className="course-hero-art">
+            <Cover src={course.thumbnailUrl} alt="" className="course-card-cover" />
+          </div>
+
+          <div className="space-y-1">
+            <h2 className="course-hero-title">{course.title}</h2>
+            <div className="course-hero-meta">
+              <span>{course.channelTitle || (isAr ? 'قناة غير معروفة' : 'Unknown channel')}</span>
+              <span className="dot-sep">
+                {isAr
+                  ? `${available.length} درساً`
+                  : `${available.length} ${available.length === 1 ? 'lesson' : 'lessons'}`}
+              </span>
+              {totalLabel && <span className="dot-sep">{totalLabel}</span>}
+            </div>
+          </div>
+
+          {course.description && <p className="course-hero-desc">{course.description}</p>}
+
+          <div className="course-hero-actions">
+            {nextVideo ? (
+              <a
+                href={canonicalVideoUrl(nextVideo.videoId, course.playlistId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="course-hero-play"
+              >
+                <NuqtaIcon name="play" className="w-4 h-4" />
+                {progress.done > 0
+                  ? isAr
+                    ? 'أكمل المشاهدة'
+                    : 'Continue watching'
+                  : isAr
+                  ? 'ابدأ الدورة'
+                  : 'Play all'}
+              </a>
+            ) : (
+              <a
+                href={course.canonicalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="course-hero-play"
+              >
+                <NuqtaIcon name="play" className="w-4 h-4" />
+                {isAr ? 'أعد المشاهدة' : 'Watch again'}
+              </a>
             )}
-          </div>
-          <div className="text-end shrink-0">
-            <p className="text-[var(--fs-lg)] font-semibold tabular-nums text-[var(--studio-accent-ink)]">
-              {progress.pct}%
-            </p>
-            <p className="text-[10px] text-[var(--text-tertiary)]">
-              {isAr ? `${progress.done}/${progress.total}` : `${progress.done}/${progress.total}`}
-            </p>
-          </div>
-        </div>
-
-        <ProgressBar value={progress.pct} />
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          {nextVideo && (
             <a
-              href={canonicalVideoUrl(nextVideo.videoId, course.playlistId)}
+              href={course.canonicalUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-3 h-8 rounded-[var(--r-xs)] bg-[var(--studio-accent)] text-[var(--text-on-accent)] text-[var(--fs-xs)] font-semibold hover:opacity-90 transition-opacity"
+              className="inline-flex items-center gap-2 h-9 px-3 rounded-[var(--r-full)] border border-[var(--studio-line)] text-[var(--fs-xs)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--studio-line-strong)] transition-colors"
             >
-              <NuqtaIcon name="play" className="w-3.5 h-3.5" />
-              {isAr ? 'ابدأ من حيث توقفت' : 'Resume'}
+              {isAr ? 'افتح في يوتيوب' : 'Open on YouTube'}
+              <NuqtaIcon name="arrow" className="w-3.5 h-3.5 rtl:-scale-x-100" />
             </a>
+            <Button variant="ghost" size="sm" onClick={onOpenGoal}>
+              <NuqtaIcon name="target" className="w-3.5 h-3.5" />
+              {isAr ? 'اربطه بهدف' : 'Link to a goal'}
+            </Button>
+          </div>
+
+          <div className="course-hero-progress">
+            <div className="course-hero-progress-label">
+              <span>
+                {progress.done === 0
+                  ? isAr
+                    ? 'لم تبدأ بعد'
+                    : 'Not started'
+                  : isAr
+                  ? 'تقدمك'
+                  : 'Your progress'}
+              </span>
+              <span>
+                <strong>{progress.pct}%</strong>
+                {` · ${progress.done}/${progress.total}`}
+              </span>
+            </div>
+            <ProgressBar value={progress.pct} />
+          </div>
+
+          {course.truncated && (
+            <p className="text-[var(--fs-xs)] text-[var(--tone-warning)]">
+              {isAr
+                ? 'قائمة التشغيل أطول من الحد المسموح للاستيراد، لذا حُفظ جزء منها فقط.'
+                : 'This playlist is longer than the import limit, so only part of it was saved.'}
+            </p>
           )}
-          <a
-            href={course.canonicalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-3 h-8 rounded-[var(--r-xs)] border border-[var(--studio-line)] text-[var(--fs-xs)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            {isAr ? 'افتح في يوتيوب' : 'Open on YouTube'}
-            <NuqtaIcon name="arrow" className="w-3.5 h-3.5 rtl:-scale-x-100" />
-          </a>
-          <Button variant="ghost" size="sm" onClick={onOpenGoal}>
-            <NuqtaIcon name="target" className="w-3.5 h-3.5" />
-            {isAr ? 'اربطه بهدف' : 'Link to a goal'}
-          </Button>
-        </div>
+        </section>
 
-        {course.truncated && (
-          <p className="text-[var(--fs-xs)] text-[var(--tone-warning)]">
+        <div className="min-w-0">
+          <div className="course-list-head">
+            <span className="inline-flex items-center gap-2">
+              <span className="text-[var(--fs-sm)] font-semibold text-[var(--text-primary)]">
+                {isAr ? 'الدروس' : 'Lessons'}
+              </span>
+              <Badge tone="neutral">{course.videos.length}</Badge>
+            </span>
+            <span className="tabular-nums">
+              {isAr
+                ? `${progress.done} مكتمل`
+                : `${progress.done} done`}
+            </span>
+          </div>
+
+          <ol className="course-list">
+            {course.videos.map((video) => (
+              <LessonRow
+                key={`${video.videoId}-${video.position}`}
+                video={video}
+                isAr={isAr}
+                playlistId={course.playlistId}
+                channelTitle={course.channelTitle}
+                done={completedIds.includes(video.videoId)}
+                active={nextVideo?.videoId === video.videoId}
+                onToggle={() => onToggleVideo(video)}
+              />
+            ))}
+          </ol>
+
+          <p className="text-[10px] text-[var(--text-tertiary)] mt-3">
             {isAr
-              ? 'قائمة التشغيل أطول من الحد المسموح للاستيراد، لذا حُفظ جزء منها فقط.'
-              : 'This playlist is longer than the import limit, so only part of it was saved.'}
+              ? `آخر تحديث للبيانات: ${course.fetchedAt.slice(0, 10)} — نسخة محلية من يوتيوب.`
+              : `Metadata last refreshed: ${course.fetchedAt.slice(0, 10)} — a local copy of YouTube's data.`}
           </p>
-        )}
-      </StudioSection>
-
-      <StudioSection>
-        <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-[var(--fs-sm)] font-semibold text-[var(--text-primary)]">
-            {isAr ? 'الدروس' : 'Lessons'}
-          </h3>
-          <Badge tone="neutral">{course.videos.length}</Badge>
         </div>
-
-        <ol className="space-y-1">
-          {course.videos.map((video) => (
-            <LessonRow
-              key={`${video.videoId}-${video.position}`}
-              video={video}
-              isAr={isAr}
-              playlistId={course.playlistId}
-              done={completedIds.includes(video.videoId)}
-              onToggle={() => onToggleVideo(video)}
-            />
-          ))}
-        </ol>
-      </StudioSection>
-
-      <p className="text-[10px] text-[var(--text-tertiary)]">
-        {isAr
-          ? `آخر تحديث للبيانات: ${course.fetchedAt.slice(0, 10)} — نسخة محلية من يوتيوب.`
-          : `Metadata last refreshed: ${course.fetchedAt.slice(0, 10)} — a local copy of YouTube's data.`}
-      </p>
+      </div>
     </div>
   );
 };
+
+/** "2 hr 14 min" / "ساعتان و14 دقيقة" — only whole minutes, never a fake precision. */
+function formatTotalDuration(seconds: number, isAr: boolean): string | null {
+  const totalMinutes = Math.round(seconds / 60);
+  if (totalMinutes <= 0) return null;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (isAr) {
+    const h = hours > 0 ? `${hours} ساعة` : '';
+    const m = minutes > 0 ? `${minutes} دقيقة` : '';
+    return [h, m].filter(Boolean).join(' و');
+  }
+  const h = hours > 0 ? `${hours} hr` : '';
+  const m = minutes > 0 ? `${minutes} min` : '';
+  return [h, m].filter(Boolean).join(' ');
+}
 
 const LessonRow: React.FC<{
   video: CourseVideo;
   isAr: boolean;
   playlistId: string;
+  channelTitle?: string;
   done: boolean;
+  active: boolean;
   onToggle: () => void;
-}> = ({ video, isAr, playlistId, done, onToggle }) => {
+}> = ({ video, isAr, playlistId, channelTitle, done, active, onToggle }) => {
   const duration = formatDuration(video.durationSeconds ?? null);
+  const uploader = video.channelTitle || channelTitle;
+  const year = video.publishedAt ? video.publishedAt.slice(0, 4) : null;
 
   return (
-    <li className="flex items-center gap-2 rounded-[var(--r-xs)] px-2 py-1.5 hover:bg-[var(--studio-rail-bg)] transition-colors">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-pressed={done}
-        aria-label={
-          done
-            ? isAr
-              ? 'تحديد كغير مكتمل'
-              : 'Mark as not completed'
-            : isAr
-            ? 'تحديد كمكتمل'
-            : 'Mark as completed'
-        }
-        className={[
-          'w-5 h-5 shrink-0 rounded-full border flex items-center justify-center transition-colors',
-          done
-            ? 'bg-[var(--tone-success)] border-[var(--tone-success)] text-[var(--text-on-state)]'
-            : 'border-[var(--studio-line-strong)] text-transparent hover:border-[var(--studio-accent-line)]'
-        ].join(' ')}
-      >
-        <NuqtaIcon name="check" className="w-3 h-3" />
-      </button>
+    <li
+      className="course-row"
+      data-done={done ? 'true' : 'false'}
+      data-active={active ? 'true' : 'false'}
+    >
+      <div className="course-row-thumb">
+        {video.unavailable ? (
+          <span className="course-card-fallback" aria-hidden="true">
+            <NuqtaIcon name="alert" />
+          </span>
+        ) : (
+          <Cover src={video.thumbnailUrl} alt="" icon="play" />
+        )}
+        {!video.unavailable && duration && (
+          <span className="course-row-duration">{duration}</span>
+        )}
+      </div>
 
-      <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] w-6 shrink-0">
-        {video.position + 1}
-      </span>
+      <div className="course-row-body">
+        <div className="course-row-main">
+          {video.unavailable ? (
+            <span className="course-row-unavailable">
+              {isAr ? 'هذا الدرس لم يعد متاحاً على يوتيوب.' : 'This lesson is no longer available on YouTube.'}
+            </span>
+          ) : (
+            <a
+              href={canonicalVideoUrl(video.videoId, playlistId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="course-row-title"
+            >
+              {video.title}
+            </a>
+          )}
 
-      {video.unavailable ? (
-        <span className="grow text-[var(--fs-xs)] text-[var(--text-tertiary)] italic">
-          {isAr ? 'هذا الدرس لم يعد متاحاً على يوتيوب.' : 'This lesson is no longer available on YouTube.'}
-        </span>
-      ) : (
-        <a
-          href={canonicalVideoUrl(video.videoId, playlistId)}
-          target="_blank"
-          rel="noopener noreferrer"
+          <div className="course-row-meta">
+            <span className="tabular-nums">
+              {String(video.position + 1).padStart(2, '0')}
+            </span>
+            {uploader && <span>{uploader}</span>}
+            {year && <span>{year}</span>}
+            {active && (
+              <span className="course-row-now">
+                <span className="bars" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                {isAr ? 'التالي' : 'Up next'}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-pressed={done}
+          aria-label={
+            done
+              ? isAr
+                ? 'تحديد كغير مكتمل'
+                : 'Mark as not completed'
+              : isAr
+              ? 'تحديد كمكتمل'
+              : 'Mark as completed'
+          }
           className={[
-            'grow min-w-0 truncate text-[var(--fs-xs)] hover:underline',
-            done ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text-primary)]'
+            'w-6 h-6 shrink-0 mt-0.5 rounded-full border inline-grid place-items-center transition-colors',
+            done
+              ? 'bg-[var(--tone-success)] border-[var(--tone-success)] text-[var(--text-on-state)]'
+              : 'border-[var(--studio-line-strong)] text-transparent hover:border-[var(--studio-accent-line)] hover:text-[var(--studio-accent-line)]'
           ].join(' ')}
         >
-          {video.title}
-        </a>
-      )}
-
-      {duration && (
-        <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] shrink-0">{duration}</span>
-      )}
+          <NuqtaIcon name="check" className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </li>
   );
 };

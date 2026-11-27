@@ -198,7 +198,7 @@ describe('CoursesView — a course', () => {
     expect(screen.getByText('Lesson two')).toBeTruthy();
   });
 
-  it('offers "resume" at the first unfinished lesson, not the first lesson', async () => {
+  it('offers "continue watching" at the first unfinished lesson, not the first lesson', async () => {
     await seed(course());
     localStorage.setItem('nuqta.ui.courseProgress', JSON.stringify({ c1: ['aaaaaaaaaaa'] }));
     await act(async () => {
@@ -207,9 +207,16 @@ describe('CoursesView — a course', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Learn TypeScript/ }));
     });
-    const resume = screen.getByRole('link', { name: /Resume/i });
+    const resume = screen.getByRole('link', { name: /Continue watching/i });
     expect(resume.getAttribute('href')).toContain('bbbbbbbbbbb');
     expect(resume.getAttribute('href')).toContain('list=');
+  });
+
+  it('offers "play all" on a course that has not been started', async () => {
+    await openCourse(course());
+    const play = screen.getByRole('link', { name: /Play all/i });
+    // Starting a course must open its first lesson, not just the playlist page.
+    expect(play.getAttribute('href')).toContain('aaaaaaaaaaa');
   });
 
   it('marks a lesson done and records it locally', async () => {
@@ -298,5 +305,194 @@ describe('CoursesView — Arabic', () => {
       render(<CoursesView isAr />);
     });
     expect(screen.getByText(/لا دورات بعد/)).toBeTruthy();
+  });
+});
+
+describe('CoursesView — cover artwork', () => {
+  const COVER = 'https://i.ytimg.com/vi/zzzzzzzzzzz/hqdefault.jpg';
+
+  it('uses the real playlist thumbnail on the library card', async () => {
+    await seed(course({ thumbnailUrl: COVER }));
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    const img = document.querySelector(`img[src="${COVER}"]`);
+    expect(img).toBeTruthy();
+    // The cover is decoration next to the title, so it must not be announced twice.
+    expect(img?.getAttribute('alt')).toBe('');
+  });
+
+  it('shows the title and channel over the cover, not beside it', async () => {
+    await seed(course({ thumbnailUrl: COVER }));
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    const scrim = document.querySelector('.course-card-scrim');
+    expect(scrim?.textContent).toContain('Learn TypeScript');
+    expect(scrim?.textContent).toContain('Type Academy');
+  });
+
+  it('falls back to a designed surface when YouTube gave no cover', async () => {
+    await seed(course({ thumbnailUrl: undefined }));
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    expect(document.querySelector('.course-card img')).toBeNull();
+    expect(document.querySelector('.course-card-fallback')).toBeTruthy();
+  });
+
+  it('replaces a cover that fails to load instead of leaving a broken image', async () => {
+    await seed(course({ thumbnailUrl: COVER }));
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    const img = document.querySelector<HTMLImageElement>(`.course-card img[src="${COVER}"]`)!;
+    await act(async () => {
+      fireEvent.error(img);
+    });
+    expect(document.querySelector('.course-card img')).toBeNull();
+    expect(document.querySelector('.course-card-fallback')).toBeTruthy();
+  });
+
+  it('never invents a cover when the course has none', async () => {
+    await seed(course({ thumbnailUrl: undefined }));
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    expect(document.querySelectorAll('img').length).toBe(0);
+  });
+
+  it('names the card with its title, channel, and progress — and nests no widget', async () => {
+    await seed(course({ thumbnailUrl: COVER }));
+    localStorage.setItem('nuqta.ui.courseProgress', JSON.stringify({ c1: ['aaaaaaaaaaa'] }));
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    const card = screen.getByRole('button', { name: /Learn TypeScript/ });
+    const name = card.textContent ?? '';
+    expect(name).toContain('Type Academy');
+    expect(name).toContain('1 of 2 lessons');
+    // A progressbar inside a button is invalid ARIA; the bar is decoration and
+    // the count is already spoken as part of the button's name.
+    expect(card.querySelector('[role="progressbar"]')).toBeNull();
+  });
+});
+
+describe('CoursesView — playlist detail', () => {
+  const withVideos = (overrides: Partial<YoutubeCourse> = {}) =>
+    course({
+      description: 'A tour of the type system.',
+      videos: [
+        video({
+          videoId: 'aaaaaaaaaaa',
+          title: 'Lesson one',
+          position: 0,
+          durationSeconds: 3661,
+          thumbnailUrl: 'https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg'
+        }),
+        video({
+          videoId: 'bbbbbbbbbbb',
+          title: 'Lesson two',
+          position: 1,
+          durationSeconds: 90,
+          thumbnailUrl: 'https://i.ytimg.com/vi/bbbbbbbbbbb/hqdefault.jpg'
+        })
+      ],
+      ...overrides
+    });
+
+  const openWith = async (c: YoutubeCourse) => {
+    await seed(c);
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Learn TypeScript/ }));
+    });
+  };
+
+  it('shows the playlist description and video count in the hero', async () => {
+    await openWith(withVideos());
+    expect(screen.getByText('A tour of the type system.')).toBeTruthy();
+    expect(screen.getByText(/2 lessons/)).toBeTruthy();
+  });
+
+  it('totals the runtime only from the durations YouTube actually returned', async () => {
+    await openWith(withVideos());
+    // 3661s + 90s ≈ 62.5 min → rounds to 1 hr 3 min.
+    expect(screen.getByText(/1 hr 3 min/)).toBeTruthy();
+  });
+
+  it('omits the total when any lesson is missing a duration', async () => {
+    await openWith(
+      withVideos({
+        videos: [
+          video({ videoId: 'aaaaaaaaaaa', title: 'Lesson one', position: 0, durationSeconds: 600 }),
+          video({ videoId: 'bbbbbbbbbbb', title: 'Lesson two', position: 1 })
+        ]
+      })
+    );
+    const meta = document.querySelector('.course-hero-meta')!;
+    expect(meta.textContent).not.toMatch(/\bhr\b|\bmin\b/);
+  });
+
+  it('gives every lesson row its own thumbnail and duration overlay', async () => {
+    await openWith(withVideos());
+    expect(document.querySelector('img[src*="aaaaaaaaaaa"]')).toBeTruthy();
+    expect(document.querySelector('img[src*="bbbbbbbbbbb"]')).toBeTruthy();
+    // 3661s formats as 1:01:01; 90s as 1:30.
+    expect(screen.getByText('1:01:01')).toBeTruthy();
+    expect(screen.getByText('1:30')).toBeTruthy();
+  });
+
+  it('marks the lesson that continue-watching will open, and only that one', async () => {
+    await seed(withVideos());
+    localStorage.setItem('nuqta.ui.courseProgress', JSON.stringify({ c1: ['aaaaaaaaaaa'] }));
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Learn TypeScript/ }));
+    });
+    const rows = document.querySelectorAll('.course-row');
+    expect(rows[0].getAttribute('data-active')).toBe('false');
+    expect(rows[1].getAttribute('data-active')).toBe('true');
+    expect(screen.getAllByText(/Up next/i)).toHaveLength(1);
+  });
+
+  it('marks completed rows without hiding them from the list', async () => {
+    await seed(withVideos());
+    localStorage.setItem('nuqta.ui.courseProgress', JSON.stringify({ c1: ['aaaaaaaaaaa'] }));
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Learn TypeScript/ }));
+    });
+    const first = document.querySelectorAll('.course-row')[0];
+    expect(first.getAttribute('data-done')).toBe('true');
+    expect(first.textContent).toContain('Lesson one');
+  });
+
+  it('keeps playlist order even when a lesson is completed', async () => {
+    await seed(withVideos());
+    localStorage.setItem('nuqta.ui.courseProgress', JSON.stringify({ c1: ['bbbbbbbbbbb'] }));
+    await act(async () => {
+      render(<CoursesView isAr={false} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Learn TypeScript/ }));
+    });
+    const titles = [...document.querySelectorAll('.course-row-title')].map((n) => n.textContent);
+    expect(titles).toEqual(['Lesson one', 'Lesson two']);
+  });
+
+  it('still marks lessons done from the redesigned row', async () => {
+    await openWith(withVideos());
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: /Mark as completed/i })[1]);
+    });
+    const stored = JSON.parse(localStorage.getItem('nuqta.ui.courseProgress') ?? '{}');
+    expect(stored.c1).toEqual(['bbbbbbbbbbb']);
   });
 });
