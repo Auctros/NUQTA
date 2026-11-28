@@ -3,6 +3,8 @@ import { NuqtaIcon } from '../NuqtaIcon';
 import type { IconName } from '../NuqtaIcon';
 import { Button, IconButton } from './primitives';
 import { useModalFocus } from '../../lib/useModalFocus';
+import { isTopmostOverlay, popOverlay, pushOverlay } from '../../lib/overlayStack';
+import { lockPageScroll, unlockPageScroll } from '../../lib/scrollLock';
 import { useNuqtaStore } from '../../store/nuqtaStore';
 import {
   settleDialog,
@@ -60,6 +62,16 @@ const DialogPanel: React.FC<{ dialog: ActiveDialog }> = ({ dialog }) => {
   const titleId = useId();
   const descriptionId = useId();
   const errorId = useId();
+  // Declared before the key handlers below so registration runs first: they
+  // need this panel to already be on the stack to claim Escape.
+  const token = useRef<object | null>(null);
+  useEffect(() => {
+    token.current = pushOverlay(() => panelRef.current);
+    return () => {
+      if (token.current) popOverlay(token.current);
+      token.current = null;
+    };
+  }, []);
 
   const cancel = useCallback(() => {
     if (dialog.kind === 'prompt') settleDialog(dialog.id, null);
@@ -84,26 +96,29 @@ const DialogPanel: React.FC<{ dialog: ActiveDialog }> = ({ dialog }) => {
   }, [dialog, value]);
 
   // Escape dismisses only when the caller allows it; confirm/prompt then resolve
-  // as "cancelled", exactly like the native dialogs they replace.
+  // as "cancelled", exactly like the native dialogs they replace. Listening in
+  // the bubble phase alongside the Modals means the shared overlay stack decides
+  // which surface is topmost, instead of this capture listener stealing Escape
+  // from a Modal that was opened after it.
   useEffect(() => {
     if (!dismissible) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
+      if (!token.current || !isTopmostOverlay(token.current)) return;
       event.stopPropagation();
       cancel();
     };
-    document.addEventListener('keydown', onKeyDown, true);
-    return () => document.removeEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
   }, [dismissible, cancel]);
 
   // Native dialogs freeze the page behind them; a dialog the user can scroll past
-  // feels detached from the decision it is asking for.
+  // feels detached from the decision it is asking for. Shared with the other
+  // overlays: a per-dialog save/restore strands the page locked when a Modal is
+  // already open, because the outer overlay restores "hidden" as its "original".
   useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
+    const lock = lockPageScroll();
+    return () => unlockPageScroll(lock);
   }, []);
 
   const confirmLabel =

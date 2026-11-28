@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useEntering, usePresence } from '../../lib/usePresence';
 import { NuqtaIcon } from '../NuqtaIcon';
+import { OVERLAY_TIMING, useReducedMotion } from '../../lib/motion';
+import { MovingHighlight, useMovingHighlight } from '../motion/MovingHighlight';
 
 /* ============================================================
    NUQTA — branded select
@@ -15,6 +18,12 @@ import { NuqtaIcon } from '../NuqtaIcon';
    navigation (Arrow keys, Home/End, Enter/Space, type-ahead).
    The menu renders in a portal so it is never clipped by the
    scroll container or modal it lives in.
+
+   Motion (Animate UI "Select" reference): the popup fades and
+   scales out of the trigger, options enter in a clipped stagger,
+   a single highlight surface follows pointer *and* keyboard, and
+   the chosen value swaps with a short vertical blur transition
+   instead of appearing abruptly.
    ============================================================ */
 
 export interface SelectOption {
@@ -104,6 +113,9 @@ export const NuqtaSelect: React.FC<NuqtaSelectProps> = ({
   const menuRef = useRef<HTMLDivElement | null>(null);
   const reactId = useId();
   const listboxId = `nuqta-select-${reactId}`;
+  const reduced = useReducedMotion();
+  const presence = usePresence(open, OVERLAY_TIMING.menuOut);
+  const entering = useEntering(presence.mounted);
 
   const resolvedOptions = useMemo(
     () => (children ? parseChildren(children) : options || []),
@@ -117,6 +129,15 @@ export const NuqtaSelect: React.FC<NuqtaSelectProps> = ({
   );
   const selectedOption = selectedIndex >= 0 ? resolvedOptions[selectedIndex] : undefined;
   const hasValue = selectedOption !== undefined;
+
+  // The highlight covers the *active* row (pointer or keyboard), which is not
+  // necessarily the selected one — that is what makes it feel like one surface
+  // travelling through the list rather than a hover painted per row.
+  const highlightRect = useMovingHighlight({
+    containerRef: menuRef,
+    activeIndex: open ? activeIndex : -1,
+    enabled: open
+  });
 
   const positionMenu = useCallback(() => {
     const el = triggerRef.current;
@@ -265,8 +286,18 @@ export const NuqtaSelect: React.FC<NuqtaSelectProps> = ({
           .filter(Boolean)
           .join(' ')}
       >
-        <span className={`flex-1 min-w-0 truncate ${hasValue ? '' : 'text-[var(--text-tertiary)]'}`}>
-          {hasValue ? selectedOption!.label : placeholder || ''}
+        {/* The chosen value swaps with a short vertical blur instead of cutting. The
+            wrapper is a grid so both the outgoing and incoming labels occupy the same
+            cell and the trigger never resizes mid-transition. */}
+        <span className="relative flex-1 min-w-0 grid overflow-hidden text-start">
+          <span
+            key={hasValue ? valueStr : '__placeholder__'}
+            className={`col-start-1 row-start-1 min-w-0 truncate ${
+              hasValue ? '' : 'text-[var(--text-tertiary)]'
+            }${reduced ? '' : ' nq-value-swap'}`}
+          >
+            {hasValue ? selectedOption!.label : placeholder || ''}
+          </span>
         </span>
         <NuqtaIcon
           name="chevronDown"
@@ -276,58 +307,79 @@ export const NuqtaSelect: React.FC<NuqtaSelectProps> = ({
         />
       </button>
 
-      {open &&
-        createPortal(
-          <div
-            ref={menuRef}
-            id={listboxId}
-            role="listbox"
-            tabIndex={-1}
-            aria-activedescendant={activeIndex >= 0 ? `${listboxId}-opt-${activeIndex}` : undefined}
-            className={[
-              'overflow-y-auto rounded-[var(--r-sm)] border border-[var(--border-default)]',
-              'bg-[var(--surface-raised)] shadow-[var(--elev-3)] py-1',
-              menuClassName
-            ].join(' ')}
-            style={menuStyle}
-          >
-            {resolvedOptions.map((opt, i) => {
-              const isSelected = opt.value === valueStr;
-              const isActive = i === activeIndex;
-              return (
-                <div
-                  key={opt.value}
-                  id={`${listboxId}-opt-${i}`}
-                  role="option"
-                  aria-selected={isSelected}
-                  aria-disabled={opt.disabled || undefined}
-                  onMouseEnter={() => !opt.disabled && setActiveIndex(i)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    commit(i);
-                  }}
-                  className={[
-                    'flex items-center gap-2 px-3 py-2 text-[var(--fs-sm)] cursor-pointer select-none',
-                    opt.disabled
-                      ? 'text-[var(--text-tertiary)] opacity-50 cursor-not-allowed'
-                      : 'text-[var(--text-primary)]',
-                    isActive && !opt.disabled ? 'bg-[var(--surface-chip)]' : '',
-                    isSelected ? 'font-[var(--fw-semibold)] text-[var(--brand-strong)]' : ''
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <span className="flex-1 min-w-0 truncate">{opt.label}</span>
-                  {isSelected && <NuqtaIcon name="check" className="w-4 h-4 shrink-0" />}
-                </div>
-              );
-            })}
-            {resolvedOptions.length === 0 && (
-              <div className="px-3 py-2 text-[var(--fs-xs)] text-[var(--text-tertiary)]">—</div>
-            )}
-          </div>,
-          document.body
-        )}
+      {createPortal(
+        presence.mounted ? (
+            <div
+              ref={menuRef}
+              id={listboxId}
+              role="listbox"
+              tabIndex={-1}
+              // `open` is already false while the exit animation runs: the popup is
+              // visually still there but no longer an interactive control, so it must
+              // be hidden from assistive tech and from pointer/keyboard alike.
+              aria-hidden={presence.exiting || undefined}
+              inert={presence.exiting || undefined}
+              aria-activedescendant={
+                open && activeIndex >= 0 ? `${listboxId}-opt-${activeIndex}` : undefined
+              }
+              className={[
+                'nq-menu overflow-y-auto rounded-[var(--r-sm)] border border-[var(--border-default)]',
+                'bg-[var(--surface-raised)] shadow-[var(--elev-3)] py-1 relative',
+                entering ? 'nq-menu--entering' : '',
+                menuClassName
+              ].join(' ')}
+              data-state={presence.exiting ? 'closed' : 'open'}
+              style={{ ...menuStyle, transformOrigin: 'top center' }}
+            >
+              <MovingHighlight rect={highlightRect} className="bg-[var(--surface-chip)]" />
+              {resolvedOptions.map((opt, i) => {
+                const isSelected = opt.value === valueStr;
+                const isActive = i === activeIndex && !opt.disabled;
+                return (
+                  <div
+                    key={opt.value}
+                    id={`${listboxId}-opt-${i}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    aria-disabled={opt.disabled || undefined}
+                    data-highlight-item="true"
+                    style={
+                      reduced
+                        ? undefined
+                        : ({ '--nq-row-delay': `${Math.min(i * 22, 220)}ms` } as React.CSSProperties)
+                    }
+                    onMouseEnter={() => !opt.disabled && setActiveIndex(i)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      commit(i);
+                    }}
+                    className={[
+                      'relative flex items-center gap-2 px-3 py-2 text-[var(--fs-sm)] cursor-pointer select-none',
+                      opt.disabled
+                        ? 'text-[var(--text-tertiary)] opacity-50 cursor-not-allowed'
+                        : 'text-[var(--text-primary)]',
+                      isSelected ? 'font-[var(--fw-semibold)] text-[var(--brand-strong)]' : '',
+                      reduced ? '' : 'nq-row-in'
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <span className="flex-1 min-w-0 truncate">{opt.label}</span>
+                    {isSelected && (
+                      <span className={`shrink-0${reduced ? '' : ' nq-indicator--pop'}`}>
+                        <NuqtaIcon name="check" className="w-4 h-4" />
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              {resolvedOptions.length === 0 && (
+                <div className="px-3 py-2 text-[var(--fs-xs)] text-[var(--text-tertiary)]">—</div>
+              )}
+            </div>
+        ) : null,
+        document.body
+      )}
     </>
   );
 };

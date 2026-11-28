@@ -9,6 +9,9 @@ import {
   settleDialog
 } from '../src/components/ui/dialogController';
 import { DialogHost } from '../src/components/ui/DialogHost';
+import { Modal } from '../src/components/ui/overlays';
+import { resetOverlayStack } from '../src/lib/overlayStack';
+import { resetScrollLock } from '../src/lib/scrollLock';
 import { useNuqtaStore } from '../src/store/nuqtaStore';
 
 const setLanguage = (language: 'ar' | 'en') =>
@@ -23,6 +26,8 @@ beforeEach(() => {
   }
   feedback.clear();
   setLanguage('en');
+  resetOverlayStack();
+  resetScrollLock();
 });
 
 afterEach(() => {
@@ -260,5 +265,98 @@ describe('the page cannot scroll behind an open dialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(document.body.style.overflow).toBe('');
+  });
+});
+
+describe('dialog host layered over a modal', () => {
+  it('closes the confirm first, leaving the modal and the page lock intact', async () => {
+    const closeModal = vi.fn();
+    render(
+      <>
+        <Modal open onClose={closeModal} title="Settings">
+          <p>body</p>
+        </Modal>
+        <DialogHost />
+      </>
+    );
+    await screen.findByRole('dialog');
+    expect(document.body.style.overflow).toBe('hidden');
+
+    let answer: boolean | undefined;
+    act(() => {
+      void dialogs.confirm({ title: 'Discard changes?' }).then((value) => {
+        answer = value;
+      });
+    });
+    await screen.findByRole('dialog', { name: /Discard changes\?/ });
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => expect(answer).toBe(false));
+    // The underlying modal must survive the Escape that dismissed the confirm,
+    // and the page must stay locked because that modal is still open.
+    expect(closeModal).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: /Settings/ })).toBeTruthy();
+    expect(document.body.style.overflow).toBe('hidden');
+  });
+
+  it('releases the lock once nothing is open and never restores the locked value', async () => {
+    const { rerender } = render(
+      <>
+        <Modal open onClose={() => {}} title="Settings">
+          <p>body</p>
+        </Modal>
+        <DialogHost />
+      </>
+    );
+    await screen.findByRole('dialog');
+    expect(document.body.style.overflow).toBe('hidden');
+
+    rerender(
+      <>
+        <Modal open={false} onClose={() => {}} title="Settings">
+          <p>body</p>
+        </Modal>
+        <DialogHost />
+      </>
+    );
+
+    await waitFor(() => expect(document.body.style.overflow).toBe(''));
+  });
+});
+
+describe('modal opened over an existing confirm', () => {
+  it('gives Escape to the newer modal, leaving the confirm pending', async () => {
+    const closeModal = vi.fn();
+    // The tree shape stays identical across renders, so DialogHost is not
+    // remounted: a remount would re-register the confirm as the newest overlay
+    // and make the assertion below pass for the wrong reason.
+    const tree = (modalOpen: boolean) => (
+      <>
+        <Modal open={modalOpen} onClose={closeModal} title="Settings">
+          <p>body</p>
+        </Modal>
+        <DialogHost />
+      </>
+    );
+    const { rerender } = render(tree(false));
+
+    let answer: boolean | undefined;
+    act(() => {
+      void dialogs.confirm({ title: 'Discard changes?' }).then((value) => {
+        answer = value;
+      });
+    });
+    await screen.findByRole('dialog', { name: /Discard changes\?/ });
+
+    rerender(tree(true));
+    await screen.findByRole('dialog', { name: /Settings/ });
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    // The confirm was opened first, so it is no longer topmost: Escape belongs
+    // to the modal and the pending question must not be resolved behind it.
+    expect(closeModal).toHaveBeenCalledTimes(1);
+    expect(answer).toBeUndefined();
   });
 });

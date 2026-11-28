@@ -4,6 +4,7 @@ import { StorageIssueBanner } from './components/StorageIssueBanner';
 import { UpdateBanner } from './components/UpdateBanner';
 import { SyncStatusBadge } from './components/SyncStatusBadge';
 import { localDateKey } from './lib/dateKey';
+import { isTopmostOverlay, popOverlay, pushOverlay } from './lib/overlayStack';
 import { isTaskPending } from './lib/taskStatus';
 import React, { useEffect, useState } from 'react';
 import { useNuqtaStore } from './store/nuqtaStore';
@@ -73,6 +74,7 @@ export default function App() {
   const { navigate } = useNavigation();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarTokenRef = React.useRef<object | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [sidebarHasMore, setSidebarHasMore] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -122,6 +124,22 @@ export default function App() {
     applyThemeClass(profile.theme);
   }, [profile.theme]);
 
+  // The narrow-screen sidebar behaves as a drawer over the page, so it takes a
+  // place on the overlay stack. Its own z-index decides the ranking, which is
+  // what makes an open dialog outrank it.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const token = pushOverlay(() => {
+      const el = document.querySelector('.sidebar');
+      return el instanceof HTMLElement ? el : null;
+    });
+    sidebarTokenRef.current = token;
+    return () => {
+      popOverlay(token);
+      sidebarTokenRef.current = null;
+    };
+  }, [sidebarOpen]);
+
   // Global hotkeys (Q for new task, Escape to close sidebar)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -136,7 +154,15 @@ export default function App() {
         return;
       }
       if (e.key === 'Escape') {
-        setSidebarOpen(false);
+        // The drawer answers Escape only while it is the topmost surface, so a
+        // dialog opened over it keeps the key.
+        if (sidebarOpen) {
+          const token = sidebarTokenRef.current;
+          const drawer = document.querySelector('.sidebar');
+          if (token && isTopmostOverlay(token, drawer instanceof HTMLElement ? drawer : null)) {
+            setSidebarOpen(false);
+          }
+        }
         return;
       }
 

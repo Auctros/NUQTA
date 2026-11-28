@@ -161,6 +161,69 @@ with an IndexedDB mirror for recovery.
   the e2e nav sweep. On desktop the rail's `inset-block-end` leaves room for the dock; on
   mobile the dock rides the off-canvas drawer via the shared `open` class.
 
+## Motion & surface lifecycles
+
+Motion is a property of state, not an animation script. A surface is rendered from one
+declarative state flag, CSS transitions that flag, and nothing else.
+
+- **No animation library.** Not a stylistic preference; the app is offline-first and the
+  surface motion is a handful of transitions and one scalar spring, so a library would add a
+  parse/eval cost on every cold start to replace code the app already owns. It also moves the
+  definition of "when a surface is gone" into a third-party scheduler, which is exactly the
+  timing `usePresence` has to keep in step with the CSS. Invariant 27 fails the build on any
+  `motion` / `framer-motion` import, and there is no exception path: if a new animation cannot
+  be expressed with CSS transitions plus `OVERLAY_TIMING`, that is a design question, not a
+  dependency question. Durations live in `OVERLAY_TIMING` (`src/lib/motion.ts`) and the CSS
+  rules in `src/index.css` read the same constant. One number must not be duplicated between
+  the transition and the timer that unmounts the surface, or the two drift and panels vanish
+  mid-fade or linger as ghosts. Add a duration to `OVERLAY_TIMING`; never inline one.
+- **Presence outlives the open flag.** A surface that animates out renders while
+  `usePresence(...).mounted` is true, and expresses direction with
+  `data-state={exiting ? 'closed' : 'open'}`. While exiting it is still on screen, so it must
+  already be unreachable: `inert` plus `aria-hidden="true"`. It is removed only when the exit
+  timer fires. A surface that merely hides is still reachable by keyboard and screen readers.
+- **Entrance is derived, not scheduled.** `useEntering(presence.mounted)` yields a one-frame
+  flag in the same commit the surface appears, so the first paint carries the offset and the
+  transition has a start value. Two consequences worth keeping: the flag must key on
+  `mounted`, because an owning component stays mounted across open/close and any flag cleared
+  in a later effect is consumed before the panel paints; and a reopen during an exit must not
+  replay the entrance, it reverses the exit from wherever it had reached.
+- **One frame-loop integrator, and it is local.** The travelling highlight
+  (`MovingHighlight` / `useMovingHighlight`) interpolates per frame with the rAF spring in
+  `useSpringRect`. Nothing else in the app animates from script.
+- **Overlapping surfaces are the norm, not an edge case.** Dialogs nest, and one may close as
+  another opens in the same commit. Five rules follow, and each exists because the naive
+  version breaks:
+  - **One writer for the page lock.** `src/lib/scrollLock.ts` reference-counts the lock: the
+    first owner records the original `overflow`, the last release restores it. Per-surface
+    save/restore strands the page locked, because the outer overlay restores `hidden` as its
+    "original". Invariant 28 forbids writing `body.style.overflow` anywhere else.
+  - **One owner for Escape.** Every surface listens on `document`, so `stopPropagation`
+    isolates nothing — one keypress would close them all. Surfaces register on
+    `src/lib/overlayStack.ts` and only `isTopmostOverlay()` answers (invariant 29). Topmost
+    means what the user sees, and that is the **path** of stacking levels from the root, not a
+    single z-index: the context menu portals to `body` at `z-index` 40 while a Modal sits
+    inside `.app-shell`, whose `isolation: isolate` traps the Modal's higher z-index in a
+    context at level 0 — the menu paints on top, and a raw `40 < 120` comparison would give
+    Escape to the wrong surface. After the path: the surface rendered inside another one, then
+    the most recently opened. Do not rank by registration order — React runs child effects
+    before their parent's, so a nested surface registers first while painting on top.
+  - **A surface with no element still joins the stack.** The older views close on Escape
+    through `src/lib/useEscapeKey.ts` and render their own `.modal-backdrop`, so they have no
+    panel to rank by. That hook registers anyway: it defers to any surface that does have
+    one, and among themselves the newest answers. Do not add a bare `document` keydown
+    listener for Escape — invariant 29 scans the whole tree for one.
+  - **Registration ends when the exit begins.** A fading-out surface must stop answering
+    Escape immediately, even though it stays mounted for the animation; otherwise it swallows
+    the press and nothing underneath reacts. Registration keys on "accepting input", the
+    scroll lock and focus restore key on "still mounted".
+  - **Focus returns to the opener.** Once the surface is gone, focus goes back to the element
+    that opened it, never to `<body>`. A closing surface that leaves focus on a removed node
+    strands keyboard and screen-reader users at the top of the page.
+- **Reduced motion removes travel, never information.** `prefers-reduced-motion` collapses the
+  transitions to zero duration. Every state — open, selected, checked, disabled — must still
+  be rendered and still be asserted in tests.
+
 ## Layout / responsive rules
 
 - `.page-heading` and `.heading-actions` must wrap and shrink; never reintroduce
