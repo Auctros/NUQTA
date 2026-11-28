@@ -161,6 +161,29 @@ with an IndexedDB mirror for recovery.
   the e2e nav sweep. On desktop the rail's `inset-block-end` leaves room for the dock; on
   mobile the dock rides the off-canvas drawer via the shared `open` class.
 
+## Motion & surface lifecycles
+
+- No animation library. Surfaces animate with CSS transitions driven by the `nq-*` rules in
+  `src/index.css`, and their durations come from `OVERLAY_TIMING` in `src/lib/motion.ts`. The
+  same constant feeds the CSS transition and the unmount timer, so a panel can never vanish
+  mid-fade or linger after it finished. Do not invent a new duration; extend `OVERLAY_TIMING`.
+- A surface that animates out uses `usePresence(open, exitMs)` from `src/lib/usePresence.ts`
+  and renders on `presence.mounted` with `data-state={presence.exiting ? 'closed' : 'open'}`.
+  While exiting it must also carry `inert` and `aria-hidden="true"` — the element is still on
+  screen, so it must already be unreachable. Only after the timer fires is it truly removed;
+  a menu that merely hides is the bug this replaced.
+- Entrance uses `useEntering(presence.mounted)`, keyed on `mounted` and not on `open`. A mount
+  effect that clears a one-frame flag is wrong here: the owner component stays mounted across
+  open/close, so the flag is consumed before the panel ever paints and the surface appears
+  without travelling. Keying on `mounted` also means reopening mid-exit reverses the exit
+  instead of replaying the entrance.
+- The travelling highlight (`MovingHighlight` / `useMovingHighlight`) is the one integrator in
+  the app that runs per frame; it is a local rAF spring (`useSpringRect` → `springStep`), never
+  a library.
+- Reduced motion removes travel, never information. `prefers-reduced-motion` collapses CSS
+  transitions to zero duration in `index.css`; keep every state (open, selected, checked)
+  fully rendered and asserted in tests.
+
 ## Layout / responsive rules
 
 - `.page-heading` and `.heading-actions` must wrap and shrink; never reintroduce

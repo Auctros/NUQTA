@@ -16,6 +16,8 @@ import { useCompletionHold } from '../lib/useCompletionHold';
 import { usePrefersReducedMotion } from '../lib/useSpringValue';
 import { feedback } from './ui/dialogController';
 import { SpringCheck } from './ui/SpringCheck';
+import { ContextMenu } from './motion/ContextMenu';
+import { buildTaskMenu } from './motion/entityMenus';
 import {
   asTaskView,
   countTasksForViews,
@@ -96,6 +98,8 @@ export const TasksView: React.FC = () => {
     archiveTask,
     restoreTask,
     setActiveNavTab,
+    linkActivityToGoal,
+    unlinkActivityFromGoal,
     focusRequest,
     consumeFocus
   } = useNuqtaStore();
@@ -546,6 +550,31 @@ export const TasksView: React.FC = () => {
                     className={`space-y-2${isExiting(task.id) ? ' task-row-exiting' : ''}`}
                     id={'task-' + task.id}
                   >
+                    <ContextMenu
+                      ariaLabel={isAr ? 'خيارات المهمة' : 'Task actions'}
+                      items={buildTaskMenu({
+                        task,
+                        isAr,
+                        onOpen: () => openEditModal(task),
+                        onToggle: () => handleToggleTask(task),
+                        onArchive: () => archiveTask(task.id),
+                        onRestore: task.isArchived ? () => restoreTask(task.id) : undefined,
+                        onDelete: () =>
+                          task.seriesId ? deleteTaskSeries(task.seriesId) : deleteTask(task.id),
+                        onOpenProject: task.projectId ? () => setActiveNavTab('projects') : undefined,
+                        // Linking reuses the store's own goal↔activity relation, so no
+                        // second copy of the task is created and unlink stays symmetrical.
+                        goals: goals.map((g) => ({
+                          id: g.id,
+                          title: g.title,
+                          linked: g.linkedTaskIds?.includes(task.id) ?? false
+                        })),
+                        onToggleGoalLink: (goalId, linked) =>
+                          linked
+                            ? unlinkActivityFromGoal(goalId, 'task', task.id)
+                            : linkActivityToGoal(goalId, 'task', task.id)
+                      })}
+                    >
                     <div className={`task-row ${isCompleted ? 'done' : ''} ${focusedTaskId === task.id ? 'focus-flash' : ''}`}>
                       <SpringCheck
                         checked={isCompleted}
@@ -667,6 +696,7 @@ export const TasksView: React.FC = () => {
                         </button>
                       </div>
                     </div>
+                    </ContextMenu>
 
                     {/* Subtasks Inline Expansion */}
                     {isExpanded && (

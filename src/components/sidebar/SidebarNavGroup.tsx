@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { NuqtaIcon, IconName } from '../NuqtaIcon';
+import { MovingHighlight, useMovingHighlight } from '../motion/MovingHighlight';
 
 export type SidebarNavItem<T extends string = string> = {
   id: T;
@@ -28,6 +29,16 @@ type SidebarNavGroupProps<T extends string> = {
   spaced?: boolean;
 };
 
+/**
+ * One highlight surface travels between the items of a group instead of each
+ * item painting its own hover. It follows the pointer *and* keyboard focus, so
+ * tabbing through the rail reads the same as pointing at it.
+ *
+ * The highlight is a decorative layer: it never receives the click, never
+ * carries `aria-current`, and navigation still runs through the real buttons
+ * beneath it. The active destination keeps its own persistent styling, so
+ * "where hover is" and "where I am" stay separately legible.
+ */
 export function SidebarNavGroup<T extends string>({
   label,
   items,
@@ -38,13 +49,38 @@ export function SidebarNavGroup<T extends string>({
   onHideTooltip,
   spaced = false
 }: SidebarNavGroupProps<T>) {
+  const navRef = useRef<HTMLElement | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState(-1);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  // Focus wins over hover: with the keyboard in use, the row the user is on is
+  // the one the highlight must explain, even if the mouse rests elsewhere.
+  const activeIndex = focusedIndex >= 0 ? focusedIndex : hoveredIndex;
+
+  const highlightRect = useMovingHighlight({
+    containerRef: navRef,
+    activeIndex,
+    itemSelector: '[data-sidebar-nav="true"]'
+  });
+
+  const clearFocus = useCallback(() => setFocusedIndex(-1), []);
+
   return (
     <>
       <div className={spaced ? 'nav-label nav-label-spaced' : 'nav-label'}>
         <span>{label}</span>
       </div>
-      <nav className="primary-nav" aria-label={label}>
-        {items.map((item) => {
+      <nav
+        className="primary-nav relative"
+        aria-label={label}
+        ref={navRef}
+        onMouseLeave={() => setHoveredIndex(-1)}
+        onBlur={(e) => {
+          if (!navRef.current?.contains(e.relatedTarget as Node | null)) clearFocus();
+        }}
+      >
+        <MovingHighlight rect={highlightRect} className="nav-hover-highlight" preset="bouncy" />
+        {items.map((item, index) => {
           const isActive = activeId === item.id;
           const badgeText = item.count !== undefined && item.count > 0 ? String(item.count) : undefined;
           return (
@@ -60,10 +96,12 @@ export function SidebarNavGroup<T extends string>({
                 onNavigate(item.id);
               }}
               onMouseEnter={(e) => {
+                setHoveredIndex(index);
                 if (!isActive) onShowTooltip(e, item.id, item.label, badgeText);
               }}
               onMouseLeave={onHideTooltip}
               onFocus={(e) => {
+                setFocusedIndex(index);
                 if (!isActive) onShowTooltip(e, item.id, item.label, badgeText);
               }}
               onBlur={onHideTooltip}

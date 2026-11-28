@@ -1227,7 +1227,9 @@ body.light-mode {
 }
 
 .light-mode .nav-item:hover {
-  background: rgba(20, 60, 40, 0.065) !important;
+  /* The travelling highlight now paints the hover surface; a per-row background
+     here would show two overlapping shapes while the highlight is in flight. */
+  background: transparent !important;
   color: #14231a !important;
 }
 
@@ -2351,6 +2353,26 @@ html::-webkit-scrollbar-corner {
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
     inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent),
     0 3px 10px -6px rgba(20, 40, 28, 0.12);
+}
+
+/* Shared hover/focus surface for the sidebar nav groups.
+   Sits behind the labels (z-index: 0) and never takes pointer events. */
+.nav-hover-highlight {
+  z-index: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 9%, rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.light-mode .nav-hover-highlight {
+  background: color-mix(in srgb, var(--accent) 7%, rgba(255, 255, 255, 0.5));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* Items must sit above the highlight for their ink and badges to stay readable. */
+.primary-nav .nav-item {
+  position: relative;
+  z-index: 1;
 }
 
 .nav-item.active:before {
@@ -5109,3 +5131,199 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 /* A catalogue cover fills the spine box exactly: the box is already 2:3, the
    printed-cover ratio, so nothing is stretched or cropped away. */
 .book-spine-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ============================================================
+   Overlay transitions (Modal · Sheet)
+   ------------------------------------------------------------
+   The panel and its backdrop animate through CSS so the presence
+   timer in src/lib/usePresence.ts can unmount them on a known
+   duration — no animation library, no completion callback.
+
+   `data-state` is the only switch: `open` -> `closed` runs the
+   same transition in reverse, so reopening mid-exit resumes from
+   the current frame instead of restarting. Durations mirror
+   OVERLAY_TIMING in src/lib/motion.ts.
+   ============================================================ */
+
+.nq-backdrop {
+  opacity: 1;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  transition:
+    opacity 180ms var(--ease-standard),
+    backdrop-filter 180ms var(--ease-standard);
+}
+.nq-backdrop[data-state='closed'] {
+  opacity: 0;
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition-duration: 120ms;
+}
+
+.nq-panel {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1) rotateX(0deg) rotateY(0deg);
+  filter: blur(0px);
+  transition:
+    opacity 320ms var(--ease-spring),
+    transform 320ms var(--ease-spring),
+    filter 320ms var(--ease-spring);
+}
+
+/* Entrance: the panel starts offset and tilted toward its `direction`, then
+   settles when the class is removed on the next frame. Kept in CSS so the
+   tilt costs the component no per-frame JavaScript. */
+.nq-panel--entering {
+  opacity: 0;
+  transform: translate3d(var(--nq-enter-x, 0), var(--nq-enter-y, 0), 0) scale(0.95)
+    rotateX(var(--nq-enter-rx, 0deg)) rotateY(var(--nq-enter-ry, 0deg));
+  filter: blur(6px);
+  transition: none;
+}
+.nq-panel[data-state='closed'] {
+  opacity: 0;
+  filter: blur(3px);
+  transition-duration: 200ms;
+}
+
+/* Sheet travels from the edge it lives on; the axis comes from `side`. */
+.nq-panel--sheet[data-side='end'][data-state='closed'] {
+  opacity: 0;
+  transform: translate3d(100%, 0, 0);
+}
+.nq-panel--sheet[data-side='end'][data-rtl='true'][data-state='closed'] {
+  transform: translate3d(-100%, 0, 0);
+}
+.nq-panel--sheet[data-side='bottom'][data-state='closed'] {
+  opacity: 0;
+  transform: translate3d(0, 100%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Reduced motion keeps the state change, drops the travel. */
+  .nq-backdrop,
+  .nq-panel,
+  .nq-backdrop[data-state='closed'],
+  .nq-panel[data-state='closed'] {
+    transition: none;
+  }
+  .nq-panel[data-state='closed'] {
+    filter: none;
+  }
+  .nq-panel--sheet[data-state='closed'] {
+    transform: none;
+  }
+  /* No tilt or blur travel either: reduced motion gets the fade alone. */
+  .nq-panel--entering {
+    transform: none;
+    filter: none;
+    opacity: 0;
+  }
+}
+
+/* ============================================================
+   Menus and indicators (Context Menu · Select · Dropdown)
+   ------------------------------------------------------------
+   Same contract as the overlay rules above: `data-state` drives
+   the transition, and the presence timer unmounts the node on a
+   duration that matches. The entrance is a one-frame class flip.
+   ============================================================ */
+
+.nq-menu {
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: var(--nq-menu-origin, top left);
+  transition:
+    opacity 160ms var(--ease-standard),
+    transform 160ms var(--ease-spring);
+}
+.nq-menu [dir='rtl'] .nq-menu,
+[dir='rtl'] .nq-menu {
+  transform-origin: top right;
+}
+.nq-menu--entering {
+  opacity: 0;
+  transform: scale(0.94);
+  transition: none;
+}
+.nq-menu[data-state='closed'] {
+  opacity: 0;
+  transform: scale(0.96);
+  transition-duration: 120ms;
+}
+
+/* A checked box or radio pops in once; the element unmounts with the row. */
+.nq-indicator {
+  display: grid;
+  place-items: center;
+}
+.nq-indicator--pop {
+  animation: nq-indicator-pop 220ms var(--ease-spring) both;
+}
+
+@keyframes nq-indicator-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nq-menu,
+  .nq-menu--entering,
+  .nq-menu[data-state='closed'] {
+    transition: none;
+  }
+  .nq-menu--entering {
+    transform: none;
+  }
+  .nq-indicator--pop {
+    animation: none;
+  }
+}
+
+/* A selected value swaps with a short vertical blur rather than cutting. */
+.nq-value-swap {
+  animation: nq-value-swap 160ms var(--ease-standard) both;
+}
+
+@keyframes nq-value-swap {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Rows enter in sequence; the delay is capped so a long list still lands fast. */
+.nq-row-in {
+  animation: nq-row-in 160ms var(--ease-standard) both;
+  animation-delay: var(--nq-row-delay, 0ms);
+}
+
+@keyframes nq-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nq-value-swap,
+  .nq-row-in {
+    animation: none;
+  }
+}
