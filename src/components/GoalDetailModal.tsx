@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Goal, KeyResult, KeyResultDataSource, GoalMilestone, SpecializedHabitType } from '../types';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { evaluateGoalProgress, pacingIconName } from '../lib/goalProgressEngine';
-import { NuqtaDatePicker, NuqtaSelect } from './ui';
+import { NuqtaDatePicker, NuqtaSelect, SpringCheck } from './ui';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
 
 interface GoalDetailModalProps {
@@ -724,33 +724,31 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({ goal, onClose,
                           : 'border-[var(--border-subtle)] bg-[var(--surface-raised)]'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => toggleGoalMilestone(goal.id, ms.id)}
-                          className={`w-5 h-5 rounded-md border flex items-center justify-center font-bold text-xs transition-colors ${
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <SpringCheck
+                          checked={ms.isCompleted}
+                          onChange={() => toggleGoalMilestone(goal.id, ms.id)}
+                          size="sm"
+                          label={
+                            <span className="text-sm font-semibold text-[var(--text-primary)]">{ms.title}</span>
+                          }
+                          doneOpacity={0.6}
+                          ariaLabel={
                             ms.isCompleted
-                              ? 'bg-[var(--tone-success)] border-[var(--tone-success-line)] text-[var(--accent-ink)]'
-                              : 'border-[var(--border-strong)] hover:border-[var(--tone-success-line)] bg-transparent'
-                          }`}
-                        >
-                          {ms.isCompleted && <NuqtaIcon name="check" className="w-3 h-3" />}
-                        </button>
-                        <div>
-                          <span
-                            className={`text-sm font-semibold block ${
-                              ms.isCompleted ? 'line-through text-muted' : 'text-[var(--text-primary)]'
-                            }`}
-                          >
-                            {ms.title}
+                              ? isAr
+                                ? 'إلغاء إنجاز المعلم'
+                                : 'Reopen milestone'
+                              : isAr
+                              ? 'إنجاز المعلم'
+                              : 'Complete milestone'
+                          }
+                        />
+                        {ms.targetDate && (
+                          <span className="text-[11px] text-muted font-mono ps-7">
+                            {isAr ? 'مستهدف:' : 'Target:'} {ms.targetDate}
+                            {ms.completedDate && ` · ${isAr ? 'اكتمل في' : 'Completed on'} ${ms.completedDate}`}
                           </span>
-                          {ms.targetDate && (
-                            <span className="text-[11px] text-muted font-mono">
-                              {isAr ? 'مستهدف:' : 'Target:'} {ms.targetDate}
-                              {ms.completedDate && ` · ${isAr ? 'اكتمل في' : 'Completed on'} ${ms.completedDate}`}
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
 
                       <button

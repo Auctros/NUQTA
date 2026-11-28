@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CourseVideo, YoutubeCourse } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { Badge, Button, Field, Input, Modal, ProgressBar, Surface } from './ui';
+import { Badge, Button, Field, Input, Modal, ProgressBar, SpringCheck, Surface } from './ui';
 import { dialogs, feedback } from './ui/dialogController';
 import { StudioEmpty, StudioFrame, StudioStat } from './studios/StudioKit';
 import { usePersistedViewTab } from '../lib/useNavigation';
@@ -731,11 +731,12 @@ const LessonRow: React.FC<{
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-pressed={done}
-          aria-label={
+        <SpringCheck
+          checked={done}
+          onChange={onToggle}
+          size="sm"
+          className="shrink-0 mt-0.5"
+          ariaLabel={
             done
               ? isAr
                 ? 'تحديد كغير مكتمل'
@@ -744,15 +745,7 @@ const LessonRow: React.FC<{
               ? 'تحديد كمكتمل'
               : 'Mark as completed'
           }
-          className={[
-            'w-6 h-6 shrink-0 mt-0.5 rounded-full border inline-grid place-items-center transition-colors',
-            done
-              ? 'bg-[var(--tone-success)] border-[var(--tone-success)] text-[var(--text-on-state)]'
-              : 'border-[var(--studio-line-strong)] text-transparent hover:border-[var(--studio-accent-line)] hover:text-[var(--studio-accent-line)]'
-          ].join(' ')}
-        >
-          <NuqtaIcon name="check" className="w-3.5 h-3.5" />
-        </button>
+        />
       </div>
     </li>
   );

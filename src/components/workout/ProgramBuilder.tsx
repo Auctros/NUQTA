@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { WorkoutRoutine, WorkoutProgramStatus, ExerciseEntry, ProgramDay } from '../../types';
-import { Button } from '../ui';
+import { Button, SpringCheck } from '../ui';
 import { NuqtaIcon } from '../NuqtaIcon';
 import { ExerciseCatalog } from './ExerciseCatalog';
 import { PrebuiltExercise, exerciseEntryFromCatalog } from '../../lib/exerciseCatalog';
@@ -92,15 +92,13 @@ export const ProgramBuilder: React.FC<ProgramBuilderProps> = ({
             <li key={day.id} className={`ex-day${day.isRest ? ' ex-day-rest' : ''}${isDone ? ' ex-day-done' : ''}`}>
               <div className="ex-day-head">
                 {!day.isRest ? (
-                  <button
-                    type="button"
-                    className="ex-day-check"
-                    aria-pressed={isDone}
-                    aria-label={isAr ? 'تم إنجاز اليوم' : 'Mark day complete'}
-                    onClick={() => onToggleDayComplete(day.id, !isDone)}
-                  >
-                    <NuqtaIcon name="check-square" className="w-4 h-4" />
-                  </button>
+                  <SpringCheck
+                    checked={isDone}
+                    onChange={(next) => onToggleDayComplete(day.id, next)}
+                    size="sm"
+                    ariaLabel={isAr ? 'تم إنجاز اليوم' : 'Mark day complete'}
+                    className="ex-day-spring"
+                  />
                 ) : (
                   <span className="ex-day-rest-icon" aria-hidden="true">
                     <NuqtaIcon name="moon" className="w-4 h-4" />

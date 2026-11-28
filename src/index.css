@@ -376,6 +376,31 @@ body {
   padding: 13px 15px;
   gap: 12px;
 }
+/* A just-completed row stays mounted briefly so the checkmark can draw. It fades rather
+   than collapses, because collapsing would reflow every row below it twice: once on
+   completion and again on removal. */
+.task-row-exiting {
+  animation: task-row-exit 620ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+@keyframes task-row-exit {
+  0%,
+  62% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+/* The row keeps its own dimmed title: the completion control in a task row is icon-only,
+   so the strikethrough has to come from the row, not from a label inside the control. */
+@media (prefers-reduced-motion: reduce) {
+  .task-row-exiting {
+    animation: none;
+    opacity: 0.5;
+  }
+}
 /* Completion history is grouped by day: a quiet label, not a card, so the tasks stay
    the visual focus and the header only marks where one day ends and the next begins. */
 .completed-day-header {
@@ -411,14 +436,152 @@ body {
   margin: 0;
   line-height: 1.5;
 }
-.check-circle {
-  width: 19px;
-  height: 19px;
-  border-radius: 6px;
+
+/* ============================================================
+   SpringCheck — completion control (React Bits "Spring Check",
+   adapted). Colours are NUQTA tokens so every theme works.
+   The unchecked state is the CSS default; the spring writes
+   transforms/opacity inline on top of it.
+   ============================================================ */
+.spring-check {
+  --sc-box: 22px;
+  --sc-radius: 7px;
+  --sc-ring: 1.5px;
+  --sc-tick: 2.9;
+  --sc-origin: left center;
+  --sc-fill: var(--tone-success);
+  --sc-tick-ink: var(--on-accent-ink);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  border-radius: var(--sc-radius);
+  flex: none;
 }
-.check-circle.checked:after {
-  font-size: 13px;
+.spring-check--bare {
+  gap: 0;
 }
+.spring-check:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.spring-check__press {
+  flex: none;
+  width: var(--sc-box);
+  height: var(--sc-box);
+  border-radius: var(--sc-radius);
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.spring-check:not(:disabled):active .spring-check__press {
+  transform: scale(0.94);
+}
+/* Focus lands on the box, not the label: the ring must read as one control. */
+.spring-check:focus-visible {
+  outline: none;
+}
+.spring-check:focus-visible .spring-check__press {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.spring-check__box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  transform-origin: center;
+}
+
+.spring-check__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 var(--sc-ring) var(--border-strong);
+  transition: opacity 120ms ease, box-shadow 120ms ease;
+}
+.spring-check.is-checked .spring-check__ring {
+  box-shadow: inset 0 0 0 var(--sc-ring) var(--sc-fill);
+}
+@media (hover: hover) and (pointer: fine) {
+  .spring-check:not(:disabled):hover .spring-check__ring {
+    box-shadow: inset 0 0 0 var(--sc-ring) var(--tone-success);
+  }
+}
+
+/* Unchecked default: fully scaled away, so no inline style is needed on first paint. */
+.spring-check__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--sc-fill);
+  transform: scale(0);
+  transform-origin: center;
+}
+
+.spring-check__tick {
+  position: relative;
+  width: 74%;
+  height: 74%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--sc-tick-ink);
+  stroke-width: var(--sc-tick);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Unchecked default for the drawn tick. */
+.spring-check__tick path {
+  stroke-dashoffset: 1;
+}
+
+.spring-check__label {
+  position: relative;
+  display: inline-block;
+  min-width: 0;
+}
+
+.spring-check__word {
+  display: inline-block;
+}
+
+.spring-check__rule {
+  position: absolute;
+  inset-inline: 0;
+  top: 52%;
+  height: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: var(--sc-origin);
+  pointer-events: none;
+}
+
+/* Reduced motion keeps every state change, drops every tween. */
+@media (prefers-reduced-motion: reduce) {
+  .spring-check__press,
+  .spring-check__ring {
+    transition: none;
+  }
+  .spring-check:not(:disabled):active .spring-check__press {
+    transform: none;
+  }
+}
+
 
 /* Navigation & Sidebar */
 .nav-item {
@@ -1263,18 +1426,6 @@ body.light-mode {
 .light-mode .select:focus {
   border-color: #278157 !important;
   box-shadow: 0 0 0 3px rgba(30, 99, 68, 0.12) !important;
-}
-
-/* Check Circle */
-.light-mode .check-circle {
-  border-color: #8fa095 !important;
-  background: #ffffff !important;
-}
-
-.light-mode .check-circle.checked {
-  background: #1e6344 !important;
-  border-color: #1e6344 !important;
-  color: #ffffff !important;
 }
 
 /* Tags */
@@ -2967,8 +3118,6 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .set-row:last-child { border-bottom: none; }
 .set-input { width: 100%; min-height: 38px; text-align: center; font-family: ui-monospace, monospace; font-weight: var(--fw-bold); border: 1px solid var(--studio-line, var(--border-default)); border-radius: var(--r-sm); background: var(--surface-inset, var(--surface-track)); color: var(--text-primary); }
 .set-input:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring-color); }
-.set-done { width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--r-sm); border: 1px solid var(--studio-line, var(--border-default)); background: var(--surface-track); color: var(--text-secondary); cursor: pointer; }
-.set-done[data-done='true'] { background: var(--state-success); border-color: var(--state-success); color: var(--text-on-state); }
 .set-index { font-family: ui-monospace, monospace; font-size: var(--fs-xs); color: var(--text-secondary); }
 .set-type-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--state-warning-strong, var(--state-warning)); }
 @media (max-width: 560px) { .set-row { grid-template-columns: 24px 1fr 1fr 54px 36px; gap: 5px; } }
@@ -3086,8 +3235,7 @@ html.theme-liquid-transition.theme-liquid-simple::view-transition-new(root) {
 .ex-day-rest { opacity: 0.6; }
 .ex-day-done { border-color: color-mix(in srgb, var(--state-success) 40%, var(--border-default)); }
 .ex-day-head { display: flex; align-items: center; gap: var(--sp-2); padding: 8px 10px; }
-.ex-day-check { display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--r-sm); border: 1px solid var(--border-default); background: transparent; color: var(--text-tertiary); cursor: pointer; flex: none; }
-.ex-day-done .ex-day-check { color: var(--state-success); border-color: color-mix(in srgb, var(--state-success) 40%, var(--border-default)); }
+.ex-day-spring { flex: none; }
 .ex-day-rest-icon { display: grid; place-items: center; width: 26px; height: 26px; color: var(--text-tertiary); flex: none; }
 .ex-day-title { display: flex; align-items: center; gap: var(--sp-2); flex: 1; min-width: 0; background: transparent; border: 0; cursor: pointer; text-align: start; color: var(--text-primary); font-size: var(--fs-sm); }
 .ex-day-caret { display: grid; place-items: center; background: transparent; border: 0; color: var(--text-tertiary); cursor: pointer; flex: none; }

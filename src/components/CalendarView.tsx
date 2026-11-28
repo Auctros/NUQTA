@@ -1,9 +1,10 @@
 import { localDateKey, parseDateKey } from '../lib/dateKey';
 import { indexFromWeekStart, weekDayLabels } from '../lib/week';
-import { isTaskPending } from '../lib/taskStatus';
+import { isTaskDone, isTaskPending } from '../lib/taskStatus';
 import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { NuqtaIcon, IconName } from './NuqtaIcon';
+import { SpringCheck } from './ui';
 
 export const CalendarView: React.FC = () => {
   const { tasks, habits, focusSessions, goals, toggleTaskStatus, updateTask, profile, setActiveNavTab } = useNuqtaStore();
@@ -302,12 +303,13 @@ export const CalendarView: React.FC = () => {
                       {t.isTopThree ? <span className="inline-flex items-center gap-1"> · <NuqtaIcon name="star" className="w-3 h-3" /> {isAr ? 'أهم 3' : 'Top 3'}</span> : ''}
                     </small>
                     <div style={{ marginTop: '7px', display: 'flex', gap: '6px' }}>
-                      <button
-                        className="btn small subtle"
-                        onClick={() => toggleTaskStatus(t.id)}
-                      >
-                        <NuqtaIcon name="check" className="w-3.5 h-3.5" /> {isAr ? 'تم' : 'Done'}
-                      </button>
+                      <SpringCheck
+                        checked={isTaskDone(t)}
+                        onChange={() => toggleTaskStatus(t.id)}
+                        size="sm"
+                        label={isAr ? 'تم' : 'Done'}
+                        ariaLabel={isAr ? 'إتمام المهمة' : 'Complete task'}
+                      />
                     </div>
                   </div>
                 </div>

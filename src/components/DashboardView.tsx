@@ -18,6 +18,7 @@ import {
   TrendRangeId
 } from '../lib/dashboardAnalytics';
 import { NuqtaNotificationEngine } from '../lib/notifications';
+import { SpringCheck } from './ui';
 import { NuqtaIcon } from './NuqtaIcon';
 import { QuickCaptureBar } from './QuickCaptureBar';
 import { ReadingAppModal } from './ReadingAppModal';
@@ -587,18 +588,13 @@ export const DashboardView: React.FC = () => {
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <button
-                            type="button"
-                            onClick={() => toggleTaskStatus(task.id)}
-                            aria-label={isAr ? 'إتمام المهمة' : 'Toggle task completion'}
-                            className={`w-4 h-4 rounded-[5px] border grid place-items-center text-[11px] font-bold shrink-0 transition-colors ${
-                              isDone
-                                ? 'bg-[var(--brand)] border-[var(--brand)] text-[var(--text-on-accent)]'
-                                : 'border-[var(--border-strong)] bg-transparent text-transparent hover:border-[var(--brand-strong)]'
-                            }`}
-                          >
-                            <NuqtaIcon name="check" className="w-3 h-3" />
-                          </button>
+                          <SpringCheck
+                            checked={isDone}
+                            onChange={() => toggleTaskStatus(task.id)}
+                            size="sm"
+                            className="shrink-0"
+                            ariaLabel={isAr ? 'إتمام المهمة' : 'Toggle task completion'}
+                          />
                           <div className="min-w-0 flex-1">
                             <div
                               className={`text-xs font-semibold truncate ${
@@ -672,18 +668,13 @@ export const DashboardView: React.FC = () => {
                     return (
                       <div key={habit.id} className="py-2 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <button
-                            type="button"
-                            onClick={() => toggleHabitToday(habit.id)}
-                            aria-label={`${habit.name}`}
-                            className={`w-4 h-4 rounded-[5px] border grid place-items-center text-[11px] font-bold shrink-0 ${
-                              done
-                                ? 'bg-[var(--brand)] border-[var(--brand)] text-[var(--text-on-accent)]'
-                                : 'border-[var(--border-strong)] bg-transparent text-transparent hover:border-[var(--brand-strong)]'
-                            }`}
-                          >
-                            <NuqtaIcon name="check" className="w-3 h-3" />
-                          </button>
+                          <SpringCheck
+                            checked={done}
+                            onChange={() => toggleHabitToday(habit.id)}
+                            size="sm"
+                            className="shrink-0"
+                            ariaLabel={habit.name}
+                          />
                           <div className="min-w-0">
                             <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
                               {habit.name}

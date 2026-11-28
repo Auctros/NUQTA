@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { localDateKey } from '../lib/dateKey';
 import { NuqtaIcon } from './NuqtaIcon';
-import { EmptyState, NuqtaDatePicker, NuqtaSelect, PageHeader, TabBar } from './ui';
+import { EmptyState, NuqtaDatePicker, NuqtaSelect, PageHeader, SpringCheck, TabBar } from './ui';
 import { dialogs, feedback } from './ui/dialogController';
 import {
   assessProjectHealth,
@@ -583,20 +583,16 @@ export const ProjectWorkspace: React.FC<Props> = ({ project, onBack }) => {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <h4 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
-                          <button
-                            onClick={() => toggleProjectPhaseCompletion(project.id, phase.id)}
-                            className={`w-4 h-4 rounded border grid place-items-center shrink-0 ${
-                              phase.completedAt
-                                ? 'bg-[var(--tone-success)] border-[var(--tone-success)] text-white'
-                                : 'border-[var(--border-strong)]'
-                            }`}
-                            title={phase.completedAt ? t(ui.reopen, isAr) : t(ui.markDone, isAr)}
-                          >
-                            {phase.completedAt && <NuqtaIcon name="check" className="w-3 h-3" />}
-                          </button>
-                          <span className={phase.completedAt ? 'line-through text-muted' : ''}>{phase.title}</span>
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <SpringCheck
+                            checked={Boolean(phase.completedAt)}
+                            onChange={() => toggleProjectPhaseCompletion(project.id, phase.id)}
+                            size="sm"
+                            label={<span className="text-sm font-bold text-[var(--text-primary)]">{phase.title}</span>}
+                            doneOpacity={0.6}
+                            ariaLabel={phase.completedAt ? t(ui.reopen, isAr) : t(ui.markDone, isAr)}
+                          />
+                        </div>
                         {phase.description && <p className="text-[11px] text-muted mt-1 ms-6">{phase.description}</p>}
                         <span className="text-[10px] text-muted ms-6 font-mono">
                           {done}/{phaseSteps.length} {isAr ? 'خطوة' : 'steps'}

@@ -12,7 +12,10 @@ import { PriorityLevel, RecurrenceFrequency, RecurrenceRule, Task, TaskStatus } 
 import { NuqtaIcon } from './NuqtaIcon';
 import { EmptyState, NuqtaDatePicker, NuqtaSelect, NuqtaTimePicker, PageHeader, Surface, TabBar } from './ui';
 import { suggestSmartReschedule } from '../lib/energyAlgorithm';
+import { useCompletionHold } from '../lib/useCompletionHold';
+import { usePrefersReducedMotion } from '../lib/useSpringValue';
 import { feedback } from './ui/dialogController';
+import { SpringCheck } from './ui/SpringCheck';
 import {
   asTaskView,
   countTasksForViews,
@@ -98,6 +101,7 @@ export const TasksView: React.FC = () => {
   } = useNuqtaStore();
 
   const isAr = profile.language === 'ar';
+  const prefersReducedMotion = usePrefersReducedMotion();
   // Filters and the chosen view are working positions, not destinations: they are
   // restored on reload but deliberately kept out of the URL (see usePersistedWorkflowState).
   const [viewMode, setViewMode] = usePersistedWorkflowState<'list' | 'board' | 'matrix'>(
@@ -315,8 +319,27 @@ export const TasksView: React.FC = () => {
     }
   }[taskView];
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'priority') {
+      return a.priority - b.priority;
+    }
+    const aDate = a.scheduledDate || '9999-99-99';
+    const bDate = b.scheduledDate || '9999-99-99';
+    return aDate.localeCompare(bDate) || (a.scheduledTime || '99:99').localeCompare(b.scheduledTime || '99:99');
+  });
+
+  /**
+   * Completing a task removes it from every active view at once. The row is held on screen
+   * for one beat so the checkmark can draw before the list closes over it; the store write
+   * has already happened, so nothing here delays persistence. Under reduced motion the
+   * state change is instant, so the hold only needs to be long enough to be seen.
+   */
+  const holdMs = prefersReducedMotion ? 200 : 620;
+  const { rows: heldTasks, hold, isExiting } = useCompletionHold(sorted, tasks, holdMs);
+
   const handleToggleTask = (task: Task) => {
     const wasCompleted = isTaskDone(task);
+    if (!wasCompleted) hold(task.id, sorted.findIndex((t) => t.id === task.id));
     toggleTaskStatus(task.id);
     feedback.success(
       wasCompleted
@@ -335,15 +358,6 @@ export const TasksView: React.FC = () => {
       }
     );
   };
-
-  const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === 'priority') {
-      return a.priority - b.priority;
-    }
-    const aDate = a.scheduledDate || '9999-99-99';
-    const bDate = b.scheduledDate || '9999-99-99';
-    return aDate.localeCompare(bDate) || (a.scheduledTime || '99:99').localeCompare(b.scheduledTime || '99:99');
-  });
 
   const priorityMeta = (priority: PriorityLevel) => {
     switch (priority) {
@@ -483,7 +497,7 @@ export const TasksView: React.FC = () => {
         {/* View Mode: List */}
         {viewMode === 'list' && (
           <div className="task-list">
-            {sorted.length === 0 ? (
+            {sorted.length === 0 && heldTasks.length === 0 ? (
               <EmptyState
                 icon="check-square"
                 title={
@@ -503,15 +517,15 @@ export const TasksView: React.FC = () => {
                 }
               />
             ) : (
-              sorted.map((task, index) => {
+              heldTasks.map((task, index) => {
                 // Completed work is a record, so it is grouped by the day it was finished.
                 // `sorted` is already newest-first for this view, so a day header is shown
                 // whenever the day changes from the previous row.
                 const completionDay =
                   taskView === 'completed' && task.completedAt ? task.completedAt.slice(0, 10) : null;
                 const previousDay =
-                  taskView === 'completed' && index > 0 && sorted[index - 1].completedAt
-                    ? sorted[index - 1].completedAt!.slice(0, 10)
+                  taskView === 'completed' && index > 0 && heldTasks[index - 1].completedAt
+                    ? heldTasks[index - 1].completedAt!.slice(0, 10)
                     : null;
                 const showDayHeader = completionDay !== null && completionDay !== previousDay;
                 const pInfo = priorityMeta(task.priority);
@@ -528,12 +542,17 @@ export const TasksView: React.FC = () => {
                       <span>{sorted.filter((t) => t.completedAt?.slice(0, 10) === completionDay).length}</span>
                     </div>
                   )}
-                  <div className="space-y-2" id={'task-' + task.id}>
+                  <div
+                    className={`space-y-2${isExiting(task.id) ? ' task-row-exiting' : ''}`}
+                    id={'task-' + task.id}
+                  >
                     <div className={`task-row ${isCompleted ? 'done' : ''} ${focusedTaskId === task.id ? 'focus-flash' : ''}`}>
-                      <button
-                        className={`check-circle ${isCompleted ? 'checked' : ''}`}
-                        onClick={() => handleToggleTask(task)}
-                        aria-label="Toggle completed"
+                      <SpringCheck
+                        checked={isCompleted}
+                        onChange={() => handleToggleTask(task)}
+                        size="sm"
+                        ariaLabel={isCompleted ? (isAr ? 'إعادة فتح المهمة' : 'Reopen task') : (isAr ? 'إتمام المهمة' : 'Complete task')}
+                        className="task-check"
                       />
 
                       <div className="task-detail" onClick={() => openEditModal(task)} style={{ cursor: 'pointer' }}>
@@ -658,9 +677,11 @@ export const TasksView: React.FC = () => {
                         </div>
                         {subtasks.map((st) => (
                           <div key={st.id} className="flex items-center gap-2 py-1">
-                            <button
-                              className={`check-circle ${st.completed ? 'checked' : ''}`}
-                              onClick={() => toggleSubtask(task.id, st.id)}
+                            <SpringCheck
+                              checked={st.completed}
+                              onChange={() => toggleSubtask(task.id, st.id)}
+                              size="sm"
+                              ariaLabel={st.title}
                             />
                             <span className={`text-xs ${st.completed ? 'line-through text-muted' : 'text-text'}`}>
                               {st.title}
@@ -790,9 +811,12 @@ export const TasksView: React.FC = () => {
                       >
                         {task.title}
                       </button>
-                      <button
-                        className={`check-circle ${isTaskDone(task) ? 'checked' : ''} shrink-0`}
-                        onClick={() => handleToggleTask(task)}
+                      <SpringCheck
+                        checked={isTaskDone(task)}
+                        onChange={() => handleToggleTask(task)}
+                        size="sm"
+                        ariaLabel={isTaskDone(task) ? (isAr ? 'إعادة فتح المهمة' : 'Reopen task') : (isAr ? 'إتمام المهمة' : 'Complete task')}
+                        className="shrink-0"
                       />
                     </div>
                   ))

@@ -5,10 +5,28 @@ import React, { useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { Habit, RecurrenceRule, SpecializedHabitType } from '../types';
 import { NuqtaIcon } from './NuqtaIcon';
-import { EmptyState, NuqtaSelect, PageHeader, TabBar } from './ui';
+import { EmptyState, NuqtaSelect, PageHeader, SpringCheck, TabBar } from './ui';
 import { ReadingAppModal } from './ReadingAppModal';
 import { WorkoutAppModal } from './WorkoutAppModal';
 import { useEscapeKey } from '../lib/useEscapeKey';
+
+/**
+ * Habits that are recorded in a dedicated studio. `standard` (and the studio-less
+ * `walking`) are plain check-offs; the rest open the surface that captures the detail.
+ */
+function studioTabFor(
+  type: SpecializedHabitType | undefined
+): 'quran' | 'reading' | 'workout' | 'drawing' | null {
+  switch (type) {
+    case 'quran':
+    case 'reading':
+    case 'workout':
+    case 'drawing':
+      return type;
+    default:
+      return null;
+  }
+}
 
 /**
  * Map the habit frequency picker to a recurrence rule. `weekdays` means NUQTA's
@@ -585,34 +603,38 @@ export const HabitsView: React.FC = () => {
                   <span className="streak">
                     <NuqtaIcon name="flame" className="w-3.5 h-3.5 inline-block" /> {habit.currentStreak || 0} {isAr ? 'يوم متواصل' : 'streak'}
                   </span>
-                  <button
-                    className={`btn small ${isDoneToday ? 'subtle' : 'primary'}`}
-                    onClick={() => {
-                      if (habit.specializedType === 'quran' && !isDoneToday) {
-                        useNuqtaStore.getState().setActiveNavTab('quran');
-                      } else if (habit.specializedType === 'reading' && !isDoneToday) {
-                        useNuqtaStore.getState().setActiveNavTab('reading');
-                      } else if (habit.specializedType === 'workout' && !isDoneToday) {
-                        useNuqtaStore.getState().setActiveNavTab('workout');
-                      } else if (habit.specializedType === 'drawing' && !isDoneToday) {
-                        useNuqtaStore.getState().setActiveNavTab('drawing');
-                      } else {
-                        toggleHabitToday(habit.id);
-                      }
-                    }}
-                  >
-                    {isDoneToday
-                      ? (isAr ? 'إلغاء الإنجاز' : 'Undo')
-                      : habit.specializedType === 'quran'
-                      ? (isAr ? 'جلسة حفظ/مراجعة' : 'Log Quran')
-                      : habit.specializedType === 'reading'
-                      ? (isAr ? 'تسجيل قراءة' : 'Log Reading')
-                      : habit.specializedType === 'workout'
-                      ? (isAr ? 'تسجيل تمرين' : 'Log Workout')
-                      : habit.specializedType === 'drawing'
-                      ? (isAr ? 'تسجيل رسم' : 'Log Art')
-                      : (isAr ? 'تم الإنجاز' : 'Mark Done')}
-                  </button>
+                  {studioTabFor(habit.specializedType) ? (
+                    <button
+                      className={`btn small ${isDoneToday ? 'subtle' : 'primary'}`}
+                      onClick={() => {
+                        if (isDoneToday) {
+                          toggleHabitToday(habit.id);
+                          return;
+                        }
+                        // A specialised habit is logged in its studio, not toggled here:
+                        // the button opens the surface that records the real detail.
+                        useNuqtaStore.getState().setActiveNavTab(studioTabFor(habit.specializedType)!);
+                      }}
+                    >
+                      {isDoneToday
+                        ? (isAr ? 'إلغاء الإنجاز' : 'Undo')
+                        : habit.specializedType === 'quran'
+                        ? (isAr ? 'جلسة حفظ/مراجعة' : 'Log Quran')
+                        : habit.specializedType === 'reading'
+                        ? (isAr ? 'تسجيل قراءة' : 'Log Reading')
+                        : habit.specializedType === 'workout'
+                        ? (isAr ? 'تسجيل تمرين' : 'Log Workout')
+                        : (isAr ? 'تسجيل رسم' : 'Log Art')}
+                    </button>
+                  ) : (
+                    <SpringCheck
+                      checked={isDoneToday}
+                      onChange={() => toggleHabitToday(habit.id)}
+                      size="sm"
+                      label={isDoneToday ? (isAr ? 'أُنجز اليوم' : 'Done today') : (isAr ? 'تم الإنجاز' : 'Mark done')}
+                      doneOpacity={0.55}
+                    />
+                  )}
                 </div>
 
                 <div className="subtle-line"></div>

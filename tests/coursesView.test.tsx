@@ -222,7 +222,7 @@ describe('CoursesView — a course', () => {
   it('marks a lesson done and records it locally', async () => {
     await openCourse(course());
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Mark as completed/i })[0]);
+      fireEvent.click(screen.getAllByRole('checkbox', { name: /Mark as completed/i })[0]);
     });
     const stored = JSON.parse(localStorage.getItem('nuqta.ui.courseProgress') ?? '{}');
     expect(stored.c1).toHaveLength(1);
@@ -238,7 +238,7 @@ describe('CoursesView — a course', () => {
       fireEvent.click(screen.getByRole('button', { name: /Learn TypeScript/ }));
     });
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Mark as not completed/i })[0]);
+      fireEvent.click(screen.getAllByRole('checkbox', { name: /Mark as not completed/i })[0]);
     });
     const stored = JSON.parse(localStorage.getItem('nuqta.ui.courseProgress') ?? '{}');
     expect(stored.c1).toHaveLength(0);
@@ -490,7 +490,7 @@ describe('CoursesView — playlist detail', () => {
   it('still marks lessons done from the redesigned row', async () => {
     await openWith(withVideos());
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Mark as completed/i })[1]);
+      fireEvent.click(screen.getAllByRole('checkbox', { name: /Mark as completed/i })[1]);
     });
     const stored = JSON.parse(localStorage.getItem('nuqta.ui.courseProgress') ?? '{}');
     expect(stored.c1).toEqual(['bbbbbbbbbbb']);
