@@ -20,7 +20,21 @@ with an IndexedDB mirror for recovery.
 ## Invariants
 
 `scripts/check-invariants.mjs` is the acceptance gate and exits non-zero on any violation
-(24 rules). Add a rule whenever a new safety property must never regress.
+(27 rules). Add a rule whenever a new safety property must never regress.
+
+## Completion controls
+
+- Every binary "done" toggle is `<SpringCheck>` from `src/components/ui/`. It owns the
+  animation (a local rAF spring in `src/lib/useSpringValue.ts`, no `motion` dependency), the
+  checkbox semantics, and the label strike. Invariants #26 and #27 fail the build on a
+  second `role="checkbox"`, a `check-circle` class, or an `motion`/`framer-motion` import.
+- Give it a `label` when the row text belongs to the control (milestones, phases); leave the
+  label off in dense rows and pass `ariaLabel`. Do not re-add a per-surface checkmark: the
+  old `.check-circle` / `.set-done` / `.ex-day-check` copies each drifted on keyboard
+  support and reduced motion.
+- A completed row that leaves a filtered list stays mounted for `useCompletionHold`
+  (`src/lib/useCompletionHold.ts`) so the checkmark can draw. The store write happens
+  immediately; only the visual exit is delayed.
 
 ## Theming (light / dark)
 

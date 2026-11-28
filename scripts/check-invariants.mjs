@@ -581,8 +581,36 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 26. Completion is one control. Every binary "done" toggle goes through SpringCheck.
+//     The checkmark used to be re-implemented per surface (`.check-circle`, `.set-done`,
+//     `.ex-day-check`), so a fix to one — keyboard support, reduced motion, the label
+//     strike — silently missed the others. A bare `role="checkbox"` or a `check-circle`
+//     class outside the component means a new copy has appeared.
+{
+  const allowed = 'src/components/ui/SpringCheck.tsx';
+  const hits = [
+    ...grep(/role=["']checkbox["']/, { except: [allowed] }),
+    ...grep(/className=["'`][^"'`]*\bcheck-circle\b/)
+  ];
+  if (hits.length) {
+    fail(
+      'Completion toggles must use SpringCheck (src/components/ui/SpringCheck.tsx), not a local copy',
+      hits.slice(0, 6).join('\n    ')
+    );
+  }
+}
+
+// 27. SpringCheck must not depend on an animation library. The spring is a local rAF
+//     integrator; importing `motion` here would add a dependency for one scalar.
+{
+  const hits = grep(/from\s+['"](motion|framer-motion)(\/[^'"]*)?['"]/);
+  if (hits.length) {
+    fail('No animation library: SpringCheck animates with src/lib/useSpringValue.ts', hits.slice(0, 5).join('\n    '));
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (25 rules).');
+console.log('Invariant check passed (27 rules).');

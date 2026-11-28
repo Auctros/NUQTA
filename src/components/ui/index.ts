@@ -6,5 +6,6 @@ export * from './NuqtaSelect';
 export * from './NuqtaPickers';
 export * from './TimeWheel';
 export * from './LiquidTabs';
+export * from './SpringCheck';
 export * from './dialogController';
 export * from './DialogHost';

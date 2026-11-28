@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNuqtaStore } from '../store/nuqtaStore';
 import { usePersistedViewTab } from '../lib/useNavigation';
 import { WorkoutRoutine, ExerciseEntry, ExerciseSet, MuscleMovement } from '../types';
-import { Button, NuqtaSelect } from './ui';
+import { Button, NuqtaSelect, SpringCheck } from './ui';
 import { dialogs } from './ui/dialogController';
 import { NuqtaIcon } from './NuqtaIcon';
 import {
@@ -655,16 +655,12 @@ export const WorkoutView: React.FC = () => {
                         {ex.restSeconds}s
                       </span>
                       <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          data-done={s.completed}
-                          aria-pressed={s.completed}
-                          aria-label={isAr ? 'إتمام المجموعة' : 'Complete set'}
-                          className="set-done"
-                          onClick={() => toggleSetDone(currentIdx, si)}
-                        >
-                          <NuqtaIcon name="check" className="w-3.5 h-3.5" />
-                        </button>
+                        <SpringCheck
+                          checked={s.completed}
+                          onChange={() => toggleSetDone(currentIdx, si)}
+                          size="sm"
+                          ariaLabel={isAr ? 'إتمام المجموعة' : 'Complete set'}
+                        />
                         {ex.sets.length > 1 && (
                           <button
                             type="button"
