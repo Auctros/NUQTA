@@ -3,6 +3,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Modal, Sheet } from '../src/components/ui/overlays';
 import { OVERLAY_TIMING } from '../src/lib/motion';
+import { resetScrollLock } from '../src/lib/scrollLock';
+import { resetOverlayStack } from '../src/lib/overlayStack';
 
 /* ============================================================
    Overlay lifecycle on the timer-driven presence.
@@ -16,7 +18,12 @@ const dialog = () => document.querySelector('[role="dialog"]');
 const backdrop = () => document.querySelector('.nq-backdrop');
 
 beforeEach(() => { vi.useFakeTimers(); });
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => {
+  vi.useRealTimers();
+  resetScrollLock();
+  resetOverlayStack();
+  document.body.style.overflow = '';
+});
 
 describe('Modal lifecycle', () => {
   it('mounts, locks scroll, and unmounts for real after closing', () => {

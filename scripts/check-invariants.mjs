@@ -609,8 +609,48 @@ const grep = (re, { except = [] } = {}) =>
   }
 }
 
+// 28. Page scroll lock has exactly one writer. Overlays overlap, so a second
+//     save/restore pair strands the page locked or unlocks it under an open
+//     surface; the reference count in src/lib/scrollLock.ts is the only place
+//     allowed to touch body overflow.
+{
+  const hits = grep(/document\.body\.style\.overflow\s*=/, { except: ['src/lib/scrollLock.ts'] });
+  if (hits.length) {
+    fail('Page scroll lock is owned by src/lib/scrollLock.ts; do not write body overflow directly', hits.slice(0, 6).join('\n    '));
+  }
+}
+
+// 29. A surface that owns Escape must register on the shared overlay stack.
+//     Every listener sits on `document`, so stopPropagation cannot isolate them:
+//     without the token one Escape closes every open surface at once. The whole
+//     tree is scanned, not a list of known files, because the surface that
+//     forgets is always the next one someone adds.
+{
+  // Escape may also mean "clear the selection" in a view that is not a surface.
+  // Those are listed here by hand so adding one is a decision, not an oversight:
+  // Timeline drops its inspector selection and nothing is stacked above it.
+  const selectionOnly = new Set(['src/components/timeline/TimelineWorkspace.tsx']);
+  for (const file of srcFiles) {
+    if (/^src\/lib\/(overlayStack|useEscapeKey)\.ts$/.test(file.path)) continue;
+    if (selectionOnly.has(file.path)) continue;
+    // Only a listener on `document`/`window` competes: every such listener fires
+    // for the same press and `stopPropagation` cannot isolate them. A React
+    // `onKeyDown` on one element is scoped to that element and is fine.
+    const globalListener = /(document|window)\.addEventListener\(\s*'keydown'/.test(file.text);
+    const listensEscape = /key\s*!==\s*'Escape'|key\s*===\s*'Escape'|key\s*==\s*"Escape"/.test(file.text);
+    if (!globalListener || !listensEscape) continue;
+    const usesStack = /from '.*lib\/overlayStack'/.test(file.text);
+    const guarded = /isTopmostOverlay\(/.test(file.text);
+    if (!usesStack || !guarded) {
+      fail(`${file.path} handles Escape without the shared overlay stack`, 'import and guard with isTopmostOverlay() from src/lib/overlayStack.ts');
+    }
+  }
+}
+
 if (failures.length) {
   console.error(`\nInvariant check FAILED (${failures.length}):\n\n${failures.join('\n\n')}\n`);
   process.exit(1);
 }
-console.log('Invariant check passed (27 rules).');
+// Counted, not typed: a hardcoded number silently drifts from the rules above.
+const ruleCount = (readFileSync(new URL(import.meta.url), 'utf8').match(/^\/\/ \d+\./gm) || []).length;
+console.log(`Invariant check passed (${ruleCount} rules).`);

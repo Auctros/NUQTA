@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { NuqtaIcon, type IconName } from '../NuqtaIcon';
 import { OVERLAY_TIMING, isRtlElement, useReducedMotion } from '../../lib/motion';
 import { useEntering, usePresence } from '../../lib/usePresence';
+import { isTopmostOverlay, popOverlay, pushOverlay } from '../../lib/overlayStack';
 import { MovingHighlight, useMovingHighlight } from './MovingHighlight';
 
 /* ============================================================
@@ -186,12 +187,15 @@ const Panel: React.FC<PanelProps> = ({
         break;
       case 'Escape':
       case 'ArrowLeft':
-        // Escape is owned by the host so a nested panel collapses with its parent;
-        // here we only step back out of a submenu.
+        // The submenu's open/closed state lives in its parent panel, so closing
+        // it means calling the parent's onClose — not this panel's own
+        // `openSubmenu`, which only tracks *its* children and would leave the
+        // submenu on screen. The root panel ignores both keys here; its own
+        // document listener closes the menu.
         if (variant === 'submenu') {
           e.preventDefault();
           e.stopPropagation();
-          setOpenSubmenu(null);
+          onClose();
         }
         break;
       case 'ArrowRight': {
@@ -414,6 +418,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   useEffect(() => {
     if (!open) return;
+    // Registered on the shared stack: the menu is often opened from inside a
+    // dialog, and stopPropagation cannot help here because every surface listens
+    // on `document`. Without the token, one Escape would close the menu *and*
+    // the dialog behind it in the same keypress.
+    const token = pushOverlay(() => document.getElementById(menuId));
     const onDown = (e: MouseEvent) => {
       const menuEl = document.getElementById(menuId);
       if (wrapRef.current?.contains(e.target as Node)) return;
@@ -421,14 +430,15 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        close();
-      }
+      if (e.key !== 'Escape') return;
+      if (!isTopmostOverlay(token)) return;
+      e.stopPropagation();
+      close();
     };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
+      popOverlay(token);
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };

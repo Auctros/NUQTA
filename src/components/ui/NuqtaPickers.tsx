@@ -4,6 +4,7 @@ import { NuqtaIcon } from '../NuqtaIcon';
 import { Button } from './primitives';
 import { WheelColumn, type WheelOption } from './TimeWheel';
 import { localDateKey, parseDateKey } from '../../lib/dateKey';
+import { isTopmostOverlay, popOverlay, pushOverlay } from '../../lib/overlayStack';
 import { indexFromWeekStart, weekDayNarrows } from '../../lib/week';
 import {
   formatTimeLabel,
@@ -125,8 +126,13 @@ function usePickerShell(
       if (triggerRef.current?.contains(t) || panelRef.current?.contains(t)) return;
       setOpen(false);
     };
+    // The panel portals to body, so it is a surface of its own: Escape must
+    // close the picker and nothing behind it. Registering with the shared stack
+    // keeps that true when a dialog is open underneath.
+    const token = pushOverlay(() => panelRef.current);
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      if (!isTopmostOverlay(token)) return;
       e.stopPropagation();
       onEscape();
       setOpen(false);
@@ -137,6 +143,7 @@ function usePickerShell(
     return () => {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
+      popOverlay(token);
     };
   }, [open, setOpen, onEscape]);
 

@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { IconButton } from './primitives';
 import { OVERLAY_TIMING } from '../../lib/motion';
 import { useEntering, usePresence } from '../../lib/usePresence';
+import { lockPageScroll, unlockPageScroll } from '../../lib/scrollLock';
+import { isTopmostOverlay, popOverlay, pushOverlay } from '../../lib/overlayStack';
 
 /* ============================================================
    NUQTA — overlays
@@ -26,34 +28,60 @@ import { useEntering, usePresence } from '../../lib/usePresence';
    ============================================================ */
 
 /**
- * Owns Escape, scroll lock and initial focus for the whole visible lifetime of
- * the overlay — including the exit animation. `present` (not `open`) gates the
- * cleanup so the page cannot be scrolled under a panel that is fading out.
+ * Owns Escape, scroll lock and focus for the visible lifetime of the overlay —
+ * including the exit animation, which is why the two concerns take different
+ * flags. `present` (not `open`) gates the lock and focus restore so the page
+ * cannot be scrolled under a panel that is fading out. `interactive` is false
+ * once the exit starts: a surface on its way out must stop answering Escape
+ * immediately, or it swallows the press meant for whatever sits underneath.
  */
-const useOverlayBehaviour = (present: boolean, onClose: () => void) => {
+const useOverlayBehaviour = (present: boolean, interactive: boolean, onClose: () => void) => {
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const returnFocus = useRef<HTMLElement | null>(null);
+  // Callers pass an inline arrow, so the handler is read from a ref: a new
+  // identity must not tear down the scroll lock and re-run the focus timer.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  // Registration is tied to `interactive`, not to `present`: a surface that is
+  // fading out must stop claiming Escape the moment it starts to leave, or it
+  // swallows the next press and strands whatever sits underneath it.
+  useEffect(() => {
+    if (!present || !interactive) return;
+    // Overlays stack, and a plain document listener would let one Escape close
+    // every open dialog at once. Only the topmost one answers.
+    const token = pushOverlay(() => panelRef.current);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (!isTopmostOverlay(token)) return;
+      e.stopPropagation();
+      closeRef.current();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      popOverlay(token);
+    };
+  }, [present, interactive]);
 
   useEffect(() => {
     if (!present) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    const prevOverflow = document.body.style.overflow;
-    // Lock the page without reflowing it: the scrollbar gutter is already
-    // reserved (html { scrollbar-gutter: stable }), so hiding the scrollbar
-    // keeps the content width identical while the overlay is open.
-    document.body.style.overflow = 'hidden';
+    // Reference-counted so an overlapping dialog keeps the page locked after
+    // this one closes. The scrollbar gutter is already reserved
+    // (html { scrollbar-gutter: stable }), so the content width never shifts.
+    const lock = lockPageScroll();
+    returnFocus.current = document.activeElement as HTMLElement | null;
     const id = window.setTimeout(() => panelRef.current?.focus(), 30);
     return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
+      unlockPageScroll(lock);
       window.clearTimeout(id);
+      const target = returnFocus.current;
+      returnFocus.current = null;
+      // Leaving focus on <body> strands keyboard and screen-reader users at the
+      // top of the page; it goes back to whatever opened the dialog.
+      if (target && document.contains(target)) target.focus();
     };
-  }, [present, onClose]);
+  }, [present]);
 
   return panelRef;
 };
@@ -105,7 +133,7 @@ export const Modal: React.FC<ModalProps> = ({
   direction = 'top'
 }) => {
   const presence = usePresence(open, OVERLAY_TIMING.panelOut);
-  const panelRef = useOverlayBehaviour(presence.mounted, onClose);
+  const panelRef = useOverlayBehaviour(presence.mounted, !presence.exiting, onClose);
   const entering = useEntering(presence.mounted);
   const offset = DIRECTION_OFFSET[direction];
   const state = presence.exiting ? 'closed' : 'open';
@@ -197,7 +225,7 @@ export const Sheet: React.FC<SheetProps> = ({
   closeLabel = 'Close'
 }) => {
   const presence = usePresence(open, OVERLAY_TIMING.panelOut);
-  const panelRef = useOverlayBehaviour(presence.mounted, onClose);
+  const panelRef = useOverlayBehaviour(presence.mounted, !presence.exiting, onClose);
   const entering = useEntering(presence.mounted);
   const state = presence.exiting ? 'closed' : 'open';
 
